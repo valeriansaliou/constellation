@@ -9,7 +9,7 @@ use rocket::http::Status;
 use rocket_contrib::Json;
 
 use super::record_guard::RecordGuard;
-use dns::record::RecordType;
+use dns::record::{RecordType, RecordName};
 use store::store::StoreRecord;
 
 use APP_STORE;
@@ -17,7 +17,7 @@ use APP_STORE;
 #[derive(Deserialize)]
 pub struct RecordData {
     ttl: u32,
-    value: String,
+    value: RecordName,
 }
 
 #[derive(Serialize)]
@@ -25,18 +25,18 @@ pub struct RecordGetResponse {
     #[serde(rename = "type")]
     _type: RecordType,
 
-    name: String,
+    name: RecordName,
     ttl: u32,
-    value: String,
+    value: RecordName,
 }
 
 #[head("/record/<record_name>/<record_type>")]
 fn head_record(
     _auth: RecordGuard,
-    record_name: String,
+    record_name: RecordName,
     record_type: RecordType,
 ) -> Result<(), Failure> {
-    APP_STORE.check(&record_name, record_type).or(Err(Failure(
+    APP_STORE.check(record_name, record_type).or(Err(Failure(
         Status::NotFound,
     )))
 }
@@ -44,45 +44,46 @@ fn head_record(
 #[get("/record/<record_name>/<record_type>")]
 fn get_record(
     _auth: RecordGuard,
-    record_name: String,
+    record_name: RecordName,
     record_type: RecordType,
 ) -> Result<Json<RecordGetResponse>, Failure> {
-    APP_STORE.get(&record_name, record_type).map(|record| {
-        Json(RecordGetResponse {
-            _type: record.kind,
-            name: record.name,
-            ttl: record.ttl,
-            value: record.value,
+    APP_STORE
+        .get(record_name, record_type)
+        .map(|record| {
+            Json(RecordGetResponse {
+                _type: record.kind,
+                name: record.name,
+                ttl: record.ttl,
+                value: record.value,
+            })
         })
-    }).or(Err(Failure(
-        Status::NotFound,
-    )))
+        .or(Err(Failure(Status::NotFound)))
 }
 
 #[put("/record/<record_name>/<record_type>", data = "<data>", format = "application/json")]
 fn put_record(
     _auth: RecordGuard,
-    record_name: String,
+    record_name: RecordName,
     record_type: RecordType,
     data: Json<RecordData>,
 ) -> Result<(), Failure> {
-    APP_STORE.set(StoreRecord {
-        kind: record_type,
-        name: record_name,
-        ttl: data.ttl,
-        value: data.value.to_owned(),
-    }).or(Err(Failure(
-        Status::InternalServerError,
-    )))
+    APP_STORE
+        .set(StoreRecord {
+            kind: record_type,
+            name: record_name,
+            ttl: data.ttl,
+            value: data.value.to_owned(),
+        })
+        .or(Err(Failure(Status::InternalServerError)))
 }
 
 #[delete("/record/<record_name>/<record_type>")]
 fn delete_record(
     _auth: RecordGuard,
-    record_name: String,
+    record_name: RecordName,
     record_type: RecordType,
 ) -> Result<(), Failure> {
-    APP_STORE.remove(&record_name, record_type).or(Err(Failure(
+    APP_STORE.remove(record_name, record_type).or(Err(Failure(
         Status::InternalServerError,
     )))
 }

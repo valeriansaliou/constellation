@@ -23,6 +23,7 @@ extern crate r2d2_redis;
 extern crate redis;
 extern crate rocket;
 extern crate rocket_contrib;
+extern crate regex;
 extern crate farmhash;
 
 mod config;

@@ -10,7 +10,7 @@ use r2d2_redis::RedisConnectionManager;
 use redis::{RedisError, Commands};
 
 use super::key::StoreKey;
-use dns::record::RecordType;
+use dns::record::{RecordType, RecordName};
 
 use APP_CONF;
 
@@ -27,9 +27,9 @@ pub struct Store {
 
 pub struct StoreRecord {
     pub kind: RecordType,
-    pub name: String,
+    pub name: RecordName,
     pub ttl: u32,
-    pub value: String,
+    pub value: RecordName,
 }
 
 pub enum StoreError {
@@ -93,9 +93,13 @@ impl StoreBuilder {
 }
 
 impl Store {
-    pub fn check(&self, record_name: &str, record_type: RecordType) -> Result<(), StoreError> {
+    pub fn check(
+        &self,
+        record_name: RecordName,
+        record_type: RecordType,
+    ) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            client.exists::<&str, bool>(&StoreKey::to_key(record_name, &record_type))
+            client.exists::<&str, bool>(&StoreKey::to_key(&record_name, &record_type))
             .map_err(|err| {
                 StoreError::Connector(err)
             })
@@ -111,21 +115,25 @@ impl Store {
 
     pub fn get(
         &self,
-        record_name: &str,
+        record_name: RecordName,
         record_type: RecordType,
     ) -> Result<StoreRecord, StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
             match client.hget::<_, _, (String, String, u32, String)>(
-                StoreKey::to_key(record_name, &record_type),
+                StoreKey::to_key(&record_name, &record_type),
                 (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_VALUE),
             ) {
                 Ok(values) => {
-                    if let Some(kind_value) = RecordType::from_str(&values.0) {
+                    if let (Some(kind_value), Some(name_value), Some(value_value)) = (
+                        RecordType::from_str(&values.0),
+                        RecordName::from_str(&values.1),
+                        RecordName::from_str(&values.3)
+                    ) {
                         Ok(StoreRecord {
                             kind: kind_value,
-                            name: values.1,
+                            name: name_value,
                             ttl: values.2,
-                            value: values.3,
+                            value: value_value,
                         })
                     } else {
                         Err(StoreError::Corrupted)
@@ -141,9 +149,9 @@ impl Store {
             client.hset_multiple(
                 StoreKey::to_key(&record.name, &record.kind), &[
                     (KEY_TYPE, record.kind.to_str()),
-                    (KEY_NAME, &record.name),
+                    (KEY_NAME, record.name.to_str()),
                     (KEY_TTL, &record.ttl.to_string()),
-                    (KEY_VALUE, &record.value),
+                    (KEY_VALUE, record.value.to_str()),
                 ]
             ).map_err(|err| {
                 StoreError::Connector(err)
@@ -151,9 +159,13 @@ impl Store {
         })
     }
 
-    pub fn remove(&self, record_name: &str, record_type: RecordType) -> Result<(), StoreError> {
+    pub fn remove(
+        &self,
+        record_name: RecordName,
+        record_type: RecordType,
+    ) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            client.del(StoreKey::to_key(record_name, &record_type)).map_err(|err| {
+            client.del(StoreKey::to_key(&record_name, &record_type)).map_err(|err| {
                 StoreError::Connector(err)
             })
         })

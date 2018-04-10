@@ -6,32 +6,36 @@
 
 use farmhash;
 
-use dns::record::RecordType;
+use dns::record::{RecordType, RecordName};
 
 pub struct StoreKey;
 
 pub static KEY_PREFIX: &'static str = "cl";
 
 impl StoreKey {
-    pub fn to_key(record_name: &str, record_type: &RecordType) -> String {
+    pub fn to_key(record_name: &RecordName, record_type: &RecordType) -> String {
         let key = format!("{}:{}", KEY_PREFIX, Self::hash(record_name, record_type));
 
         debug!(
-            "generated key: {} for record: {} on type: {:?}",
+            "generated key: {} for record: {} on type: {}",
             key,
-            record_name,
-            record_type
+            record_name.to_str(),
+            record_type.to_str()
         );
 
         key
     }
 
-    fn hash(record_name: &str, record_type: &RecordType) -> String {
-        debug!("hashing record: {} on type: {:?}", record_name, record_type);
+    fn hash(record_name: &RecordName, record_type: &RecordType) -> String {
+        debug!(
+            "hashing record: {} on type: {}",
+            record_name.to_str(),
+            record_type.to_str()
+        );
 
         format!(
             "{:x}:{}",
-            farmhash::fingerprint32(record_name.as_bytes()),
+            farmhash::fingerprint32(record_name.to_str().as_bytes()),
             record_type.to_str()
         )
     }

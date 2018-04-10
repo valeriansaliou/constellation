@@ -4,128 +4,67 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use std::{fmt, str};
+use regex::Regex;
 use rocket::request::FromParam;
 use rocket::http::RawStr;
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::de::{Visitor, Unexpected, Error as DeserializeError};
 
-#[derive(Serialize, Deserialize, Debug)]
+lazy_static! {
+    static ref RECORD_NAME_REGEX: Regex = Regex::new(
+        r"^(([^\\/:@&_\*]+)\.)[^\\/:@&_\*\-\.]{2,63}$"
+    ).unwrap();
+}
+
+serde_string_impls!(RecordType);
+serde_string_impls!(RecordName);
+
+#[derive(Clone)]
 pub enum RecordType {
-    #[serde(rename = "a")]
     A,
-
-    #[serde(rename = "aaaa")]
     AAAA,
-
-    #[serde(rename = "afsdb")]
     AFSDB,
-
-    #[serde(rename = "apl")]
     APL,
-
-    #[serde(rename = "caa")]
     CAA,
-
-    #[serde(rename = "cdnskey")]
     CDNSKEY,
-
-    #[serde(rename = "cds")]
     CDS,
-
-    #[serde(rename = "cert")]
     CERT,
-
-    #[serde(rename = "cname")]
     CNAME,
-
-    #[serde(rename = "dhcid")]
     DHCID,
-
-    #[serde(rename = "dlv")]
     DLV,
-
-    #[serde(rename = "dname")]
     DNAME,
-
-    #[serde(rename = "dnskey")]
     DNSKEY,
-
-    #[serde(rename = "ds")]
     DS,
-
-    #[serde(rename = "hip")]
     HIP,
-
-    #[serde(rename = "ipseckey")]
     IPSECKEY,
-
-    #[serde(rename = "key")]
     KEY,
-
-    #[serde(rename = "kx")]
     KX,
-
-    #[serde(rename = "loc")]
     LOC,
-
-    #[serde(rename = "mx")]
     MX,
-
-    #[serde(rename = "naptr")]
     NAPTR,
-
-    #[serde(rename = "ns")]
     NS,
-
-    #[serde(rename = "nsec")]
     NSEC,
-
-    #[serde(rename = "nsec3")]
     NSEC3,
-
-    #[serde(rename = "nsec3param")]
     NSEC3PARAM,
-
-    #[serde(rename = "openpgpkey")]
     OPENPGPKEY,
-
-    #[serde(rename = "ptr")]
     PTR,
-
-    #[serde(rename = "rrsig")]
     RRSIG,
-
-    #[serde(rename = "rp")]
     RP,
-
-    #[serde(rename = "sig")]
     SIG,
-
-    #[serde(rename = "soa")]
     SOA,
-
-    #[serde(rename = "srv")]
     SRV,
-
-    #[serde(rename = "sshfp")]
     SSHFP,
-
-    #[serde(rename = "ta")]
     TA,
-
-    #[serde(rename = "tkey")]
     TKEY,
-
-    #[serde(rename = "tlsa")]
     TLSA,
-
-    #[serde(rename = "tsig")]
     TSIG,
-
-    #[serde(rename = "txt")]
     TXT,
-
-    #[serde(rename = "uri")]
     URI,
 }
+
+#[derive(Clone)]
+pub struct RecordName(String);
 
 impl RecordType {
     pub fn from_str(value: &str) -> Option<RecordType> {
@@ -218,10 +157,36 @@ impl RecordType {
     }
 }
 
+impl RecordName {
+    pub fn from_str(value: &str) -> Option<RecordName> {
+        if Self::validate(value) {
+            Some(RecordName(value.to_string()))
+        } else {
+            None
+        }
+    }
+
+    pub fn to_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn validate(value: &str) -> bool {
+        RECORD_NAME_REGEX.is_match(value)
+    }
+}
+
 impl<'r> FromParam<'r> for RecordType {
     type Error = &'r RawStr;
 
     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
         RecordType::from_str(param).ok_or(param)
+    }
+}
+
+impl<'r> FromParam<'r> for RecordName {
+    type Error = &'r RawStr;
+
+    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+        RecordName::from_str(param).ok_or(param)
     }
 }

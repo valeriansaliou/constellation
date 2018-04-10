@@ -21,8 +21,10 @@ mod config;
 mod server;
 mod store;
 
+use std::thread;
 use std::ops::Deref;
 use std::str::FromStr;
+use std::time::Duration;
 
 use clap::{App, Arg};
 use log::LevelFilter;
@@ -31,6 +33,7 @@ use config::config::Config;
 use config::logger::ConfigLogger;
 use config::reader::ConfigReader;
 use store::store::{Store, StoreBuilder};
+use server::listen::ServerListenBuilder;
 
 struct AppArgs {
     config: String,
@@ -71,26 +74,26 @@ fn ensure_states() {
 }
 
 fn spawn_worker() {
-    // let worker = thread::Builder::new()
-    //     .name(THREAD_NAME_WORKER.to_string())
-    //     .spawn(|| ServerListenBuilder::new().run());
+    let worker = thread::Builder::new()
+        .name(THREAD_NAME_WORKER.to_string())
+        .spawn(|| ServerListenBuilder::new().run());
 
-    // // Block on worker thread (join it)
-    // let has_error = if let Ok(worker_thread) = worker {
-    //     worker_thread.join().is_err()
-    // } else {
-    //     true
-    // };
+    // Block on worker thread (join it)
+    let has_error = if let Ok(worker_thread) = worker {
+        worker_thread.join().is_err()
+    } else {
+        true
+    };
 
-    // // Worker thread crashed?
-    // if has_error == true {
-    //     error!("worker thread crashed, setting it up again");
+    // Worker thread crashed?
+    if has_error == true {
+        error!("worker thread crashed, setting it up again");
 
-    //     // Prevents thread start loop floods
-    //     thread::sleep(Duration::from_secs(1));
+        // Prevents thread start loop floods
+        thread::sleep(Duration::from_secs(1));
 
-    //     spawn_worker();
-    // }
+        spawn_worker();
+    }
 }
 
 fn main() {
@@ -104,7 +107,7 @@ fn main() {
     ensure_states();
 
     // Run server (from main thread, maintain thread active if down)
-    // spawn_worker();
+    spawn_worker();
 
     error!("could not start");
 }

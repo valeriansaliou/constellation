@@ -11,6 +11,8 @@ use super::defaults;
 #[derive(Deserialize)]
 pub struct Config {
     pub server: ConfigServer,
+    pub dns: ConfigDNS,
+    pub http: ConfigHTTP,
     pub redis: ConfigRedis,
 }
 
@@ -18,9 +20,23 @@ pub struct Config {
 pub struct ConfigServer {
     #[serde(default = "defaults::server_log_level")]
     pub log_level: String,
+}
 
-    #[serde(default = "defaults::server_inet")]
+#[derive(Deserialize)]
+pub struct ConfigDNS {
+    #[serde(default = "defaults::dns_inet")]
     pub inet: SocketAddr,
+}
+
+#[derive(Deserialize)]
+pub struct ConfigHTTP {
+    #[serde(default = "defaults::http_inet")]
+    pub inet: SocketAddr,
+
+    #[serde(default = "defaults::http_workers")]
+    pub workers: u16,
+
+    pub record_token: String,
 }
 
 #[derive(Deserialize)]

@@ -26,9 +26,14 @@ clap = { version = "2.26", default-features = false }
 lazy_static = "1.0"
 serde = "1.0"
 serde_derive = "1.0"
+base64 = "0.9"
 r2d2 = "0.8"
 r2d2_redis = "0.7"
 redis = "0.8"
+rocket = { version = "0.3", default-features = false }
+rocket_codegen = "0.3"
+rocket_contrib = { version = "0.3", features = ["json"], default-features = false }
+farmhash = "1.1"
 
 [profile.dev]
 opt-level = 0

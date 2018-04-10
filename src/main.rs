@@ -4,6 +4,9 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+#![feature(plugin)]
+#![plugin(rocket_codegen)]
+
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -12,10 +15,15 @@ extern crate clap;
 extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde;
 extern crate toml;
+extern crate base64;
 extern crate r2d2;
 extern crate r2d2_redis;
 extern crate redis;
+extern crate rocket;
+extern crate rocket_contrib;
+extern crate farmhash;
 
 mod config;
 mod dns;
@@ -79,8 +87,18 @@ lazy_static! {
     static ref APP_STORE: Store = StoreBuilder::new();
 }
 
-gen_spawn_managed!("dns", spawn_dns, THREAD_NAME_DNS, DNSListenBuilder::new().run());
-gen_spawn_managed!("http", spawn_http, THREAD_NAME_HTTP, HTTPListenBuilder::new().run());
+gen_spawn_managed!(
+    "dns",
+    spawn_dns,
+    THREAD_NAME_DNS,
+    DNSListenBuilder::new().run()
+);
+gen_spawn_managed!(
+    "http",
+    spawn_http,
+    THREAD_NAME_HTTP,
+    HTTPListenBuilder::new().run()
+);
 
 fn make_app_args() -> AppArgs {
     let matches = App::new(crate_name!())

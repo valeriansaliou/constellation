@@ -10,8 +10,16 @@ pub fn server_log_level() -> String {
     "warn".to_string()
 }
 
-pub fn server_inet() -> SocketAddr {
+pub fn dns_inet() -> SocketAddr {
     "[::1]:53".parse().unwrap()
+}
+
+pub fn http_inet() -> SocketAddr {
+    "[::1]:8080".parse().unwrap()
+}
+
+pub fn http_workers() -> u16 {
+    2
 }
 
 pub fn redis_host() -> String {

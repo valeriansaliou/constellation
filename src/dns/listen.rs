@@ -7,6 +7,9 @@
 pub struct DNSListenBuilder;
 pub struct DNSListen;
 
+use std::thread;
+use std::time::Duration;
+
 impl DNSListenBuilder {
     pub fn new() -> DNSListen {
         DNSListen {}
@@ -16,5 +19,6 @@ impl DNSListenBuilder {
 impl DNSListen {
     pub fn run(&self) {
         // TODO
+        thread::sleep(Duration::from_secs(120));
     }
 }

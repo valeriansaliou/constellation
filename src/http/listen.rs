@@ -4,16 +4,16 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-pub struct ServerListenBuilder;
-pub struct ServerListen;
+pub struct HTTPListenBuilder;
+pub struct HTTPListen;
 
-impl ServerListenBuilder {
-    pub fn new() -> ServerListen {
-        ServerListen {}
+impl HTTPListenBuilder {
+    pub fn new() -> HTTPListen {
+        HTTPListen {}
     }
 }
 
-impl ServerListen {
+impl HTTPListen {
     pub fn run(&self) {
         // TODO
     }

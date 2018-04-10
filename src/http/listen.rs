@@ -45,6 +45,9 @@ impl HTTPListen {
                 catchers::unauthorized,
                 catchers::forbidden,
                 catchers::not_found,
+                catchers::method_not_allowed,
+                catchers::not_acceptable,
+                catchers::payload_too_large,
                 catchers::internal_server_error,
             ])
             .launch();

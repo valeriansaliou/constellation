@@ -31,6 +31,21 @@ pub fn not_found() -> Json<CatcherResponse> {
     Json(CatcherResponse { error: "not_found" })
 }
 
+#[error(405)]
+pub fn method_not_allowed() -> Json<CatcherResponse> {
+    Json(CatcherResponse { error: "method_not_allowed" })
+}
+
+#[error(406)]
+pub fn not_acceptable() -> Json<CatcherResponse> {
+    Json(CatcherResponse { error: "not_acceptable" })
+}
+
+#[error(413)]
+pub fn payload_too_large() -> Json<CatcherResponse> {
+    Json(CatcherResponse { error: "payload_too_large" })
+}
+
 #[error(500)]
 pub fn internal_server_error() -> Json<CatcherResponse> {
     Json(CatcherResponse { error: "internal_server_error" })

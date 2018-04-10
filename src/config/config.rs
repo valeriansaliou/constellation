@@ -1,0 +1,50 @@
+// Constellation
+//
+// Pluggable authoritative DNS server
+// Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
+// License: Mozilla Public License v2.0 (MPL v2.0)
+
+use std::net::SocketAddr;
+
+use super::defaults;
+
+#[derive(Deserialize)]
+pub struct Config {
+    pub server: ConfigServer,
+    pub redis: ConfigRedis,
+}
+
+#[derive(Deserialize)]
+pub struct ConfigServer {
+    #[serde(default = "defaults::server_log_level")]
+    pub log_level: String,
+
+    #[serde(default = "defaults::server_inet")]
+    pub inet: SocketAddr,
+}
+
+#[derive(Deserialize)]
+pub struct ConfigRedis {
+    #[serde(default = "defaults::redis_host")]
+    pub host: String,
+
+    #[serde(default = "defaults::redis_port")]
+    pub port: u16,
+
+    pub password: Option<String>,
+
+    #[serde(default = "defaults::redis_database")]
+    pub database: u8,
+
+    #[serde(default = "defaults::redis_pool_size")]
+    pub pool_size: u32,
+
+    #[serde(default = "defaults::redis_max_lifetime_seconds")]
+    pub max_lifetime_seconds: u64,
+
+    #[serde(default = "defaults::redis_idle_timeout_seconds")]
+    pub idle_timeout_seconds: u64,
+
+    #[serde(default = "defaults::redis_connection_timeout_seconds")]
+    pub connection_timeout_seconds: u64,
+}

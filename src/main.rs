@@ -4,10 +4,10 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-#![feature(plugin)]
+#![feature(use_extern_macros, plugin)]
 #![plugin(rocket_codegen)]
 
-#[macro_use]
+#[macro_use(log)]
 extern crate log;
 #[macro_use]
 extern crate clap;
@@ -56,7 +56,7 @@ pub static THREAD_NAME_HTTP: &'static str = "constellation-http";
 macro_rules! gen_spawn_managed {
     ($name:expr, $method:ident, $thread_name:ident, $managed_fn:expr) => (
         fn $method() {
-            debug!("spawn managed thread: {}", $name);
+            log::debug!("spawn managed thread: {}", $name);
 
             let worker = thread::Builder::new()
                 .name($thread_name.to_string())
@@ -71,7 +71,7 @@ macro_rules! gen_spawn_managed {
 
             // Worker thread crashed?
             if has_error == true {
-                error!("managed thread crashed ({}), setting it up again", $name);
+                log::error!("managed thread crashed ({}), setting it up again", $name);
 
                 // Prevents thread start loop floods
                 thread::sleep(Duration::from_secs(1));
@@ -132,7 +132,7 @@ fn main() {
         "invalid log level",
     ));
 
-    info!("starting up");
+    log::info!("starting up");
 
     // Ensure all states are bound
     ensure_states();
@@ -143,5 +143,5 @@ fn main() {
     // Run DNS server (from main thread, maintain thread active if down)
     spawn_dns();
 
-    error!("could not start");
+    log::error!("could not start");
 }

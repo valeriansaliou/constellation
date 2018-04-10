@@ -8,7 +8,7 @@ use rocket;
 use rocket::config::{Config, Environment};
 use APP_CONF;
 
-use super::routes;
+use super::{routes, catchers};
 
 pub struct HTTPListenBuilder;
 pub struct HTTPListen;
@@ -40,6 +40,13 @@ impl HTTPListen {
                     routes::delete_record,
                 ],
             )
+            .catch(errors![
+                catchers::bad_request,
+                catchers::unauthorized,
+                catchers::forbidden,
+                catchers::not_found,
+                catchers::internal_server_error,
+            ])
             .launch();
     }
 }

@@ -6,5 +6,6 @@
 
 mod record_guard;
 mod routes;
+mod catchers;
 
 pub mod listen;

@@ -4,6 +4,7 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use log;
 use std::time::Duration;
 use r2d2::Pool;
 use r2d2_redis::RedisConnectionManager;
@@ -41,7 +42,7 @@ pub enum StoreError {
 
 impl StoreBuilder {
     pub fn new() -> Store {
-        info!(
+        log::info!(
             "binding to store backend at {}:{}",
             APP_CONF.redis.host,
             APP_CONF.redis.port
@@ -61,7 +62,7 @@ impl StoreBuilder {
             APP_CONF.redis.database,
         );
 
-        debug!("will connect to redis at: {}", tcp_addr_raw);
+        log::debug!("will connect to redis at: {}", tcp_addr_raw);
 
         match RedisConnectionManager::new(tcp_addr_raw.as_ref()) {
             Ok(manager) => {
@@ -80,7 +81,7 @@ impl StoreBuilder {
 
                 match builder.build(manager) {
                     Ok(pool) => {
-                        info!("bound to store backend");
+                        log::info!("bound to store backend");
 
                         Store { pool: pool }
                     }

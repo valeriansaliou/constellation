@@ -1,7 +1,7 @@
 Constellation
 =============
 
-[![Build Status](https://travis-ci.org/valeriansaliou/constellation.svg?branch=master)](https://travis-ci.org/valeriansaliou/constellation)
+[![Build Status](https://travis-ci.org/valeriansaliou/constellation.svg?branch=master)](https://travis-ci.org/valeriansaliou/constellation) [![Dependency Status](https://deps.rs/repo/github/valeriansaliou/constellation/status.svg)](https://deps.rs/repo/github/valeriansaliou/constellation)
 
 **Pluggable authoritative DNS server. Entries can be added & removed from an HTTP REST API.**
 

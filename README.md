@@ -7,6 +7,8 @@ Constellation
 
 Constellation is a small authoritative server that lets you manage DNS entries from an HTTP REST API, in a generic way. It can be plugged to your existing infrastructure to manage DNS records for users of your service, eg. to configure outbound email records that cannot be easily wildcarded in a traditional DNS server (DKIM, DMARC, SPF records).
 
+DNS entries are stored in Redis. The DNS database can thus be easily modified and dumped for backup purposes.
+
 ![Constellation](https://valeriansaliou.github.io/constellation/images/constellation.jpg)
 
 ## Who uses it?

@@ -13,7 +13,7 @@ use serde_json::{self, Error as SerdeJSONError};
 
 use super::key::StoreKey;
 use dns::zone::ZoneName;
-use dns::record::{RecordType, RecordName};
+use dns::record::{RecordType, RecordName, RecordValues};
 
 use APP_CONF;
 
@@ -28,11 +28,12 @@ pub struct Store {
     pool: Pool<RedisConnectionManager>,
 }
 
+#[derive(Debug)]
 pub struct StoreRecord {
     pub kind: RecordType,
     pub name: RecordName,
     pub ttl: Option<u32>,
-    pub values: Vec<String>,
+    pub values: RecordValues,
 }
 
 pub enum StoreError {
@@ -140,6 +141,13 @@ impl Store {
                         } else {
                             None
                         };
+
+                        log::debug!(
+                            "read store record with kind: {:?}, name: {:?} and values: {:?}",
+                            kind_value,
+                            name_value,
+                            value_value
+                        );
 
                         Ok(StoreRecord {
                             kind: kind_value,

@@ -10,6 +10,7 @@ use rocket::request::FromParam;
 use rocket::http::RawStr;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde::de::{Visitor, Unexpected, Error as DeserializeError};
+use trust_dns::rr::Name as TrustName;
 
 use APP_CONF;
 
@@ -21,13 +22,28 @@ lazy_static! {
 
 serde_string_impls!(ZoneName);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ZoneName(String);
 
 impl ZoneName {
     pub fn from_str(value: &str) -> Option<ZoneName> {
         if ZONE_NAME_REGEX.is_match(value) && APP_CONF.dns.zone_exists(value) {
             Some(ZoneName(value.to_string()))
+        } else {
+            None
+        }
+    }
+
+    pub fn from_trust(query_name: &TrustName) -> Option<ZoneName> {
+        let zone_string = query_name.to_string();
+        let mut zone_len = zone_string.len();
+
+        if zone_len > 0 {
+            if zone_string.get((zone_len - 1)..zone_len) == Some(".") {
+                zone_len = zone_len - 1;
+            }
+
+            ZoneName::from_str(&zone_string[..zone_len])
         } else {
             None
         }

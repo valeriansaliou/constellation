@@ -10,7 +10,7 @@ use rocket_contrib::Json;
 
 use super::record_guard::RecordGuard;
 use dns::zone::ZoneName;
-use dns::record::{RecordType, RecordName};
+use dns::record::{RecordType, RecordName, RecordValues};
 use store::store::StoreRecord;
 
 use APP_STORE;
@@ -18,7 +18,7 @@ use APP_STORE;
 #[derive(Deserialize)]
 pub struct RecordData {
     ttl: Option<u32>,
-    values: Vec<String>,
+    values: RecordValues,
 }
 
 #[derive(Serialize)]
@@ -28,7 +28,7 @@ pub struct RecordGetResponse {
 
     name: RecordName,
     ttl: Option<u32>,
-    values: Vec<String>,
+    values: RecordValues,
 }
 
 #[head("/zone/<zone_name>/record/<record_name>/<record_type>")]

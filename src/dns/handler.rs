@@ -7,11 +7,16 @@
 use log;
 use std::collections::HashMap;
 use std::sync::RwLock;
-use trust_dns::op::{Message, MessageType, OpCode, ResponseCode};
-use trust_dns::rr::Name;
+use trust_dns::op::{Message, MessageType, OpCode, Query, ResponseCode};
+use trust_dns::rr::{Name, Record};
 use trust_dns::rr::dnssec::SupportedAlgorithms;
 use trust_dns_server::server::{Request, RequestHandler};
 use trust_dns_server::authority::{AuthLookup, Authority};
+
+use dns::zone::ZoneName;
+use dns::record::{RecordName, RecordType};
+use APP_CONF;
+use APP_STORE;
 
 pub struct DNSHandler {
     authorities: HashMap<Name, RwLock<Authority>>,
@@ -91,36 +96,62 @@ impl DNSHandler {
 
                 let supported_algorithms = SupportedAlgorithms::new();
 
-                let records = authority.search(query, false, supported_algorithms);
+                // Attempt to resolve from local store
+                let records_local = authority.search(query, false, supported_algorithms);
 
-                if !records.is_empty() {
-                    response.set_response_code(ResponseCode::NoError);
-                    response.set_authoritative(true);
-                    response.add_answers(records.iter().cloned());
+                if !records_local.is_empty() {
+                    log::debug!("found records for query from local store: {}", query);
 
-                    let ns_records = authority.ns(false, supported_algorithms);
+                    let records_local_vec = records_local
+                        .iter()
+                        .map(|record| record.to_owned())
+                        .collect();
 
-                    if ns_records.is_empty() {
-                        log::warn!("no ns records for: {:?}", authority.origin());
-                    } else {
-                        response.add_name_servers(ns_records.iter().cloned());
-                    }
+                    Self::serve_response_records(
+                        &mut response,
+                        records_local_vec,
+                        &authority,
+                        supported_algorithms,
+                    );
                 } else {
-                    match records {
-                        AuthLookup::NoName => response.set_response_code(ResponseCode::NXDomain),
-                        AuthLookup::NameExists => response.set_response_code(ResponseCode::NoError),
-                        AuthLookup::Records(..) => panic!("error, should return noerror"),
-                    };
+                    if let Some(records_remote) = self.records_from_store(authority, query) {
+                        log::debug!("found records for query from remote store: {}", query);
 
-                    let soa_records = authority.soa_secure(false, supported_algorithms);
-
-                    if soa_records.is_empty() {
-                        log::warn!("no soa record for: {:?}", authority.origin());
+                        Self::serve_response_records(
+                            &mut response,
+                            records_remote,
+                            &authority,
+                            supported_algorithms,
+                        );
                     } else {
-                        response.add_name_servers(soa_records.iter().cloned());
+                        log::debug!("did not find records for query: {}", query);
+
+                        match records_local {
+                            AuthLookup::NoName => {
+                                log::debug!("domain not found for query: {}", query);
+
+                                response.set_response_code(ResponseCode::NXDomain)
+                            }
+                            AuthLookup::NameExists => {
+                                log::debug!("domain found for query: {}", query);
+
+                                response.set_response_code(ResponseCode::NoError)
+                            }
+                            AuthLookup::Records(..) => panic!("error, should return noerror"),
+                        };
+
+                        let soa_records = authority.soa_secure(false, supported_algorithms);
+
+                        if soa_records.is_empty() {
+                            log::warn!("no soa record for: {:?}", authority.origin());
+                        } else {
+                            response.add_name_servers(soa_records.iter().cloned());
+                        }
                     }
                 }
             } else {
+                log::debug!("domain authority not found for query: {}", query);
+
                 response.set_response_code(ResponseCode::NXDomain);
             }
         }
@@ -142,5 +173,80 @@ impl DNSHandler {
         }
 
         None
+    }
+
+    fn records_from_store<'s>(
+        &'s self,
+        authority: &Authority,
+        query: &Query,
+    ) -> Option<Vec<Record>> {
+        let zone_name = ZoneName::from_trust(&authority.origin());
+        let record_name = RecordName::from_trust(&authority.origin(), &query.name());
+        let record_type = RecordType::from_trust(&query.query_type());
+
+        log::debug!(
+            "lookup record in store for query: {} on zone: {:?}, record: {:?}, and type: {:?}",
+            query,
+            zone_name,
+            record_name,
+            record_type
+        );
+
+        match (zone_name, record_name, record_type) {
+            (Some(zone_name), Some(record_name), Some(record_type)) => {
+                if let Ok(record) = APP_STORE.get(zone_name, record_name, record_type) {
+                    log::debug!(
+                        "found record in store for query: {} with result: {:?}",
+                        query,
+                        record
+                    );
+
+                    let mut records = Vec::new();
+
+                    for value in record.values.iter() {
+                        if let Ok(value_data) = value.to_trust(&record.kind) {
+                            records.push(Record::from_rdata(
+                                query.name().to_owned(),
+                                record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
+                                query.query_type(),
+                                value_data,
+                            ));
+                        } else {
+                            log::warn!(
+                                "could not convert to dns format record type: {} with value: {:?}",
+                                record.kind.to_str(),
+                                value
+                            );
+                        }
+                    }
+
+                    if !records.is_empty() {
+                        return Some(records);
+                    }
+                }
+            }
+            _ => {}
+        };
+
+        None
+    }
+
+    fn serve_response_records(
+        response: &mut Message,
+        records: Vec<Record>,
+        authority: &Authority,
+        supported_algorithms: SupportedAlgorithms,
+    ) {
+        response.set_response_code(ResponseCode::NoError);
+        response.set_authoritative(true);
+        response.add_answers(records);
+
+        let ns_records = authority.ns(false, supported_algorithms);
+
+        if ns_records.is_empty() {
+            log::warn!("no ns records for: {:?}", authority.origin());
+        } else {
+            response.add_name_servers(ns_records.iter().cloned());
+        }
     }
 }

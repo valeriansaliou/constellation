@@ -5,107 +5,63 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use std::{fmt, str};
+use std::cmp;
+use std::ops::Deref;
 use regex::Regex;
 use rocket::request::FromParam;
 use rocket::http::RawStr;
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde::de::{Visitor, Unexpected, Error as DeserializeError};
+use trust_dns::rr::{Name as TrustName, RecordType as TrustRecordType, RData as TrustRData};
+use trust_dns::rr::rdata::mx::MX;
+use trust_dns::rr::rdata::txt::TXT;
 
 lazy_static! {
     static ref RECORD_NAME_REGEX: Regex = Regex::new(r"^(([^\\/:@&_\*]+)\.)?@$").unwrap();
 }
 
+static DATA_TXT_CHUNK_MAXIMUM: usize = 255;
+
 serde_string_impls!(RecordType);
 serde_string_impls!(RecordName);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum RecordType {
     A,
     AAAA,
-    AFSDB,
-    APL,
-    CAA,
-    CDNSKEY,
-    CDS,
-    CERT,
     CNAME,
-    DHCID,
-    DLV,
-    DNAME,
-    DNSKEY,
-    DS,
-    HIP,
-    IPSECKEY,
-    KEY,
-    KX,
-    LOC,
     MX,
-    NAPTR,
-    NS,
-    NSEC,
-    NSEC3,
-    NSEC3PARAM,
-    OPENPGPKEY,
-    PTR,
-    RRSIG,
-    RP,
-    SIG,
-    SOA,
-    SRV,
-    SSHFP,
-    TA,
-    TKEY,
-    TLSA,
-    TSIG,
     TXT,
-    URI,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RecordName(String);
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RecordValue(String);
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RecordValues(Vec<RecordValue>);
 
 impl RecordType {
     pub fn from_str(value: &str) -> Option<RecordType> {
         match value {
             "a" => Some(RecordType::A),
             "aaaa" => Some(RecordType::AAAA),
-            "afsdb" => Some(RecordType::AFSDB),
-            "apl" => Some(RecordType::APL),
-            "caa" => Some(RecordType::CAA),
-            "cdnskey" => Some(RecordType::CDNSKEY),
-            "cds" => Some(RecordType::CDS),
-            "cert" => Some(RecordType::CERT),
             "cname" => Some(RecordType::CNAME),
-            "dhcid" => Some(RecordType::DHCID),
-            "dlv" => Some(RecordType::DLV),
-            "dname" => Some(RecordType::DNAME),
-            "dnskey" => Some(RecordType::DNSKEY),
-            "ds" => Some(RecordType::DS),
-            "hip" => Some(RecordType::HIP),
-            "ipseckey" => Some(RecordType::IPSECKEY),
-            "key" => Some(RecordType::KEY),
-            "kx" => Some(RecordType::KX),
-            "loc" => Some(RecordType::LOC),
             "mx" => Some(RecordType::MX),
-            "naptr" => Some(RecordType::NAPTR),
-            "ns" => Some(RecordType::NS),
-            "nsec" => Some(RecordType::NSEC),
-            "nsec3" => Some(RecordType::NSEC3),
-            "nsec3param" => Some(RecordType::NSEC3PARAM),
-            "openpgpkey" => Some(RecordType::OPENPGPKEY),
-            "ptr" => Some(RecordType::PTR),
-            "rrsig" => Some(RecordType::RRSIG),
-            "rp" => Some(RecordType::RP),
-            "sig" => Some(RecordType::SIG),
-            "soa" => Some(RecordType::SOA),
-            "srv" => Some(RecordType::SRV),
-            "sshfp" => Some(RecordType::SSHFP),
-            "ta" => Some(RecordType::TA),
-            "tkey" => Some(RecordType::TKEY),
-            "tlsa" => Some(RecordType::TLSA),
-            "tsig" => Some(RecordType::TSIG),
             "txt" => Some(RecordType::TXT),
-            "uri" => Some(RecordType::URI),
+            _ => None,
+        }
+    }
+
+    pub fn from_trust(record_type: &TrustRecordType) -> Option<RecordType> {
+        match record_type {
+            &TrustRecordType::A => Some(RecordType::A),
+            &TrustRecordType::AAAA => Some(RecordType::AAAA),
+            &TrustRecordType::CNAME => Some(RecordType::CNAME),
+            &TrustRecordType::MX => Some(RecordType::MX),
+            &TrustRecordType::TXT => Some(RecordType::TXT),
             _ => None,
         }
     }
@@ -114,43 +70,9 @@ impl RecordType {
         match *self {
             RecordType::A => "a",
             RecordType::AAAA => "aaaa",
-            RecordType::AFSDB => "afsdb",
-            RecordType::APL => "apl",
-            RecordType::CAA => "caa",
-            RecordType::CDNSKEY => "cdnskey",
-            RecordType::CDS => "cds",
-            RecordType::CERT => "cert",
             RecordType::CNAME => "cname",
-            RecordType::DHCID => "dhcid",
-            RecordType::DLV => "dlv",
-            RecordType::DNAME => "dname",
-            RecordType::DNSKEY => "dnskey",
-            RecordType::DS => "ds",
-            RecordType::HIP => "hip",
-            RecordType::IPSECKEY => "ipseckey",
-            RecordType::KEY => "key",
-            RecordType::KX => "kx",
-            RecordType::LOC => "loc",
             RecordType::MX => "mx",
-            RecordType::NAPTR => "naptr",
-            RecordType::NS => "ns",
-            RecordType::NSEC => "nsec",
-            RecordType::NSEC3 => "nsec3",
-            RecordType::NSEC3PARAM => "nsec3param",
-            RecordType::OPENPGPKEY => "openpgpkey",
-            RecordType::PTR => "ptr",
-            RecordType::RRSIG => "rrsig",
-            RecordType::RP => "rp",
-            RecordType::SIG => "sig",
-            RecordType::SOA => "soa",
-            RecordType::SRV => "srv",
-            RecordType::SSHFP => "sshfp",
-            RecordType::TA => "ta",
-            RecordType::TKEY => "tkey",
-            RecordType::TLSA => "tlsa",
-            RecordType::TSIG => "tsig",
             RecordType::TXT => "txt",
-            RecordType::URI => "uri",
         }
     }
 }
@@ -164,12 +86,110 @@ impl RecordName {
         }
     }
 
+    pub fn from_trust(zone_name: &TrustName, query_name: &TrustName) -> Option<RecordName> {
+        let mut query_string = query_name.to_string();
+        let query_len = query_string.len();
+
+        // Nuke authority section from domain?
+        if query_len > 0 {
+            let zone_string = zone_name.to_string();
+            let zone_len = zone_string.len();
+
+            if query_string.get((query_len - 1)..query_len) == Some(".") &&
+                query_string.ends_with(&zone_string)
+            {
+                query_string.truncate(query_len - zone_len);
+            }
+        }
+
+        // Encode record name in internal format
+        query_string = format!("{}@", query_string);
+
+        RecordName::from_str(&query_string)
+    }
+
     pub fn to_str(&self) -> &str {
         &self.0
     }
 
     pub fn validate(value: &str) -> bool {
         RECORD_NAME_REGEX.is_match(value)
+    }
+}
+
+impl RecordValue {
+    pub fn to_trust(&self, record_type: &RecordType) -> Result<TrustRData, ()> {
+        match record_type {
+            RecordType::A => {
+                // Parse A into actual IPv4
+                self.parse().map(|value| TrustRData::A(value)).or(Err(()))
+            },
+            RecordType::AAAA => {
+                // Parse AAAA into actual IPv6
+                self.parse().map(|value| TrustRData::AAAA(value)).or(
+                    Err(()),
+                )
+            }
+            RecordType::CNAME => {
+                // Parse CNAME into domain name
+                TrustName::parse(self, Some(&TrustName::new()))
+                    .map(|value| TrustRData::CNAME(value))
+                    .or(Err(()))
+            }
+            RecordType::MX => {
+                // Parse MX record into (priority, exchange) tuple
+                let mut mx_parts = self.split(" ");
+
+                let priority_str = mx_parts.next().unwrap_or("0");
+                let exchange_str = mx_parts.next().unwrap_or("");
+
+                if let (Ok(priority), Ok(exchange)) = (
+                    priority_str.parse::<u16>(),
+                    TrustName::parse(exchange_str, Some(&TrustName::new()))
+                ) {
+                    Ok(TrustRData::MX(MX::new(priority, exchange)))
+                } else {
+                    Err(())
+                }
+            }
+            RecordType::TXT => {
+                // Split TXT records to parts of 255 characters (enforced by specs)
+                let mut txt_splits = Vec::new();
+                let mut last_value = self.0.as_str();
+
+                while !last_value.is_empty() {
+                    let (chunk_value, rest_value) = last_value.split_at(cmp::min(DATA_TXT_CHUNK_MAXIMUM, last_value.len()));
+
+                    txt_splits.push(chunk_value.to_string());
+
+                    last_value = rest_value;
+                }
+
+                if !txt_splits.is_empty() {
+                    Ok(TrustRData::TXT(TXT::new(txt_splits)))
+                } else {
+                    Err(())
+                }
+            }
+        }
+    }
+}
+
+impl Deref for RecordValues {
+    type Target = Vec<RecordValue>;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Deref for RecordValue {
+    type Target = String;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

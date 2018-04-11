@@ -6,6 +6,7 @@
 
 use rocket;
 use rocket::config::{Config, Environment};
+
 use APP_CONF;
 
 use super::{routes, catchers};
@@ -34,10 +35,10 @@ impl HTTPListen {
             .mount(
                 "/",
                 routes![
-                    routes::head_record,
-                    routes::get_record,
-                    routes::put_record,
-                    routes::delete_record,
+                    routes::head_zone_record,
+                    routes::get_zone_record,
+                    routes::put_zone_record,
+                    routes::delete_zone_record,
                 ],
             )
             .catch(errors![

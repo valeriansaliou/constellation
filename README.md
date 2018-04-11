@@ -75,7 +75,10 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[dns]**
 
-* `inet` (type: _string_, allowed: IPv4 / IPv6 + port, default: `[::1]:53`) — Host and TCP port the DNS server should listen on
+* `inets` (type: _array[string]_, allowed: IPs + ports, default: `[0.0.0.0:53, [::]:53]`) — Hosts and UDP/TCP ports the DNS server should listen on
+* `tcp_timeout` (type: _integer_, allowed: seconds, default: `2`) — Timeout of DNS over TCP connections
+
+**[[dns.zone.'{name}']]**
 
 **[http]**
 

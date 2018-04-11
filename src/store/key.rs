@@ -7,6 +7,7 @@
 use log;
 use farmhash;
 
+use dns::zone::ZoneName;
 use dns::record::{RecordType, RecordName};
 
 pub struct StoreKey;
@@ -14,8 +15,16 @@ pub struct StoreKey;
 pub static KEY_PREFIX: &'static str = "cl";
 
 impl StoreKey {
-    pub fn to_key(record_name: &RecordName, record_type: &RecordType) -> String {
-        let key = format!("{}:{}", KEY_PREFIX, Self::hash(record_name, record_type));
+    pub fn to_key(
+        zone_name: &ZoneName,
+        record_name: &RecordName,
+        record_type: &RecordType,
+    ) -> String {
+        let key = format!(
+            "{}:{}",
+            KEY_PREFIX,
+            Self::hash(zone_name, record_name, record_type)
+        );
 
         log::debug!(
             "generated key: {} for record: {} on type: {}",
@@ -27,15 +36,21 @@ impl StoreKey {
         key
     }
 
-    fn hash(record_name: &RecordName, record_type: &RecordType) -> String {
+    fn hash(
+        zone_name: &ZoneName,
+        record_name: &RecordName,
+        record_type: &RecordType,
+    ) -> String {
         log::debug!(
-            "hashing record: {} on type: {}",
+            "hashing record: {} on type: {} for zone: {}",
             record_name.to_str(),
-            record_type.to_str()
+            record_type.to_str(),
+            zone_name.to_str()
         );
 
         format!(
-            "{:x}:{}",
+            "{:x}:{:x}:{}",
+            farmhash::fingerprint32(zone_name.to_str().as_bytes()),
             farmhash::fingerprint32(record_name.to_str().as_bytes()),
             record_type.to_str()
         )

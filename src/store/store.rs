@@ -11,6 +11,7 @@ use r2d2_redis::RedisConnectionManager;
 use redis::{RedisError, Commands};
 
 use super::key::StoreKey;
+use dns::zone::ZoneName;
 use dns::record::{RecordType, RecordName};
 
 use APP_CONF;
@@ -96,11 +97,12 @@ impl StoreBuilder {
 impl Store {
     pub fn check(
         &self,
+        zone_name: ZoneName,
         record_name: RecordName,
         record_type: RecordType,
     ) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            client.exists::<&str, bool>(&StoreKey::to_key(&record_name, &record_type))
+            client.exists::<&str, bool>(&StoreKey::to_key(&zone_name, &record_name, &record_type))
             .map_err(|err| {
                 StoreError::Connector(err)
             })
@@ -116,12 +118,13 @@ impl Store {
 
     pub fn get(
         &self,
+        zone_name: ZoneName,
         record_name: RecordName,
         record_type: RecordType,
     ) -> Result<StoreRecord, StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
             match client.hget::<_, _, (String, String, u32, String)>(
-                StoreKey::to_key(&record_name, &record_type),
+                StoreKey::to_key(&zone_name, &record_name, &record_type),
                 (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_VALUE),
             ) {
                 Ok(values) => {
@@ -145,10 +148,10 @@ impl Store {
         })
     }
 
-    pub fn set(&self, record: StoreRecord) -> Result<(), StoreError> {
+    pub fn set(&self, zone_name: ZoneName, record: StoreRecord) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
             client.hset_multiple(
-                StoreKey::to_key(&record.name, &record.kind), &[
+                StoreKey::to_key(&zone_name, &record.name, &record.kind), &[
                     (KEY_TYPE, record.kind.to_str()),
                     (KEY_NAME, record.name.to_str()),
                     (KEY_TTL, &record.ttl.to_string()),
@@ -162,11 +165,12 @@ impl Store {
 
     pub fn remove(
         &self,
+        zone_name: ZoneName,
         record_name: RecordName,
         record_type: RecordType,
     ) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            client.del(StoreKey::to_key(&record_name, &record_type)).map_err(|err| {
+            client.del(StoreKey::to_key(&zone_name, &record_name, &record_type)).map_err(|err| {
                 StoreError::Connector(err)
             })
         })

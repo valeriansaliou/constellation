@@ -5,13 +5,24 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use std::net::SocketAddr;
+use std::collections::BTreeMap;
+
+use super::config::ConfigDNSZone;
 
 pub fn server_log_level() -> String {
     "warn".to_string()
 }
 
-pub fn dns_inet() -> SocketAddr {
-    "[::1]:53".parse().unwrap()
+pub fn dns_inets() -> Vec<SocketAddr> {
+    vec!["0.0.0.0:53".parse().unwrap(), "[::]:53".parse().unwrap()]
+}
+
+pub fn dns_tcp_timeout() -> u64 {
+    2
+}
+
+pub fn dns_zone() -> BTreeMap<String, ConfigDNSZone> {
+    BTreeMap::new()
 }
 
 pub fn http_inet() -> SocketAddr {

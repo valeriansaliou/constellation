@@ -5,6 +5,7 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use std::net::SocketAddr;
+use std::collections::BTreeMap;
 
 use super::defaults;
 
@@ -24,9 +25,18 @@ pub struct ConfigServer {
 
 #[derive(Deserialize)]
 pub struct ConfigDNS {
-    #[serde(default = "defaults::dns_inet")]
-    pub inet: SocketAddr,
+    #[serde(default = "defaults::dns_inets")]
+    pub inets: Vec<SocketAddr>,
+
+    #[serde(default = "defaults::dns_tcp_timeout")]
+    pub tcp_timeout: u64,
+
+    #[serde(default = "defaults::dns_zone")]
+    pub zone: BTreeMap<String, ConfigDNSZone>,
 }
+
+#[derive(Deserialize)]
+pub struct ConfigDNSZone {}
 
 #[derive(Deserialize)]
 pub struct ConfigHTTP {
@@ -63,4 +73,10 @@ pub struct ConfigRedis {
 
     #[serde(default = "defaults::redis_connection_timeout_seconds")]
     pub connection_timeout_seconds: u64,
+}
+
+impl ConfigDNS {
+    pub fn zone_exists(&self, name: &str) -> bool {
+        self.zone.contains_key(name)
+    }
 }

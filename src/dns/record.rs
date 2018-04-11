@@ -12,7 +12,7 @@ use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde::de::{Visitor, Unexpected, Error as DeserializeError};
 
 lazy_static! {
-    static ref RECORD_NAME_REGEX: Regex = Regex::new(
+    pub static ref DOMAIN_NAME_REGEX: Regex = Regex::new(
         r"^(([^\\/:@&_\*]+)\.)[^\\/:@&_\*\-\.]{2,63}$"
     ).unwrap();
 }
@@ -171,7 +171,7 @@ impl RecordName {
     }
 
     pub fn validate(value: &str) -> bool {
-        RECORD_NAME_REGEX.is_match(value)
+        DOMAIN_NAME_REGEX.is_match(value)
     }
 }
 

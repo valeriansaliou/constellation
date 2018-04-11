@@ -9,6 +9,7 @@ use rocket::http::Status;
 use rocket_contrib::Json;
 
 use super::record_guard::RecordGuard;
+use dns::zone::ZoneName;
 use dns::record::{RecordType, RecordName};
 use store::store::StoreRecord;
 
@@ -30,25 +31,29 @@ pub struct RecordGetResponse {
     value: RecordName,
 }
 
-#[head("/record/<record_name>/<record_type>")]
-fn head_record(
+#[head("/zone/<zone_name>/record/<record_name>/<record_type>")]
+fn head_zone_record(
     _auth: RecordGuard,
+    zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
 ) -> Result<(), Failure> {
-    APP_STORE.check(record_name, record_type).or(Err(Failure(
-        Status::NotFound,
-    )))
+    APP_STORE.check(zone_name, record_name, record_type).or(
+        Err(
+            Failure(Status::NotFound),
+        ),
+    )
 }
 
-#[get("/record/<record_name>/<record_type>")]
-fn get_record(
+#[get("/zone/<zone_name>/record/<record_name>/<record_type>")]
+fn get_zone_record(
     _auth: RecordGuard,
+    zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
 ) -> Result<Json<RecordGetResponse>, Failure> {
     APP_STORE
-        .get(record_name, record_type)
+        .get(zone_name, record_name, record_type)
         .map(|record| {
             Json(RecordGetResponse {
                 _type: record.kind,
@@ -60,30 +65,38 @@ fn get_record(
         .or(Err(Failure(Status::NotFound)))
 }
 
-#[put("/record/<record_name>/<record_type>", data = "<data>", format = "application/json")]
-fn put_record(
+#[put("/zone/<zone_name>/record/<record_name>/<record_type>", data = "<data>",
+      format = "application/json")]
+fn put_zone_record(
     _auth: RecordGuard,
+    zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
     data: Json<RecordData>,
 ) -> Result<(), Failure> {
     APP_STORE
-        .set(StoreRecord {
-            kind: record_type,
-            name: record_name,
-            ttl: data.ttl,
-            value: data.value.to_owned(),
-        })
+        .set(
+            zone_name,
+            StoreRecord {
+                kind: record_type,
+                name: record_name,
+                ttl: data.ttl,
+                value: data.value.to_owned(),
+            },
+        )
         .or(Err(Failure(Status::InternalServerError)))
 }
 
-#[delete("/record/<record_name>/<record_type>")]
-fn delete_record(
+#[delete("/zone/<zone_name>/record/<record_name>/<record_type>")]
+fn delete_zone_record(
     _auth: RecordGuard,
+    zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
 ) -> Result<(), Failure> {
-    APP_STORE.remove(record_name, record_type).or(Err(Failure(
-        Status::InternalServerError,
-    )))
+    APP_STORE.remove(zone_name, record_name, record_type).or(
+        Err(
+            Failure(Status::InternalServerError),
+        ),
+    )
 }

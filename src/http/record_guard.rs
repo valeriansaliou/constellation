@@ -8,6 +8,7 @@ use base64;
 use rocket::Outcome;
 use rocket::http::Status;
 use rocket::request::{self, Request, FromRequest};
+
 use APP_CONF;
 
 pub struct RecordGuard;

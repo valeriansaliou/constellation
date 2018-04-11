@@ -24,6 +24,7 @@ extern crate redis;
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate regex;
+extern crate trust_dns_server;
 extern crate farmhash;
 
 mod config;
@@ -74,7 +75,7 @@ macro_rules! gen_spawn_managed {
                 log::error!("managed thread crashed ({}), setting it up again", $name);
 
                 // Prevents thread start loop floods
-                thread::sleep(Duration::from_secs(1));
+                thread::sleep(Duration::from_secs(2));
 
                 $method();
             }

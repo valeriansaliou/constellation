@@ -18,7 +18,7 @@ use APP_STORE;
 #[derive(Deserialize)]
 pub struct RecordData {
     ttl: u32,
-    value: RecordName,
+    values: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -28,7 +28,7 @@ pub struct RecordGetResponse {
 
     name: RecordName,
     ttl: u32,
-    value: RecordName,
+    values: Vec<String>,
 }
 
 #[head("/zone/<zone_name>/record/<record_name>/<record_type>")]
@@ -59,7 +59,7 @@ fn get_zone_record(
                 _type: record.kind,
                 name: record.name,
                 ttl: record.ttl,
-                value: record.value,
+                values: record.values,
             })
         })
         .or(Err(Failure(Status::NotFound)))
@@ -81,7 +81,7 @@ fn put_zone_record(
                 kind: record_type,
                 name: record_name,
                 ttl: data.ttl,
-                value: data.value.to_owned(),
+                values: data.values.to_owned(),
             },
         )
         .or(Err(Failure(Status::InternalServerError)))

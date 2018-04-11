@@ -9,6 +9,7 @@ use std::time::Duration;
 use r2d2::Pool;
 use r2d2_redis::RedisConnectionManager;
 use redis::{RedisError, Commands};
+use serde_json::{self, Error as SerdeJSONError};
 
 use super::key::StoreKey;
 use dns::zone::ZoneName;
@@ -31,11 +32,12 @@ pub struct StoreRecord {
     pub kind: RecordType,
     pub name: RecordName,
     pub ttl: u32,
-    pub value: RecordName,
+    pub values: Vec<String>,
 }
 
 pub enum StoreError {
     Corrupted,
+    Encoding(SerdeJSONError),
     Connector(RedisError),
     NotFound,
     Disconnected,
@@ -128,16 +130,16 @@ impl Store {
                 (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_VALUE),
             ) {
                 Ok(values) => {
-                    if let (Some(kind_value), Some(name_value), Some(value_value)) = (
+                    if let (Some(kind_value), Some(name_value), Ok(value_value)) = (
                         RecordType::from_str(&values.0),
                         RecordName::from_str(&values.1),
-                        RecordName::from_str(&values.3)
+                        serde_json::from_str(&values.3)
                     ) {
                         Ok(StoreRecord {
                             kind: kind_value,
                             name: name_value,
                             ttl: values.2,
-                            value: value_value,
+                            values: value_value,
                         })
                     } else {
                         Err(StoreError::Corrupted)
@@ -150,16 +152,21 @@ impl Store {
 
     pub fn set(&self, zone_name: ZoneName, record: StoreRecord) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            client.hset_multiple(
-                StoreKey::to_key(&zone_name, &record.name, &record.kind), &[
-                    (KEY_TYPE, record.kind.to_str()),
-                    (KEY_NAME, record.name.to_str()),
-                    (KEY_TTL, &record.ttl.to_string()),
-                    (KEY_VALUE, record.value.to_str()),
-                ]
-            ).map_err(|err| {
-                StoreError::Connector(err)
-            })
+            match serde_json::to_string(&record.values) {
+                Ok(values) => {
+                    client.hset_multiple(
+                        StoreKey::to_key(&zone_name, &record.name, &record.kind), &[
+                            (KEY_TYPE, record.kind.to_str()),
+                            (KEY_NAME, record.name.to_str()),
+                            (KEY_TTL, &record.ttl.to_string()),
+                            (KEY_VALUE, &values),
+                        ]
+                    ).map_err(|err| {
+                        StoreError::Connector(err)
+                    })
+                },
+                Err(err) => Err(StoreError::Encoding(err))
+            }
         })
     }
 

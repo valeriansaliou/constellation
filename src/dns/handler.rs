@@ -101,7 +101,7 @@ impl DNSHandler {
                     let ns_records = authority.ns(false, supported_algorithms);
 
                     if ns_records.is_empty() {
-                        log::warn!("there are no NS records for: {:?}", authority.origin());
+                        log::warn!("no ns records for: {:?}", authority.origin());
                     } else {
                         response.add_name_servers(ns_records.iter().cloned());
                     }
@@ -109,17 +109,13 @@ impl DNSHandler {
                     match records {
                         AuthLookup::NoName => response.set_response_code(ResponseCode::NXDomain),
                         AuthLookup::NameExists => response.set_response_code(ResponseCode::NoError),
-                        AuthLookup::Records(..) => {
-                            panic!(
-                                "programming error, should have return NoError with records above"
-                            )
-                        }
+                        AuthLookup::Records(..) => panic!("error, should return noerror"),
                     };
 
                     let soa_records = authority.soa_secure(false, supported_algorithms);
 
                     if soa_records.is_empty() {
-                        log::warn!("there is no SOA record for: {:?}", authority.origin());
+                        log::warn!("no soa record for: {:?}", authority.origin());
                     } else {
                         response.add_name_servers(soa_records.iter().cloned());
                     }
@@ -139,6 +135,7 @@ impl DNSHandler {
             return authority;
         } else {
             let name = name.base_name();
+
             if !name.is_root() {
                 return self.find_auth_recurse(&name);
             }

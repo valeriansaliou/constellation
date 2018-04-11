@@ -88,7 +88,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[[dns.zone.'{name}']]**
 
-> Specify your zone name eg. as `[[dns.zone.'crisp.email']]` for zone base `crisp.email`.
+> Specify your zone name eg. as: `[[dns.zone.'crisp.email']]` for zone base: `crisp.email`.
 
 **[http]**
 

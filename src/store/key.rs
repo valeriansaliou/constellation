@@ -36,11 +36,7 @@ impl StoreKey {
         key
     }
 
-    fn hash(
-        zone_name: &ZoneName,
-        record_name: &RecordName,
-        record_type: &RecordType,
-    ) -> String {
+    fn hash(zone_name: &ZoneName, record_name: &RecordName, record_type: &RecordType) -> String {
         log::debug!(
             "hashing record: {} on type: {} for zone: {}",
             record_name.to_str(),

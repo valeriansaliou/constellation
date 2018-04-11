@@ -77,6 +77,14 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 * `inets` (type: _array[string]_, allowed: IPs + ports, default: `[0.0.0.0:53, [::]:53]`) — Hosts and UDP/TCP ports the DNS server should listen on
 * `tcp_timeout` (type: _integer_, allowed: seconds, default: `2`) — Timeout of DNS over TCP connections
+* `nameservers` (type: _array[string]_, allowed: domain names, default: no default) — Name server domains for all served domains
+* `soa_master` (type: _string_, allowed: domain names, default: no default) — SOA master domain for all zones served by this name server (name of primary NS server)
+* `soa_responsible` (type: _string_, allowed: email addresses as domain names, default: no default) — SOA responsible email for all zones served by this name server
+* `soa_refresh` (type: _integer_, allowed: seconds, default: `10000`) — SOA record refresh value
+* `soa_retry` (type: _integer_, allowed: seconds, default: `2400`) — SOA record retry value
+* `soa_expire` (type: _integer_, allowed: seconds, default: `604800`) — SOA record expire value
+* `soa_ttl` (type: _integer_, allowed: seconds, default: `3600`) — SOA record TTL value
+* `record_ttl` (type: _integer_, allowed: seconds, default: `3600`) — DNS records TTL value
 
 **[[dns.zone.'{name}']]**
 

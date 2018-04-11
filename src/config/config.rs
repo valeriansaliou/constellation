@@ -31,6 +31,26 @@ pub struct ConfigDNS {
     #[serde(default = "defaults::dns_tcp_timeout")]
     pub tcp_timeout: u64,
 
+    pub nameservers: Vec<String>,
+
+    pub soa_master: String,
+    pub soa_responsible: String,
+
+    #[serde(default = "defaults::dns_soa_refresh")]
+    pub soa_refresh: i32,
+
+    #[serde(default = "defaults::dns_soa_retry")]
+    pub soa_retry: i32,
+
+    #[serde(default = "defaults::dns_soa_expire")]
+    pub soa_expire: i32,
+
+    #[serde(default = "defaults::dns_soa_ttl")]
+    pub soa_ttl: u32,
+
+    #[serde(default = "defaults::dns_record_ttl")]
+    pub record_ttl: u32,
+
     #[serde(default = "defaults::dns_zone")]
     pub zone: BTreeMap<String, ConfigDNSZone>,
 }

@@ -25,6 +25,7 @@ extern crate redis;
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate regex;
+extern crate trust_dns;
 extern crate trust_dns_server;
 extern crate farmhash;
 

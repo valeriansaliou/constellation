@@ -21,6 +21,26 @@ pub fn dns_tcp_timeout() -> u64 {
     2
 }
 
+pub fn dns_soa_refresh() -> i32 {
+    10000
+}
+
+pub fn dns_soa_retry() -> i32 {
+    2400
+}
+
+pub fn dns_soa_expire() -> i32 {
+    604800
+}
+
+pub fn dns_soa_ttl() -> u32 {
+    3600
+}
+
+pub fn dns_record_ttl() -> u32 {
+    3600
+}
+
 pub fn dns_zone() -> BTreeMap<String, ConfigDNSZone> {
     BTreeMap::new()
 }

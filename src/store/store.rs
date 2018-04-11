@@ -31,7 +31,7 @@ pub struct Store {
 pub struct StoreRecord {
     pub kind: RecordType,
     pub name: RecordName,
-    pub ttl: u32,
+    pub ttl: Option<u32>,
     pub values: Vec<String>,
 }
 
@@ -135,10 +135,16 @@ impl Store {
                         RecordName::from_str(&values.1),
                         serde_json::from_str(&values.3)
                     ) {
+                        let ttl = if values.2 > 0 {
+                            Some(values.2)
+                        } else {
+                            None
+                        };
+
                         Ok(StoreRecord {
                             kind: kind_value,
                             name: name_value,
-                            ttl: values.2,
+                            ttl: ttl,
                             values: value_value,
                         })
                     } else {
@@ -158,7 +164,7 @@ impl Store {
                         StoreKey::to_key(&zone_name, &record.name, &record.kind), &[
                             (KEY_TYPE, record.kind.to_str()),
                             (KEY_NAME, record.name.to_str()),
-                            (KEY_TTL, &record.ttl.to_string()),
+                            (KEY_TTL, &record.ttl.unwrap_or(0).to_string()),
                             (KEY_VALUE, &values),
                         ]
                     ).map_err(|err| {

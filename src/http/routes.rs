@@ -17,7 +17,7 @@ use APP_STORE;
 
 #[derive(Deserialize)]
 pub struct RecordData {
-    ttl: u32,
+    ttl: Option<u32>,
     values: Vec<String>,
 }
 
@@ -27,7 +27,7 @@ pub struct RecordGetResponse {
     _type: RecordType,
 
     name: RecordName,
-    ttl: u32,
+    ttl: Option<u32>,
     values: Vec<String>,
 }
 

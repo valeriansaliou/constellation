@@ -7,6 +7,8 @@
 #[macro_use]
 mod macros;
 
+mod handler;
+
 pub mod listen;
 pub mod record;
 pub mod zone;

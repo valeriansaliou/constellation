@@ -88,6 +88,8 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[[dns.zone.'{name}']]**
 
+> Specify your zone name eg. as `[[dns.zone.'crisp.email']]` for zone base `crisp.email`.
+
 **[http]**
 
 * `inet` (type: _string_, allowed: IPv4 / IPv6 + port, default: `[::1]:8080`) — Host and TCP port the HTTP API server should listen on

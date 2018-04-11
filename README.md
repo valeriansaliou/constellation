@@ -113,6 +113,102 @@ Constellation can be run as such:
 
 `./constellation -c /path/to/config.cfg`
 
+### DNS records management (HTTP REST API)
+
+To check, read, insert, modify and delete DNS records, you need to use the Constellation HTTP REST API, that listens on the configured `http.inet` interface from your `config.cfg` file.
+
+#### API overview
+
+**Endpoint URL:**
+
+`HTTP http://constellation.local:8080/zone/<zone_name>/record/<record_name>/<record_type>/`
+
+Where:
+
+* `zone_name`: The zone name (ie. base domain), eg. `crisp.email`
+* `record_name`: The record name to read or alter (ie. sub-domain or base domain), eg. `inbound.@` for the `inbound.crisp.email` FQDN, or `@` for the `crisp.email` FQDN
+* `record_type`: The DNS record type to read or alter for the `record_name`; either: `a`, `aaaa`, `cname`, `mx`, `txt` ([open an issue](https://github.com/valeriansaliou/constellation/issues) if you need support for another record type)
+
+**Request headers:**
+
+* Add an `Authorization` header with a `Basic` authentication where the password is your configured `http.record_token`.
+
+#### API routes
+
+##### Check if a DNS record exists
+
+`HTTP HEAD http://constellation.local:8080/zone/<zone_name>/record/<record_name>/<record_type>/`
+
+**Example request:**
+
+```http
+HEAD /zone/crisp.email/record/@/mx HTTP/1.1
+Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
+```
+
+**Example response:**
+
+```http
+HTTP/1.1 200 OK
+```
+
+##### Get a DNS record
+
+`HTTP GET http://constellation.local:8080/zone/<zone_name>/record/<record_name>/<record_type>/`
+
+**Example request:**
+
+```http
+GET /zone/crisp.email/record/@/mx HTTP/1.1
+Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
+```
+
+**Example response:**
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"type":"mx","name":"@","ttl":600,"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"]}
+```
+
+##### Write a DNS record (or overwrite existing)
+
+`HTTP PUT http://constellation.local:8080/zone/<zone_name>/record/<record_name>/<record_type>/`
+
+**Example request:**
+
+```http
+PUT /zone/crisp.email/record/@/mx HTTP/1.1
+Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
+Content-Type: application/json; charset=utf-8
+
+{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"ttl":600}
+```
+
+**Example response:**
+
+```http
+HTTP/1.1 200 OK
+```
+
+##### Delete a DNS record
+
+`HTTP DELETE http://constellation.local:8080/zone/<zone_name>/record/<record_name>/<record_type>/`
+
+**Example request:**
+
+```http
+DELETE /zone/crisp.email/record/@/mx HTTP/1.1
+Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
+```
+
+**Example response:**
+
+```http
+HTTP/1.1 200 OK
+```
+
 ## :fire: Report A Vulnerability
 
 If you find a vulnerability in Constellation, you are more than welcome to report it directly to [@valeriansaliou](https://github.com/valeriansaliou) by sending an encrypted email to [valerian@valeriansaliou.name](mailto:valerian@valeriansaliou.name). Do not report vulnerabilities in public GitHub issues, as they may be exploited by malicious people to target production servers running an unpatched Constellation instance.

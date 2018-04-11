@@ -20,7 +20,7 @@ We consider here the packaging flow of Constellation version `1.0.0`, for target
     1. `mkdir constellation`
     2. `mv target/release/constellation constellation/`
     3. `strip constellation/constellation`
-    4. `cp -r config.cfg res constellation/`
+    4. `cp -r config.cfg constellation/`
     5. `tar -czvf v1.0.0-i686-debian9.tar.gz constellation`
     6. `rm -r constellation/`
     7. Publish the archive on the [releases](https://github.com/valeriansaliou/constellation/releases) page on GitHub

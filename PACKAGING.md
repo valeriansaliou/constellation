@@ -14,7 +14,7 @@ We consider here the packaging flow of Constellation version `1.0.0`, for target
     2. `curl https://sh.rustup.rs -sSf | sh` (install the `nightly` toolchain)
     3. `git clone https://github.com/valeriansaliou/constellation.git`
     4. `cd constellation/`
-    5. `cargo build`
+    5. `cargo build --release`
 
 3. **How to package built binary and release it on GitHub:**
     1. `mkdir constellation`

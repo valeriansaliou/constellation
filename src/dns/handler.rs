@@ -15,6 +15,7 @@ use trust_dns_server::authority::{AuthLookup, Authority};
 
 use dns::zone::ZoneName;
 use dns::record::{RecordName, RecordType};
+use store::store::StoreRecord;
 use APP_CONF;
 use APP_STORE;
 
@@ -175,11 +176,7 @@ impl DNSHandler {
         None
     }
 
-    fn records_from_store<'s>(
-        &'s self,
-        authority: &Authority,
-        query: &Query,
-    ) -> Option<Vec<Record>> {
+    fn records_from_store(&self, authority: &Authority, query: &Query) -> Option<Vec<Record>> {
         let zone_name = ZoneName::from_trust(&authority.origin());
         let record_name = RecordName::from_trust(&authority.origin(), &query.name());
         let record_type = RecordType::from_trust(&query.query_type());
@@ -194,41 +191,72 @@ impl DNSHandler {
 
         match (zone_name, record_name, record_type) {
             (Some(zone_name), Some(record_name), Some(record_type)) => {
-                if let Ok(record) = APP_STORE.get(zone_name, record_name, record_type) {
+                let mut records = Vec::new();
+
+                if let Ok(record) = APP_STORE.get(&zone_name, &record_name, &record_type) {
                     log::debug!(
                         "found record in store for query: {} with result: {:?}",
                         query,
                         record
                     );
 
-                    let mut records = Vec::new();
+                    // Append record direct results
+                    Self::parse_from_records(query, &record, &mut records);
+                }
 
-                    for value in record.values.iter() {
-                        if let Ok(value_data) = value.to_trust(&record.kind) {
-                            records.push(Record::from_rdata(
-                                query.name().to_owned(),
-                                record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
-                                query.query_type(),
-                                value_data,
-                            ));
-                        } else {
-                            log::warn!(
-                                "could not convert to dns format record type: {} with value: {:?}",
-                                record.kind.to_str(),
-                                value
-                            );
-                        }
-                    }
+                // Look for a CNAME result?
+                if record_type != RecordType::CNAME {
+                    if let Ok(record_cname) = APP_STORE.get(
+                        &zone_name,
+                        &record_name,
+                        &RecordType::CNAME,
+                    )
+                    {
+                        log::debug!(
+                            "found cname hint record in store for query: {} with result: {:?}",
+                            query,
+                            record_cname
+                        );
 
-                    if !records.is_empty() {
-                        return Some(records);
+                        // Append CNAME hint results
+                        Self::parse_from_records(query, &record_cname, &mut records);
                     }
+                }
+
+                if !records.is_empty() {
+                    return Some(records);
                 }
             }
             _ => {}
         };
 
         None
+    }
+
+    fn parse_from_records(query: &Query, record: &StoreRecord, records: &mut Vec<Record>) {
+        if let Ok(type_data) = record.kind.to_trust() {
+            for value in record.values.iter() {
+                if let Ok(value_data) = value.to_trust(&record.kind) {
+                    records.push(Record::from_rdata(
+                        query.name().to_owned(),
+                        record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
+                        type_data,
+                        value_data,
+                    ));
+                } else {
+                    log::warn!(
+                        "could not convert to dns record type: {} with value: {:?}",
+                        record.kind.to_str(),
+                        value
+                    );
+                }
+            }
+        } else {
+            log::warn!(
+                "could not convert to dns record type: {}",
+                record.kind.to_str()
+            );
+        }
     }
 
     fn serve_response_records(

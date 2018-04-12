@@ -25,7 +25,7 @@ static DATA_TXT_CHUNK_MAXIMUM: usize = 255;
 serde_string_impls!(RecordType);
 serde_string_impls!(RecordName);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum RecordType {
     A,
     AAAA,
@@ -73,6 +73,16 @@ impl RecordType {
             RecordType::CNAME => "cname",
             RecordType::MX => "mx",
             RecordType::TXT => "txt",
+        }
+    }
+
+    pub fn to_trust(&self) -> Result<TrustRecordType, ()> {
+        match *self {
+            RecordType::A => Ok(TrustRecordType::A),
+            RecordType::AAAA => Ok(TrustRecordType::AAAA),
+            RecordType::CNAME => Ok(TrustRecordType::CNAME),
+            RecordType::MX => Ok(TrustRecordType::MX),
+            RecordType::TXT => Ok(TrustRecordType::TXT),
         }
     }
 }
@@ -123,7 +133,7 @@ impl RecordValue {
             RecordType::A => {
                 // Parse A into actual IPv4
                 self.parse().map(|value| TrustRData::A(value)).or(Err(()))
-            },
+            }
             RecordType::AAAA => {
                 // Parse AAAA into actual IPv6
                 self.parse().map(|value| TrustRData::AAAA(value)).or(
@@ -143,10 +153,12 @@ impl RecordValue {
                 let priority_str = mx_parts.next().unwrap_or("0");
                 let exchange_str = mx_parts.next().unwrap_or("");
 
-                if let (Ok(priority), Ok(exchange)) = (
-                    priority_str.parse::<u16>(),
-                    TrustName::parse(exchange_str, Some(&TrustName::new()))
-                ) {
+                if let (Ok(priority), Ok(exchange)) =
+                    (
+                        priority_str.parse::<u16>(),
+                        TrustName::parse(exchange_str, Some(&TrustName::new())),
+                    )
+                {
                     Ok(TrustRData::MX(MX::new(priority, exchange)))
                 } else {
                     Err(())
@@ -158,7 +170,8 @@ impl RecordValue {
                 let mut last_value = self.0.as_str();
 
                 while !last_value.is_empty() {
-                    let (chunk_value, rest_value) = last_value.split_at(cmp::min(DATA_TXT_CHUNK_MAXIMUM, last_value.len()));
+                    let (chunk_value, rest_value) =
+                        last_value.split_at(cmp::min(DATA_TXT_CHUNK_MAXIMUM, last_value.len()));
 
                     txt_splits.push(chunk_value.to_string());
 

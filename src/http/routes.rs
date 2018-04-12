@@ -38,7 +38,7 @@ fn head_zone_record(
     record_name: RecordName,
     record_type: RecordType,
 ) -> Result<(), Failure> {
-    APP_STORE.check(zone_name, record_name, record_type).or(
+    APP_STORE.check(&zone_name, &record_name, &record_type).or(
         Err(
             Failure(Status::NotFound),
         ),
@@ -53,7 +53,7 @@ fn get_zone_record(
     record_type: RecordType,
 ) -> Result<Json<RecordGetResponse>, Failure> {
     APP_STORE
-        .get(zone_name, record_name, record_type)
+        .get(&zone_name, &record_name, &record_type)
         .map(|record| {
             Json(RecordGetResponse {
                 _type: record.kind,
@@ -76,7 +76,7 @@ fn put_zone_record(
 ) -> Result<(), Failure> {
     APP_STORE
         .set(
-            zone_name,
+            &zone_name,
             StoreRecord {
                 kind: record_type,
                 name: record_name,
@@ -94,9 +94,7 @@ fn delete_zone_record(
     record_name: RecordName,
     record_type: RecordType,
 ) -> Result<(), Failure> {
-    APP_STORE.remove(zone_name, record_name, record_type).or(
-        Err(
-            Failure(Status::InternalServerError),
-        ),
-    )
+    APP_STORE
+        .remove(&zone_name, &record_name, &record_type)
+        .or(Err(Failure(Status::InternalServerError)))
 }

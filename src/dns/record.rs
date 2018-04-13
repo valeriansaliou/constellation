@@ -17,7 +17,7 @@ use trust_dns::rr::rdata::mx::MX;
 use trust_dns::rr::rdata::txt::TXT;
 
 lazy_static! {
-    static ref RECORD_NAME_REGEX: Regex = Regex::new(r"^(([^\\/:@&\*]+)\.)?@$").unwrap();
+    static ref RECORD_NAME_REGEX: Regex = Regex::new(r"^(\*\.)?(([^\\/:@&\*]+)\.)?@$").unwrap();
 }
 
 static DATA_TXT_CHUNK_MAXIMUM: usize = 255;

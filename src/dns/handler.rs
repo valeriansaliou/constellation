@@ -177,20 +177,24 @@ impl DNSHandler {
     }
 
     fn records_from_store(authority: &Authority, query: &Query) -> Option<Vec<Record>> {
+        let (query_name, query_type) = (query.name(), query.query_type());
+
         // Attempt with requested domain
-        let mut records = Self::records_from_store_attempt(
-            authority, &query.name(), &query.query_type()
-        );
+        let mut records =
+            Self::records_from_store_attempt(authority, &query_name, &query_name, &query_type);
 
         // Attempt with wildcard domain
         if records.is_none() {
-            if let Some(base_name) = query.name().to_string().splitn(2, ".").nth(1) {
+            if let Some(base_name) = query_name.to_string().splitn(2, ".").nth(1) {
                 let wildcard_name_string = format!("*.{}", base_name);
 
                 if let Ok(wildcard_name) = Name::parse(&wildcard_name_string, Some(&Name::new())) {
-                    if &wildcard_name != query.name() {
+                    if &wildcard_name != query_name {
                         records = Self::records_from_store_attempt(
-                            authority, &wildcard_name, &query.query_type()
+                            authority,
+                            &query_name,
+                            &wildcard_name,
+                            &query_type,
                         )
                     }
                 }
@@ -202,16 +206,17 @@ impl DNSHandler {
 
     fn records_from_store_attempt(
         authority: &Authority,
-        query_name: &Name,
-        query_type: &TrustRecordType
+        query_name_client: &Name,
+        query_name_effective: &Name,
+        query_type: &TrustRecordType,
     ) -> Option<Vec<Record>> {
         let zone_name = ZoneName::from_trust(&authority.origin());
-        let record_name = RecordName::from_trust(&authority.origin(), query_name);
+        let record_name = RecordName::from_trust(&authority.origin(), query_name_effective);
         let record_type = RecordType::from_trust(query_type);
 
         log::debug!(
             "lookup record in store for query: {} {} on zone: {:?}, record: {:?}, and type: {:?}",
-            query_name,
+            query_name_effective,
             query_type,
             zone_name,
             record_name,
@@ -225,13 +230,13 @@ impl DNSHandler {
                 if let Ok(record) = APP_STORE.get(&zone_name, &record_name, &record_type) {
                     log::debug!(
                         "found record in store for query: {} {} with result: {:?}",
-                        query_name,
+                        query_name_effective,
                         query_type,
                         record
                     );
 
                     // Append record direct results
-                    Self::parse_from_records(query_name, &record, &mut records);
+                    Self::parse_from_records(query_name_client, &record, &mut records);
                 }
 
                 // Look for a CNAME result?
@@ -244,13 +249,13 @@ impl DNSHandler {
                     {
                         log::debug!(
                             "found cname hint record in store for query: {} {} with result: {:?}",
-                            query_name,
+                            query_name_effective,
                             query_type,
                             record_cname
                         );
 
                         // Append CNAME hint results
-                        Self::parse_from_records(query_name, &record_cname, &mut records);
+                        Self::parse_from_records(query_name_client, &record_cname, &mut records);
                     }
                 }
 
@@ -264,12 +269,16 @@ impl DNSHandler {
         None
     }
 
-    fn parse_from_records(query_name: &Name, record: &StoreRecord, records: &mut Vec<Record>) {
+    fn parse_from_records(
+        query_name_client: &Name,
+        record: &StoreRecord,
+        records: &mut Vec<Record>,
+    ) {
         if let Ok(type_data) = record.kind.to_trust() {
             for value in record.values.iter() {
                 if let Ok(value_data) = value.to_trust(&record.kind) {
                     records.push(Record::from_rdata(
-                        query_name.to_owned(),
+                        query_name_client.to_owned(),
                         record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
                         type_data,
                         value_data,

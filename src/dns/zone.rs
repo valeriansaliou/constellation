@@ -28,14 +28,14 @@ pub struct ZoneName(String);
 impl ZoneName {
     pub fn from_str(value: &str) -> Option<ZoneName> {
         if ZONE_NAME_REGEX.is_match(value) && APP_CONF.dns.zone_exists(value) {
-            Some(ZoneName(value.to_string()))
+            Some(ZoneName(value.to_string().to_lowercase()))
         } else {
             None
         }
     }
 
     pub fn from_trust(query_name: &TrustName) -> Option<ZoneName> {
-        let zone_string = query_name.to_string();
+        let zone_string = query_name.to_string().to_lowercase();
         let mut zone_len = zone_string.len();
 
         if zone_len > 0 {

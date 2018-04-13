@@ -90,19 +90,19 @@ impl RecordType {
 impl RecordName {
     pub fn from_str(value: &str) -> Option<RecordName> {
         if Self::validate(value) {
-            Some(RecordName(value.to_string()))
+            Some(RecordName(value.to_string().to_lowercase()))
         } else {
             None
         }
     }
 
     pub fn from_trust(zone_name: &TrustName, query_name: &TrustName) -> Option<RecordName> {
-        let mut query_string = query_name.to_string();
+        let mut query_string = query_name.to_string().to_lowercase();
         let query_len = query_string.len();
 
         // Nuke authority section from domain?
         if query_len > 0 {
-            let zone_string = zone_name.to_string();
+            let zone_string = zone_name.to_string().to_lowercase();
             let zone_len = zone_string.len();
 
             if query_string.get((query_len - 1)..query_len) == Some(".") &&

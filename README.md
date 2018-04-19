@@ -26,16 +26,9 @@ _👋 You use Constellation and you want to be listed there? [Contact me](https:
 
 ## Features
 
-### Current features
-
 * **Pluggable authoritative DNS server**, comes handy if you need to generate eg. email sub-domains for your users (with DKIM, DMARC and SPF records).
 * **HTTP REST API** to check, read, insert, modify and delete DNS records on the fly.
 * **Persistence layer** in Redis. This means you can run multiple Constellations hitting against the same database on the network. You can even shard Redis if you need fault tolerance on the DNS data store.
-
-### Planned features
-
-* **DNSSEC support**.
-* **Geo-DNS routing support**, enabling Constellation to act as a geographic load balancer.
 
 ## How to use it?
 

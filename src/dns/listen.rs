@@ -4,7 +4,6 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log;
 use std::time::Duration;
 use std::collections::BTreeMap;
 use std::net::{TcpListener, UdpSocket};
@@ -44,7 +43,7 @@ impl DNSListen {
         for (zone_name, _) in &APP_CONF.dns.zone {
             match Self::map_authority(&zone_name) {
                 Ok((name, authority)) => handler.upsert(name, authority),
-                Err(_) => log::error!("could not load zone {}", zone_name),
+                Err(_) => error!("could not load zone {}", zone_name),
             }
         }
 
@@ -56,20 +55,20 @@ impl DNSListen {
             let tcp_listener =
                 TcpListener::bind(inet).expect(&format!("tcp bind failed: {}", inet));
 
-            log::info!("listening for udp on {:?}", udp_socket);
+            info!("listening for udp on {:?}", udp_socket);
             server.register_socket(udp_socket);
 
-            log::info!("listening for tcp on {:?}", tcp_listener);
+            info!("listening for tcp on {:?}", tcp_listener);
             server
                 .register_listener(tcp_listener, Duration::from_secs(APP_CONF.dns.tcp_timeout))
                 .expect("could not register tcp listener");
         }
 
         // Listen for connections
-        log::info!("listening for dns connections");
+        info!("listening for dns connections");
 
         if let Err(err) = server.listen() {
-            log::error!("failed to listen on dns: {}", err);
+            error!("failed to listen on dns: {}", err);
         }
     }
 

@@ -41,7 +41,7 @@ impl HTTPListen {
                     routes::delete_zone_record,
                 ],
             )
-            .catch(errors![
+            .catch(catchers![
                 catchers::bad_request,
                 catchers::unauthorized,
                 catchers::forbidden,

@@ -10,7 +10,7 @@ use rocket_contrib::Json;
 
 use super::record_guard::RecordGuard;
 use dns::zone::ZoneName;
-use dns::record::{RecordType, RecordName, RecordValues};
+use dns::record::{RecordType, RecordName, RecordRegions, RecordValues};
 use store::store::StoreRecord;
 
 use APP_STORE;
@@ -18,6 +18,7 @@ use APP_STORE;
 #[derive(Deserialize)]
 pub struct RecordData {
     ttl: Option<u32>,
+    regions: Option<RecordRegions>,
     values: RecordValues,
 }
 
@@ -28,6 +29,7 @@ pub struct RecordGetResponse {
 
     name: RecordName,
     ttl: Option<u32>,
+    regions: Option<RecordRegions>,
     values: RecordValues,
 }
 
@@ -59,6 +61,7 @@ fn get_zone_record(
                 _type: record.kind,
                 name: record.name,
                 ttl: record.ttl,
+                regions: record.regions,
                 values: record.values,
             })
         })
@@ -81,6 +84,7 @@ fn put_zone_record(
                 kind: record_type,
                 name: record_name,
                 ttl: data.ttl,
+                regions: data.regions.to_owned(),
                 values: data.values.to_owned(),
             },
         )

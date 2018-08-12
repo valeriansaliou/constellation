@@ -43,6 +43,16 @@ pub struct RecordValue(String);
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RecordValues(Vec<RecordValue>);
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RecordRegions {
+    pub EU: Option<RecordValues>,
+    pub NAM: Option<RecordValues>,
+    pub SAM: Option<RecordValues>,
+    pub OC: Option<RecordValues>,
+    pub AS: Option<RecordValues>,
+    pub AF: Option<RecordValues>,
+}
+
 impl RecordType {
     pub fn from_str(value: &str) -> Option<RecordType> {
         match value {

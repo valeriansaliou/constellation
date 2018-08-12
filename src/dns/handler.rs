@@ -4,9 +4,9 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log;
 use std::collections::HashMap;
 use std::sync::RwLock;
+use std::net::IpAddr;
 use trust_dns::op::{Message, MessageType, OpCode, Query, ResponseCode};
 use trust_dns::rr::{Name, Record, RecordType as TrustRecordType};
 use trust_dns::rr::dnssec::SupportedAlgorithms;
@@ -15,6 +15,8 @@ use trust_dns_server::authority::{AuthLookup, Authority};
 
 use dns::zone::ZoneName;
 use dns::record::{RecordName, RecordType};
+use geo::locate::Locator;
+use geo::region::RegionCode;
 use store::store::StoreRecord;
 use APP_CONF;
 use APP_STORE;
@@ -27,20 +29,20 @@ impl RequestHandler for DNSHandler {
     fn handle_request(&self, request: &Request) -> Message {
         let request_message = &request.message;
 
-        log::trace!("request: {:?}", request_message);
+        trace!("request: {:?}", request_message);
 
         let response: Message = match request_message.message_type() {
             MessageType::Query => {
                 match request_message.op_code() {
                     OpCode::Query => {
-                        let response = self.lookup(&request_message);
+                        let response = self.lookup(&request.src.ip(), &request_message);
 
-                        log::trace!("query response: {:?}", response);
+                        trace!("query response: {:?}", response);
 
                         response
                     }
                     code @ _ => {
-                        log::error!("unimplemented opcode: {:?}", code);
+                        error!("unimplemented opcode: {:?}", code);
 
                         Message::error_msg(
                             request_message.id(),
@@ -51,7 +53,7 @@ impl RequestHandler for DNSHandler {
                 }
             }
             MessageType::Response => {
-                log::warn!(
+                warn!(
                     "got a response as a request from id: {}",
                     request_message.id()
                 );
@@ -77,7 +79,7 @@ impl DNSHandler {
         self.authorities.insert(name, RwLock::new(authority));
     }
 
-    pub fn lookup(&self, request: &Message) -> Message {
+    pub fn lookup(&self, source: &IpAddr, request: &Message) -> Message {
         let mut response: Message = Message::new();
 
         response.set_id(request.id());
@@ -89,7 +91,7 @@ impl DNSHandler {
             if let Some(ref_authority) = self.find_auth_recurse(query.name()) {
                 let authority = &ref_authority.read().unwrap();
 
-                log::info!(
+                info!(
                     "request: {} found authority: {}",
                     request.id(),
                     authority.origin()
@@ -101,7 +103,7 @@ impl DNSHandler {
                 let records_local = authority.search(query, false, supported_algorithms);
 
                 if !records_local.is_empty() {
-                    log::debug!("found records for query from local store: {}", query);
+                    debug!("found records for query from local store: {}", query);
 
                     let records_local_vec = records_local
                         .iter()
@@ -115,8 +117,10 @@ impl DNSHandler {
                         supported_algorithms,
                     );
                 } else {
-                    if let Some(records_remote) = Self::records_from_store(authority, query) {
-                        log::debug!("found records for query from remote store: {}", query);
+                    if let Some(records_remote) =
+                        Self::records_from_store(authority, source, query)
+                    {
+                        debug!("found records for query from remote store: {}", query);
 
                         Self::serve_response_records(
                             &mut response,
@@ -125,16 +129,16 @@ impl DNSHandler {
                             supported_algorithms,
                         );
                     } else {
-                        log::debug!("did not find records for query: {}", query);
+                        debug!("did not find records for query: {}", query);
 
                         match records_local {
                             AuthLookup::NoName => {
-                                log::debug!("domain not found for query: {}", query);
+                                debug!("domain not found for query: {}", query);
 
                                 response.set_response_code(ResponseCode::NXDomain)
                             }
                             AuthLookup::NameExists => {
-                                log::debug!("domain found for query: {}", query);
+                                debug!("domain found for query: {}", query);
 
                                 response.set_response_code(ResponseCode::NoError)
                             }
@@ -144,14 +148,14 @@ impl DNSHandler {
                         let soa_records = authority.soa_secure(false, supported_algorithms);
 
                         if soa_records.is_empty() {
-                            log::warn!("no soa record for: {:?}", authority.origin());
+                            warn!("no soa record for: {:?}", authority.origin());
                         } else {
                             response.add_name_servers(soa_records.iter().cloned());
                         }
                     }
                 }
             } else {
-                log::debug!("domain authority not found for query: {}", query);
+                debug!("domain authority not found for query: {}", query);
 
                 response.set_response_code(ResponseCode::NXDomain);
             }
@@ -176,12 +180,21 @@ impl DNSHandler {
         None
     }
 
-    fn records_from_store(authority: &Authority, query: &Query) -> Option<Vec<Record>> {
+    fn records_from_store(
+        authority: &Authority,
+        source: &IpAddr,
+        query: &Query,
+    ) -> Option<Vec<Record>> {
         let (query_name, query_type) = (query.name(), query.query_type());
 
         // Attempt with requested domain
-        let mut records =
-            Self::records_from_store_attempt(authority, &query_name, &query_name, &query_type);
+        let mut records = Self::records_from_store_attempt(
+            authority,
+            source,
+            &query_name,
+            &query_name,
+            &query_type,
+        );
 
         // Attempt with wildcard domain
         if records.is_none() {
@@ -192,6 +205,7 @@ impl DNSHandler {
                     if &wildcard_name != query_name {
                         records = Self::records_from_store_attempt(
                             authority,
+                            source,
                             &query_name,
                             &wildcard_name,
                             &query_type,
@@ -206,6 +220,7 @@ impl DNSHandler {
 
     fn records_from_store_attempt(
         authority: &Authority,
+        source: &IpAddr,
         query_name_client: &Name,
         query_name_effective: &Name,
         query_type: &TrustRecordType,
@@ -214,7 +229,7 @@ impl DNSHandler {
         let record_name = RecordName::from_trust(&authority.origin(), query_name_effective);
         let record_type = RecordType::from_trust(query_type);
 
-        log::debug!(
+        debug!(
             "lookup record in store for query: {} {} on zone: {:?}, record: {:?}, and type: {:?}",
             query_name_effective,
             query_type,
@@ -228,7 +243,7 @@ impl DNSHandler {
                 let mut records = Vec::new();
 
                 if let Ok(record) = APP_STORE.get(&zone_name, &record_name, &record_type) {
-                    log::debug!(
+                    debug!(
                         "found record in store for query: {} {} with result: {:?}",
                         query_name_effective,
                         query_type,
@@ -236,7 +251,7 @@ impl DNSHandler {
                     );
 
                     // Append record direct results
-                    Self::parse_from_records(query_name_client, &record, &mut records);
+                    Self::parse_from_records(query_name_client, source, &record, &mut records);
                 }
 
                 // Look for a CNAME result?
@@ -247,7 +262,7 @@ impl DNSHandler {
                         &RecordType::CNAME,
                     )
                     {
-                        log::debug!(
+                        debug!(
                             "found cname hint record in store for query: {} {} with result: {:?}",
                             query_name_effective,
                             query_type,
@@ -255,7 +270,12 @@ impl DNSHandler {
                         );
 
                         // Append CNAME hint results
-                        Self::parse_from_records(query_name_client, &record_cname, &mut records);
+                        Self::parse_from_records(
+                            query_name_client,
+                            source,
+                            &record_cname,
+                            &mut records,
+                        );
                     }
                 }
 
@@ -271,11 +291,63 @@ impl DNSHandler {
 
     fn parse_from_records(
         query_name_client: &Name,
+        source: &IpAddr,
         record: &StoreRecord,
         records: &mut Vec<Record>,
     ) {
         if let Ok(type_data) = record.kind.to_trust() {
-            for value in record.values.iter() {
+            // Pick record value (either from Geo-DNS or global)
+            let values = if let Some(ref regions) = record.regions {
+                debug!(
+                    "record has regions, looking up location for source ip: {}", source
+                );
+
+                // Pick relevant region
+                let region_wrap = match Locator::ip_to_region(source) {
+                    Some(region) => {
+                        Some(match region.1 {
+                            RegionCode::EU => (region.0, region.1, &regions.EU),
+                            RegionCode::NAM => (region.0, region.1, &regions.NAM),
+                            RegionCode::SAM => (region.0, region.1, &regions.SAM),
+                            RegionCode::OC => (region.0, region.1, &regions.OC),
+                            RegionCode::AS => (region.0, region.1, &regions.AS),
+                            RegionCode::AF => (region.0, region.1, &regions.AF),
+                        })
+                    },
+                    None => None,
+                };
+
+                if let Some(ref region_wrap_inner) = region_wrap {
+                    debug!(
+                        "source ip: {} located to country: {} and region: {}",
+                        source,
+                        region_wrap_inner.0.to_name(),
+                        region_wrap_inner.1.to_name()
+                    );
+
+                    if let Some(region_values) = region_wrap_inner.2 {
+                        debug!(
+                            "source ip: {} region values found: {:?}", source, region_values
+                        );
+
+                        region_values
+                    } else {
+                        debug!(
+                            "source ip: {} region values not found, using global values", source
+                        );
+
+                        &record.values
+                    }
+                } else {
+                    debug!("source ip: {} could not be located, using global values", source);
+
+                    &record.values
+                }
+            } else {
+                &record.values
+            };
+
+            for value in values.iter() {
                 if let Ok(value_data) = value.to_trust(&record.kind) {
                     records.push(Record::from_rdata(
                         query_name_client.to_owned(),
@@ -284,7 +356,7 @@ impl DNSHandler {
                         value_data,
                     ));
                 } else {
-                    log::warn!(
+                    warn!(
                         "could not convert to dns record type: {} with value: {:?}",
                         record.kind.to_str(),
                         value
@@ -292,7 +364,7 @@ impl DNSHandler {
                 }
             }
         } else {
-            log::warn!(
+            warn!(
                 "could not convert to dns record type: {}",
                 record.kind.to_str()
             );
@@ -312,7 +384,7 @@ impl DNSHandler {
         let ns_records = authority.ns(false, supported_algorithms);
 
         if ns_records.is_empty() {
-            log::warn!("no ns records for: {:?}", authority.origin());
+            warn!("no ns records for: {:?}", authority.origin());
         } else {
             response.add_name_servers(ns_records.iter().cloned());
         }

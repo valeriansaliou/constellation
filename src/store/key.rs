@@ -4,7 +4,6 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log;
 use farmhash;
 
 use dns::zone::ZoneName;
@@ -26,7 +25,7 @@ impl StoreKey {
             Self::hash(zone_name, record_name, record_type)
         );
 
-        log::debug!(
+        debug!(
             "generated key: {} for record: {} on type: {}",
             key,
             record_name.to_str(),
@@ -37,7 +36,7 @@ impl StoreKey {
     }
 
     fn hash(zone_name: &ZoneName, record_name: &RecordName, record_type: &RecordType) -> String {
-        log::debug!(
+        debug!(
             "hashing record: {} on type: {} for zone: {}",
             record_name.to_str(),
             record_type.to_str(),

@@ -7,7 +7,7 @@
 #![feature(use_extern_macros, plugin)]
 #![plugin(rocket_codegen)]
 
-#[macro_use(log)]
+#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate clap;
@@ -30,6 +30,7 @@ extern crate trust_dns_server;
 extern crate farmhash;
 
 mod config;
+mod geo;
 mod dns;
 mod http;
 mod store;
@@ -59,7 +60,7 @@ pub static THREAD_NAME_HTTP: &'static str = "constellation-http";
 macro_rules! gen_spawn_managed {
     ($name:expr, $method:ident, $thread_name:ident, $managed_fn:expr) => (
         fn $method() {
-            log::debug!("spawn managed thread: {}", $name);
+            debug!("spawn managed thread: {}", $name);
 
             let worker = thread::Builder::new()
                 .name($thread_name.to_string())
@@ -74,7 +75,7 @@ macro_rules! gen_spawn_managed {
 
             // Worker thread crashed?
             if has_error == true {
-                log::error!("managed thread crashed ({}), setting it up again", $name);
+                error!("managed thread crashed ({}), setting it up again", $name);
 
                 // Prevents thread start loop floods
                 thread::sleep(Duration::from_secs(2));
@@ -125,9 +126,7 @@ fn make_app_args() -> AppArgs {
 
 fn ensure_states() {
     // Ensure all statics are valid (a `deref` is enough to lazily initialize them)
-    APP_ARGS.deref();
-    APP_CONF.deref();
-    APP_STORE.deref();
+    let (_, _, _) = (APP_ARGS.deref(), APP_CONF.deref(), APP_STORE.deref());
 }
 
 fn main() {
@@ -135,7 +134,7 @@ fn main() {
         "invalid log level",
     ));
 
-    log::info!("starting up");
+    info!("starting up");
 
     // Ensure all states are bound
     ensure_states();
@@ -146,5 +145,5 @@ fn main() {
     // Run DNS server (from main thread, maintain thread active if down)
     spawn_dns();
 
-    log::error!("could not start");
+    error!("could not start");
 }

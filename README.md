@@ -29,6 +29,8 @@ _👋 You use Constellation and you want to be listed there? [Contact me](https:
 * **Pluggable authoritative DNS server**, comes handy if you need to generate eg. email sub-domains for your users (with DKIM, DMARC and SPF records).
 * **HTTP REST API** to check, read, insert, modify and delete DNS records on the fly.
 * **Persistence layer** in Redis. This means you can run multiple Constellations hitting against the same database on the network. You can even shard Redis if you need fault tolerance on the DNS data store.
+* **Geo-DNS** to serve records on a location basis. For instance, serve the IP to your US server for all North America users, and fallback to Europe for the rest.
+* **DNSSEC** to sign your records and authenticate DNS responses (for secure DNS resolvers).
 
 ## How to use it?
 

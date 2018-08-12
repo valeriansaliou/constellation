@@ -126,6 +126,17 @@ Where:
 
 * Add an `Authorization` header with a `Basic` authentication where the password is your configured `http.record_token`.
 
+#### API regions
+
+If you want to serve records to the nearest server using the Geo-DNS feature, you will need to set `regions` via the API, where:
+
+* `EU`: Europe
+* `NAM`: North America
+* `SAM`: South America
+* `OC`: Oceania
+* `AS`: Asia
+* `AF`: Africa
+
 #### API routes
 
 ##### Check if a DNS record exists
@@ -162,7 +173,7 @@ Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"type":"mx","name":"@","ttl":600,"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"]}
+{"type":"mx","name":"@","ttl":600,"regions": null,"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"]}
 ```
 
 ##### Write a DNS record (or overwrite existing)
@@ -176,7 +187,7 @@ PUT /zone/crisp.email/record/@/mx HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
-{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"ttl":600}
+{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"regions":{"EU":["10 inbound-failover.europe.crisp.email"],"NAM":["10 inbound-failover.americas.crisp.email"],"SAM":["10 inbound-failover.americas.crisp.email"],"OC":["10 inbound-failover.asia.crisp.email"],"AS":["10 inbound-failover.asia.crisp.email"],"AF":["10 inbound-failover.europe.crisp.email"]},"ttl":600}
 ```
 
 **Example response:**

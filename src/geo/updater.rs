@@ -40,11 +40,17 @@ impl GeoUpdater {
 
             info!("running a geo update operation...");
 
+            // Hold on 2 seconds
+            thread::sleep(Duration::from_secs(2));
+
             match Self::update_database() {
                 Ok(_) => {
-                    // TODO: reload active database
+                    info!("ran geo update operation");
 
-                    info!("ran geo update operation")
+                    match Locator::request_geo_refresh() {
+                        Ok(_) => info!("refreshed geo reader"),
+                        Err(err) => error!("failure to refresh geo reader: {}", err),
+                    }
                 },
                 Err(Some(err)) => error!("failed running geo update operation: {}", err),
                 Err(None) => error!("failed running geo update operation (no reason given)"),

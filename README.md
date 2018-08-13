@@ -30,7 +30,6 @@ _👋 You use Constellation and you want to be listed there? [Contact me](https:
 * **HTTP REST API** to check, read, insert, modify and delete DNS records on the fly.
 * **Persistence layer** in Redis. This means you can run multiple Constellations hitting against the same database on the network. You can even shard Redis if you need fault tolerance on the DNS data store.
 * **Geo-DNS** to serve records on a location basis. For instance, serve the IP to your US server for all North America users, and fallback to Europe for the rest. Based on MaxMind GeoLite2 free database, that is automatically updated when necessary.
-* **DNSSEC** to sign your records and authenticate DNS responses (for secure DNS resolvers).
 
 ## How to use it?
 

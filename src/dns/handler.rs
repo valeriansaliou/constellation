@@ -299,7 +299,8 @@ impl DNSHandler {
             // Pick record value (either from Geo-DNS or global)
             let values = if let Some(ref regions) = record.regions {
                 debug!(
-                    "record has regions, looking up location for source ip: {}", source
+                    "record has regions, looking up location for source ip: {}",
+                    source
                 );
 
                 // Pick relevant region (from country)
@@ -315,7 +316,7 @@ impl DNSHandler {
                             RegionCode::AF => (country, region, &regions.af),
                             RegionCode::AS => (country, region, &regions._as),
                         })
-                    },
+                    }
                     None => None,
                 };
 
@@ -329,19 +330,25 @@ impl DNSHandler {
 
                     if let Some(region_values) = region_wrap_inner.2 {
                         debug!(
-                            "source ip: {} region values found: {:?}", source, region_values
+                            "source ip: {} region values found: {:?}",
+                            source,
+                            region_values
                         );
 
                         region_values
                     } else {
                         debug!(
-                            "source ip: {} region values not found, using global values", source
+                            "source ip: {} region values not found, using global values",
+                            source
                         );
 
                         &record.values
                     }
                 } else {
-                    debug!("source ip: {} could not be located, using global values", source);
+                    debug!(
+                        "source ip: {} could not be located, using global values",
+                        source
+                    );
 
                     &record.values
                 }

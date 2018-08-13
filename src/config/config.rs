@@ -63,6 +63,18 @@ pub struct ConfigDNSZone {}
 pub struct ConfigGeo {
     #[serde(default = "defaults::geo_database_path")]
     pub database_path: String,
+
+    #[serde(default = "defaults::geo_database_file")]
+    pub database_file: String,
+
+    #[serde(default = "defaults::geo_update_enable")]
+    pub update_enable: bool,
+
+    #[serde(default = "defaults::geo_update_interval")]
+    pub update_interval: u64,
+
+    #[serde(default = "defaults::geo_update_url")]
+    pub update_url: String,
 }
 
 #[derive(Deserialize)]

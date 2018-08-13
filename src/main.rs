@@ -28,7 +28,11 @@ extern crate regex;
 extern crate trust_dns;
 extern crate trust_dns_server;
 extern crate farmhash;
+extern crate reqwest;
 extern crate maxminddb;
+extern crate tempfile;
+extern crate flate2;
+extern crate tar;
 
 mod config;
 mod geo;
@@ -50,6 +54,7 @@ use config::reader::ConfigReader;
 use store::store::{Store, StoreBuilder};
 use dns::listen::DNSListenBuilder;
 use http::listen::HTTPListenBuilder;
+use geo::updater::GeoUpdaterBuilder;
 use geo::locate::DB_READER;
 
 struct AppArgs {
@@ -58,6 +63,7 @@ struct AppArgs {
 
 pub static THREAD_NAME_DNS: &'static str = "constellation-dns";
 pub static THREAD_NAME_HTTP: &'static str = "constellation-http";
+pub static THREAD_NAME_GEO_UPDATER: &'static str = "constellation-geo-updater";
 
 macro_rules! gen_spawn_managed {
     ($name:expr, $method:ident, $thread_name:ident, $managed_fn:expr) => (
@@ -106,6 +112,12 @@ gen_spawn_managed!(
     THREAD_NAME_HTTP,
     HTTPListenBuilder::new().run()
 );
+gen_spawn_managed!(
+    "geo_updater",
+    spawn_geo_updater,
+    THREAD_NAME_GEO_UPDATER,
+    GeoUpdaterBuilder::new().run()
+);
 
 fn make_app_args() -> AppArgs {
     let matches = App::new(crate_name!())
@@ -128,7 +140,12 @@ fn make_app_args() -> AppArgs {
 
 fn ensure_states() {
     // Ensure all statics are valid (a `deref` is enough to lazily initialize them)
-    let (_, _, _, _) = (APP_ARGS.deref(), APP_CONF.deref(), APP_STORE.deref(), DB_READER.deref());
+    let (_, _, _, _) = (
+        APP_ARGS.deref(),
+        APP_CONF.deref(),
+        APP_STORE.deref(),
+        DB_READER.deref(),
+    );
 }
 
 fn main() {
@@ -140,6 +157,11 @@ fn main() {
 
     // Ensure all states are bound
     ensure_states();
+
+    // Spawn geo updater? (background thread)
+    if APP_CONF.geo.update_enable == true {
+        thread::spawn(spawn_geo_updater);
+    }
 
     // Spawn HTTP server (background thread)
     thread::spawn(spawn_http);

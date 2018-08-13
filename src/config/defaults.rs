@@ -46,7 +46,23 @@ pub fn dns_zone() -> BTreeMap<String, ConfigDNSZone> {
 }
 
 pub fn geo_database_path() -> String {
-    "./res/geo/GeoLite2-Country.mmdb".to_string()
+    "./res/geo/".to_string()
+}
+
+pub fn geo_database_file() -> String {
+    "GeoLite2-Country.mmdb".to_string()
+}
+
+pub fn geo_update_enable() -> bool {
+    true
+}
+
+pub fn geo_update_interval() -> u64 {
+    864000
+}
+
+pub fn geo_update_url() -> String {
+    "http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz".to_string()
 }
 
 pub fn http_inet() -> SocketAddr {

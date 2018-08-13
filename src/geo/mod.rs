@@ -8,3 +8,4 @@ mod country;
 
 pub mod region;
 pub mod locate;
+pub mod updater;

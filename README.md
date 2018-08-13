@@ -29,7 +29,7 @@ _👋 You use Constellation and you want to be listed there? [Contact me](https:
 * **Pluggable authoritative DNS server**, comes handy if you need to generate eg. email sub-domains for your users (with DKIM, DMARC and SPF records).
 * **HTTP REST API** to check, read, insert, modify and delete DNS records on the fly.
 * **Persistence layer** in Redis. This means you can run multiple Constellations hitting against the same database on the network. You can even shard Redis if you need fault tolerance on the DNS data store.
-* **Geo-DNS** to serve records on a location basis. For instance, serve the IP to your US server for all North America users, and fallback to Europe for the rest.
+* **Geo-DNS** to serve records on a location basis. For instance, serve the IP to your US server for all North America users, and fallback to Europe for the rest. Based on MaxMind GeoLite2 free database, that is automatically updated when necessary.
 * **DNSSEC** to sign your records and authenticate DNS responses (for secure DNS resolvers).
 
 ## How to use it?
@@ -88,12 +88,10 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 **[geo]**
 
 * `database_path` (type: _string_, allowed: folder path, default: `./res/geo/`) — Path to the folder containing the GeoIP database
-* `database_file` (type: _string_, allowed: file name, default: `GeoLite2-Country.mmdb`) — File name for the GeoIP2 MMDB database in the database folder (either free GeoLite2 or paid GeoIP2)
+* `database_file` (type: _string_, allowed: file name, default: `GeoLite2-Country.mmdb`) — File name for the GeoIP2 MMDB database in the database folder (either free GeoLite2 or paid GeoIP2; disable `geo.update_enable` if you want to use a custom database)
 * `update_enable` (type: _boolean_, allowed: `true`, `false`, default: `true`) — Whether to enable GeoIP database updater or not
 * `update_interval` (type: _integer_, allowed: seconds, default: `864000`) — Interval for which to refresh GeoIP database in seconds (1 week or more is recommended)
 * `update_url` (type: _string_, allowed: HTTP URL, default: `http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz`) — URL to the compressed GeoIP MMDB file (supported: `tar.gz`), that is downloaded on refresh
-
-**Notice: you can download the free GeoLite2 Country database at [this URL from MaxMind](http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz).**
 
 **[http]**
 
@@ -138,7 +136,7 @@ Where:
 
 * Add an `Authorization` header with a `Basic` authentication where the password is your configured `http.record_token`.
 
-#### API regions
+**Geo-DNS regions:**
 
 If you want to serve records to the nearest server using the Geo-DNS feature, you will need to set `regions` via the API, where:
 

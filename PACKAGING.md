@@ -10,7 +10,7 @@ We consider here the packaging flow of Constellation version `1.0.0`, for target
     2. Execute `cargo update` to bump `Cargo.lock`
 
 2. **How to build Constellation for Linux on Debian:**
-    1. `apt-get install -y git build-essential`
+    1. `apt-get install -y git build-essential pkg-config libssl-dev`
     2. `curl https://sh.rustup.rs -sSf | sh` (install the `nightly` toolchain)
     3. `git clone https://github.com/valeriansaliou/constellation.git`
     4. `cd constellation/`

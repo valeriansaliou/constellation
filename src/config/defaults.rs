@@ -45,6 +45,10 @@ pub fn dns_zone() -> BTreeMap<String, ConfigDNSZone> {
     BTreeMap::new()
 }
 
+pub fn geo_database_path() -> String {
+    "./res/geo/GeoLite2-Country.mmdb".to_string()
+}
+
 pub fn http_inet() -> SocketAddr {
     "[::1]:8080".parse().unwrap()
 }

@@ -13,6 +13,7 @@ use super::defaults;
 pub struct Config {
     pub server: ConfigServer,
     pub dns: ConfigDNS,
+    pub geo: ConfigGeo,
     pub http: ConfigHTTP,
     pub redis: ConfigRedis,
 }
@@ -57,6 +58,12 @@ pub struct ConfigDNS {
 
 #[derive(Deserialize)]
 pub struct ConfigDNSZone {}
+
+#[derive(Deserialize)]
+pub struct ConfigGeo {
+    #[serde(default = "defaults::geo_database_path")]
+    pub database_path: String,
+}
 
 #[derive(Deserialize)]
 pub struct ConfigHTTP {

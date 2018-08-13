@@ -85,6 +85,12 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 > Specify your zone name eg. as: `[[dns.zone.'crisp.email']]` for zone base: `crisp.email`.
 
+**[geo]**
+
+* `database_path` (type: _string_, allowed: file path, default: `./res/geo/GeoLite2-Country.mmdb`) — Path to a GeoIP2 MMDB database (either GeoLite2 or GeoIP2)
+
+**Notice: you can download the free GeoLite2 Country database at [this URL from MaxMind](http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz).**
+
 **[http]**
 
 * `inet` (type: _string_, allowed: IPv4 / IPv6 + port, default: `[::1]:8080`) — Host and TCP port the HTTP API server should listen on
@@ -132,12 +138,12 @@ Where:
 
 If you want to serve records to the nearest server using the Geo-DNS feature, you will need to set `regions` via the API, where:
 
-* `EU`: Europe
-* `NAM`: North America
-* `SAM`: South America
-* `OC`: Oceania
-* `AS`: Asia
-* `AF`: Africa
+* `eu`: Europe
+* `nam`: North America
+* `sam`: South America
+* `oc`: Oceania
+* `as`: Asia
+* `af`: Africa
 
 #### API routes
 
@@ -199,7 +205,7 @@ PUT /zone/crisp.email/record/@/mx HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
-{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"regions":{"EU":["10 inbound-geo.europe.crisp.email"],"NAM":["10 inbound-geo.americas.crisp.email"],"SAM":["10 inbound-geo.americas.crisp.email"],"OC":["10 inbound-geo.asia.crisp.email"],"AS":["10 inbound-geo.asia.crisp.email"],"AF":["10 inbound-geo.europe.crisp.email"]},"ttl":600}
+{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"regions":{"eu":["10 inbound-geo.europe.crisp.email"],"nam":["10 inbound-geo.americas.crisp.email"],"sam":["10 inbound-geo.americas.crisp.email"],"oc":["10 inbound-geo.asia.crisp.email"],"as":["10 inbound-geo.asia.crisp.email"],"af":["10 inbound-geo.europe.crisp.email"]},"ttl":600}
 ```
 
 **Example response:**

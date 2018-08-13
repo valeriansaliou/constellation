@@ -35,7 +35,7 @@ impl RequestHandler for DNSHandler {
             MessageType::Query => {
                 match request_message.op_code() {
                     OpCode::Query => {
-                        let response = self.lookup(&request.src.ip(), &request_message);
+                        let response = self.lookup(request.src.ip(), &request_message);
 
                         trace!("query response: {:?}", response);
 
@@ -79,7 +79,7 @@ impl DNSHandler {
         self.authorities.insert(name, RwLock::new(authority));
     }
 
-    pub fn lookup(&self, source: &IpAddr, request: &Message) -> Message {
+    pub fn lookup(&self, source: IpAddr, request: &Message) -> Message {
         let mut response: Message = Message::new();
 
         response.set_id(request.id());
@@ -182,7 +182,7 @@ impl DNSHandler {
 
     fn records_from_store(
         authority: &Authority,
-        source: &IpAddr,
+        source: IpAddr,
         query: &Query,
     ) -> Option<Vec<Record>> {
         let (query_name, query_type) = (query.name(), query.query_type());
@@ -220,7 +220,7 @@ impl DNSHandler {
 
     fn records_from_store_attempt(
         authority: &Authority,
-        source: &IpAddr,
+        source: IpAddr,
         query_name_client: &Name,
         query_name_effective: &Name,
         query_type: &TrustRecordType,
@@ -291,7 +291,7 @@ impl DNSHandler {
 
     fn parse_from_records(
         query_name_client: &Name,
-        source: &IpAddr,
+        source: IpAddr,
         record: &StoreRecord,
         records: &mut Vec<Record>,
     ) {
@@ -302,16 +302,18 @@ impl DNSHandler {
                     "record has regions, looking up location for source ip: {}", source
                 );
 
-                // Pick relevant region
-                let region_wrap = match Locator::ip_to_region(source) {
-                    Some(region) => {
-                        Some(match region.1 {
-                            RegionCode::EU => (region.0, region.1, &regions.EU),
-                            RegionCode::NAM => (region.0, region.1, &regions.NAM),
-                            RegionCode::SAM => (region.0, region.1, &regions.SAM),
-                            RegionCode::OC => (region.0, region.1, &regions.OC),
-                            RegionCode::AS => (region.0, region.1, &regions.AS),
-                            RegionCode::AF => (region.0, region.1, &regions.AF),
+                // Pick relevant region (from country)
+                let region_wrap = match Locator::ip_to_country(source) {
+                    Some(country) => {
+                        let region = country.to_region_code();
+
+                        Some(match region {
+                            RegionCode::EU => (country, region, &regions.eu),
+                            RegionCode::NAM => (country, region, &regions.nam),
+                            RegionCode::SAM => (country, region, &regions.sam),
+                            RegionCode::OC => (country, region, &regions.oc),
+                            RegionCode::AF => (country, region, &regions.af),
+                            RegionCode::AS => (country, region, &regions._as),
                         })
                     },
                     None => None,

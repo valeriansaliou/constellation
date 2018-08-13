@@ -28,6 +28,7 @@ extern crate regex;
 extern crate trust_dns;
 extern crate trust_dns_server;
 extern crate farmhash;
+extern crate maxminddb;
 
 mod config;
 mod geo;
@@ -49,6 +50,7 @@ use config::reader::ConfigReader;
 use store::store::{Store, StoreBuilder};
 use dns::listen::DNSListenBuilder;
 use http::listen::HTTPListenBuilder;
+use geo::locate::DB_READER;
 
 struct AppArgs {
     config: String,
@@ -126,7 +128,7 @@ fn make_app_args() -> AppArgs {
 
 fn ensure_states() {
     // Ensure all statics are valid (a `deref` is enough to lazily initialize them)
-    let (_, _, _) = (APP_ARGS.deref(), APP_CONF.deref(), APP_STORE.deref());
+    let (_, _, _, _) = (APP_ARGS.deref(), APP_CONF.deref(), APP_STORE.deref(), DB_READER.deref());
 }
 
 fn main() {

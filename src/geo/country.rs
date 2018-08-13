@@ -6,7 +6,7 @@
 
 use super::region::RegionCode;
 
-//- URL: https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/blob/master/all/all.csv
+//- Source: https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/blob/master/all/all.csv
 //- Last update: 13 August 2018
 
 #[derive(Clone, Debug, PartialEq)]

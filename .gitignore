@@ -1,4 +1,5 @@
 target/*
+res/geo/*
 .DS_Store
 *~
 *#

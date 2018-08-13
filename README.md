@@ -87,7 +87,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[geo]**
 
-* `database_path` (type: _string_, allowed: file path, default: `./res/geo/GeoLite2-Country.mmdb`) — Path to a GeoIP2 MMDB database (either GeoLite2 or GeoIP2)
+* `database_path` (type: _string_, allowed: file path, default: `./res/geo/GeoLite2-Country.mmdb`) — Path to a GeoIP2 MMDB database (either free GeoLite2 or paid GeoIP2)
 
 **Notice: you can download the free GeoLite2 Country database at [this URL from MaxMind](http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz).**
 

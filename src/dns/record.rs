@@ -32,6 +32,7 @@ pub enum RecordType {
     CNAME,
     MX,
     TXT,
+    PTR,
 }
 
 #[derive(Clone, Debug)]
@@ -63,6 +64,7 @@ impl RecordType {
             "cname" => Some(RecordType::CNAME),
             "mx" => Some(RecordType::MX),
             "txt" => Some(RecordType::TXT),
+            "ptr" => Some(RecordType::PTR),
             _ => None,
         }
     }
@@ -74,6 +76,7 @@ impl RecordType {
             &TrustRecordType::CNAME => Some(RecordType::CNAME),
             &TrustRecordType::MX => Some(RecordType::MX),
             &TrustRecordType::TXT => Some(RecordType::TXT),
+            &TrustRecordType::PTR => Some(RecordType::PTR),
             _ => None,
         }
     }
@@ -85,6 +88,7 @@ impl RecordType {
             RecordType::CNAME => "cname",
             RecordType::MX => "mx",
             RecordType::TXT => "txt",
+            RecordType::PTR => "ptr",
         }
     }
 
@@ -95,6 +99,7 @@ impl RecordType {
             RecordType::CNAME => Ok(TrustRecordType::CNAME),
             RecordType::MX => Ok(TrustRecordType::MX),
             RecordType::TXT => Ok(TrustRecordType::TXT),
+            RecordType::PTR => Ok(TrustRecordType::PTR),
         }
     }
 }
@@ -195,6 +200,11 @@ impl RecordValue {
                 } else {
                     Err(())
                 }
+            }
+            RecordType::PTR => {
+                TrustName::parse(self, Some(&TrustName::new()))
+                    .map(|value| TrustRData::PTR(value))
+                    .or(Err(()))
             }
         }
     }

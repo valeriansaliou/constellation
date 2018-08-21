@@ -131,7 +131,7 @@ Where:
 
 * `zone_name`: The zone name (ie. base domain), eg. `crisp.email`
 * `record_name`: The record name to read or alter (ie. sub-domain or base domain), eg. `inbound.@` for the `inbound.crisp.email` FQDN, or `@` for the `crisp.email` FQDN
-* `record_type`: The DNS record type to read or alter for the `record_name`; either: `a`, `aaaa`, `cname`, `mx`, `txt` ([open an issue](https://github.com/valeriansaliou/constellation/issues) if you need support for another record type)
+* `record_type`: The DNS record type to read or alter for the `record_name`; either: `a`, `aaaa`, `cname`, `mx`, `txt` or `ptr` ([open an issue](https://github.com/valeriansaliou/constellation/issues) if you need support for another record type)
 
 **Request headers:**
 

@@ -51,7 +51,7 @@ impl GeoUpdater {
                         Ok(_) => info!("refreshed geo reader"),
                         Err(err) => error!("failure to refresh geo reader: {}", err),
                     }
-                },
+                }
                 Err(Some(err)) => error!("failed running geo update operation: {}", err),
                 Err(None) => error!("failed running geo update operation (no reason given)"),
             }

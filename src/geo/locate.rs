@@ -50,7 +50,7 @@ impl Locator {
                 *store = reader;
 
                 Ok(())
-            },
+            }
             Err(err) => Err(err),
         }
     }

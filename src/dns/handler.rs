@@ -160,7 +160,7 @@ impl DNSHandler {
             } else {
                 debug!("domain authority not found for query: {}", query);
 
-                response.set_response_code(ResponseCode::NXDomain);
+                response.set_response_code(ResponseCode::Refused);
             }
         }
 

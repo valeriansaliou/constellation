@@ -131,6 +131,9 @@ impl DNSHandler {
                     } else {
                         debug!("did not find records for query: {}", query);
 
+                        // Important: mark error response for found root domain as authoritative
+                        response.set_authoritative(true);
+
                         match records_local {
                             AuthLookup::NoName => {
                                 debug!("domain not found for query: {}", query);

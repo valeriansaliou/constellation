@@ -203,20 +203,37 @@ impl DNSHandler {
             &query_type,
         );
 
-        // Attempt with wildcard domain
-        if records.is_none() {
+        // Check if 'records' is empty
+        let is_records_empty = if let Some(ref records_inner) = records {
+            records_inner.is_empty()
+        } else {
+            records.is_none()
+        };
+
+        // Attempt with wildcard domain? (records empty)
+        if is_records_empty == true {
+            debug!(
+                "got empty records from store, attempting wildcard for query: {}",
+                query
+            );
+
             if let Some(base_name) = query_name.to_string().splitn(2, ".").nth(1) {
                 let wildcard_name_string = format!("*.{}", base_name);
 
                 if let Ok(wildcard_name) = Name::parse(&wildcard_name_string, Some(&Name::new())) {
                     if &wildcard_name != query_name {
-                        records = Self::records_from_store_attempt(
+                        let records_wildcard = Self::records_from_store_attempt(
                             authority,
                             source,
                             &query_name,
                             &wildcard_name,
                             &query_type,
-                        )
+                        );
+
+                        // Assign non-none wildcard records? (retain any NOERROR from 'records')
+                        if records_wildcard.is_none() == false {
+                            records = records_wildcard
+                        }
                     }
                 }
             }

@@ -117,47 +117,54 @@ impl DNSHandler {
                         supported_algorithms,
                     );
                 } else {
-                    if let Some(records_remote) =
-                        Self::records_from_store(authority, source, query)
-                    {
-                        debug!(
-                            "found {} records for query from remote store: {}",
-                            records_remote.len(),
-                            query
-                        );
+                    match Self::records_from_store(authority, source, query) {
+                        Ok(records_remote) => {
+                            if let Some(records_remote_inner) = records_remote {
+                                debug!(
+                                    "found {} records for query from remote store: {}",
+                                    records_remote_inner.len(),
+                                    query
+                                );
 
-                        Self::serve_response_records(
-                            &mut response,
-                            records_remote,
-                            &authority,
-                            supported_algorithms,
-                        );
-                    } else {
-                        debug!("did not find records for query: {}", query);
+                                Self::serve_response_records(
+                                    &mut response,
+                                    records_remote_inner,
+                                    &authority,
+                                    supported_algorithms,
+                                );
+                            } else {
+                                debug!("did not find records for query: {}", query);
 
-                        // Important: mark error response for found root domain as authoritative
-                        response.set_authoritative(true);
+                                // Important: mark error response for found root domain as authoritative
+                                response.set_authoritative(true);
 
-                        match records_local {
-                            AuthLookup::NoName => {
-                                debug!("domain not found for query: {}", query);
+                                match records_local {
+                                    AuthLookup::NoName => {
+                                        debug!("domain not found for query: {}", query);
 
-                                response.set_response_code(ResponseCode::NXDomain)
+                                        response.set_response_code(ResponseCode::NXDomain)
+                                    }
+                                    AuthLookup::NameExists => {
+                                        debug!("domain found for query: {}", query);
+
+                                        response.set_response_code(ResponseCode::NoError)
+                                    }
+                                    AuthLookup::Records(..) => panic!("error, should return noerror"),
+                                };
+
+                                let soa_records = authority.soa_secure(false, supported_algorithms);
+
+                                if soa_records.is_empty() {
+                                    warn!("no soa record for: {:?}", authority.origin());
+                                } else {
+                                    response.add_name_servers(soa_records.iter().cloned());
+                                }
                             }
-                            AuthLookup::NameExists => {
-                                debug!("domain found for query: {}", query);
+                        }
+                        Err(err) => {
+                            debug!("query refused for: {} because: {}", query, err);
 
-                                response.set_response_code(ResponseCode::NoError)
-                            }
-                            AuthLookup::Records(..) => panic!("error, should return noerror"),
-                        };
-
-                        let soa_records = authority.soa_secure(false, supported_algorithms);
-
-                        if soa_records.is_empty() {
-                            warn!("no soa record for: {:?}", authority.origin());
-                        } else {
-                            response.add_name_servers(soa_records.iter().cloned());
+                            response.set_response_code(err);
                         }
                     }
                 }
@@ -191,55 +198,66 @@ impl DNSHandler {
         authority: &Authority,
         source: IpAddr,
         query: &Query,
-    ) -> Option<Vec<Record>> {
+    ) -> Result<Option<Vec<Record>>, ResponseCode> {
         let (query_name, query_type) = (query.name(), query.query_type());
+        let record_type = RecordType::from_trust(&query_type);
 
-        // Attempt with requested domain
-        let mut records = Self::records_from_store_attempt(
-            authority,
-            source,
-            &query_name,
-            &query_name,
-            &query_type,
-        );
-
-        // Check if 'records' is empty
-        let is_records_empty = if let Some(ref records_inner) = records {
-            records_inner.is_empty()
-        } else {
-            records.is_none()
-        };
-
-        // Attempt with wildcard domain? (records empty)
-        if is_records_empty == true {
-            debug!(
-                "got empty records from store, attempting wildcard for query: {}",
-                query
+        // Record type supported?
+        if let Some(record_type_inner) = record_type {
+            // Attempt with requested domain
+            let mut records = Self::records_from_store_attempt(
+                authority,
+                source,
+                &query_name,
+                &query_name,
+                &query_type,
+                &record_type_inner,
             );
 
-            if let Some(base_name) = query_name.to_string().splitn(2, ".").nth(1) {
-                let wildcard_name_string = format!("*.{}", base_name);
+            // Check if 'records' is empty
+            let is_records_empty = if let Some(ref records_inner) = records {
+                records_inner.is_empty()
+            } else {
+                records.is_none()
+            };
 
-                if let Ok(wildcard_name) = Name::parse(&wildcard_name_string, Some(&Name::new())) {
-                    if &wildcard_name != query_name {
-                        let records_wildcard = Self::records_from_store_attempt(
-                            authority,
-                            source,
-                            &query_name,
-                            &wildcard_name,
-                            &query_type,
-                        );
+            // Attempt with wildcard domain? (records empty)
+            if is_records_empty == true {
+                debug!(
+                    "got empty records from store, attempting wildcard for query: {}",
+                    query
+                );
 
-                        // Assign non-none wildcard records? (retain any NOERROR from 'records')
-                        if records_wildcard.is_none() == false {
-                            records = records_wildcard
+                if let Some(base_name) = query_name.to_string().splitn(2, ".").nth(1) {
+                    let wildcard_name_string = format!("*.{}", base_name);
+
+                    if let Ok(wildcard_name) =
+                        Name::parse(&wildcard_name_string, Some(&Name::new()))
+                    {
+                        if &wildcard_name != query_name {
+                            let records_wildcard = Self::records_from_store_attempt(
+                                authority,
+                                source,
+                                &query_name,
+                                &wildcard_name,
+                                &query_type,
+                                &record_type_inner,
+                            );
+
+                            // Assign non-none wildcard records? (retain any NOERROR from 'records')
+                            if records_wildcard.is_none() == false {
+                                records = records_wildcard
+                            }
                         }
                     }
                 }
             }
-        }
 
-        records
+            Ok(records)
+        } else {
+            // Record type not supported (ie. 'not implemented')
+            Err(ResponseCode::NotImp)
+        }
     }
 
     fn records_from_store_attempt(
@@ -248,10 +266,10 @@ impl DNSHandler {
         query_name_client: &Name,
         query_name_effective: &Name,
         query_type: &TrustRecordType,
+        record_type: &RecordType,
     ) -> Option<Vec<Record>> {
         let zone_name = ZoneName::from_trust(&authority.origin());
         let record_name = RecordName::from_trust(&authority.origin(), query_name_effective);
-        let record_type = RecordType::from_trust(query_type);
 
         debug!(
             "lookup record in store for query: {} {} on zone: {:?}, record: {:?}, and type: {:?}",
@@ -262,11 +280,11 @@ impl DNSHandler {
             record_type
         );
 
-        match (zone_name, record_name, record_type) {
-            (Some(zone_name), Some(record_name), Some(record_type)) => {
+        match (zone_name, record_name) {
+            (Some(zone_name), Some(record_name)) => {
                 let mut records = Vec::new();
 
-                if let Ok(record) = APP_STORE.get(&zone_name, &record_name, &record_type) {
+                if let Ok(record) = APP_STORE.get(&zone_name, &record_name, record_type) {
                     debug!(
                         "found record in store for query: {} {} with result: {:?}",
                         query_name_effective,
@@ -279,7 +297,7 @@ impl DNSHandler {
                 }
 
                 // Look for a CNAME result?
-                if record_type != RecordType::CNAME {
+                if record_type != &RecordType::CNAME {
                     if let Ok(record_cname) = APP_STORE.get(
                         &zone_name,
                         &record_name,

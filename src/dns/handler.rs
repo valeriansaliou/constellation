@@ -120,7 +120,11 @@ impl DNSHandler {
                     if let Some(records_remote) =
                         Self::records_from_store(authority, source, query)
                     {
-                        debug!("found records for query from remote store: {}", query);
+                        debug!(
+                            "found {} records for query from remote store: {}",
+                            records_remote.len(),
+                            query
+                        );
 
                         Self::serve_response_records(
                             &mut response,

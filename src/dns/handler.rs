@@ -282,8 +282,16 @@ impl DNSHandler {
                     }
                 }
 
+                // Records found? Return them immediately
                 if !records.is_empty() {
                     return Some(records);
+                }
+
+                // No record found, exhaust all record types to check if name exists
+                // Notice: a DNS server must return NOERROR if name exists, else NXDOMAIN
+                if Self::check_name_exists(&zone_name, &record_name) == true {
+                    // Name exists, return empty records (ie. NOERROR)
+                    return Some(vec![]);
                 }
             }
             _ => {}
@@ -391,8 +399,13 @@ impl DNSHandler {
     ) {
         response.set_response_code(ResponseCode::NoError);
         response.set_authoritative(true);
-        response.add_answers(records);
 
+        // Add records to response?
+        if !records.is_empty() {
+            response.add_answers(records);
+        }
+
+        // Add name servers to response (required)
         let ns_records = authority.ns(false, supported_algorithms);
 
         if ns_records.is_empty() {
@@ -400,5 +413,20 @@ impl DNSHandler {
         } else {
             response.add_name_servers(ns_records.iter().cloned());
         }
+    }
+
+    fn check_name_exists(zone_name: &ZoneName, record_name: &RecordName) -> bool {
+        // Exhaust all record types
+        for record_type in RecordType::list_choices() {
+            // A record exists for name and type?
+            if APP_STORE
+                .check(zone_name, record_name, &record_type)
+                .is_ok() == true
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

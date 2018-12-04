@@ -102,6 +102,17 @@ impl RecordType {
             RecordType::PTR => Ok(TrustRecordType::PTR),
         }
     }
+
+    pub fn list_choices() -> Vec<RecordType> {
+        return vec![
+            RecordType::A,
+            RecordType::AAAA,
+            RecordType::CNAME,
+            RecordType::MX,
+            RecordType::TXT,
+            RecordType::PTR,
+        ];
+    }
 }
 
 impl RecordName {

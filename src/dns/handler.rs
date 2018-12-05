@@ -111,6 +111,7 @@ impl DNSHandler {
                         .collect();
 
                     Self::serve_response_records(
+                        request,
                         &mut response,
                         records_local_vec,
                         &authority,
@@ -127,6 +128,7 @@ impl DNSHandler {
                                 );
 
                                 Self::serve_response_records(
+                                    request,
                                     &mut response,
                                     records_remote_inner,
                                     &authority,
@@ -135,21 +137,28 @@ impl DNSHandler {
                             } else {
                                 debug!("did not find records for query: {}", query);
 
-                                // Important: mark error response for found root domain as authoritative
-                                response.set_authoritative(true);
-
                                 match records_local {
                                     AuthLookup::NoName => {
                                         debug!("domain not found for query: {}", query);
 
-                                        response.set_response_code(ResponseCode::NXDomain)
+                                        Self::stamp_response_headers(
+                                            request,
+                                            &mut response,
+                                            ResponseCode::NXDomain,
+                                        );
                                     }
                                     AuthLookup::NameExists => {
                                         debug!("domain found for query: {}", query);
 
-                                        response.set_response_code(ResponseCode::NoError)
+                                        Self::stamp_response_headers(
+                                            request,
+                                            &mut response,
+                                            ResponseCode::NoError,
+                                        );
                                     }
-                                    AuthLookup::Records(..) => panic!("error, should return noerror"),
+                                    AuthLookup::Records(..) => {
+                                        panic!("error, should return noerror")
+                                    }
                                 };
 
                                 let soa_records = authority.soa_secure(false, supported_algorithms);
@@ -164,7 +173,7 @@ impl DNSHandler {
                         Err(err) => {
                             debug!("query refused for: {} because: {}", query, err);
 
-                            response.set_response_code(err);
+                            Self::stamp_response_headers(request, &mut response, err);
                         }
                     }
                 }
@@ -431,13 +440,13 @@ impl DNSHandler {
     }
 
     fn serve_response_records(
+        request: &Message,
         response: &mut Message,
         records: Vec<Record>,
         authority: &Authority,
         supported_algorithms: SupportedAlgorithms,
     ) {
-        response.set_response_code(ResponseCode::NoError);
-        response.set_authoritative(true);
+        Self::stamp_response_headers(request, response, ResponseCode::NoError);
 
         // Add records to response?
         if !records.is_empty() {
@@ -451,6 +460,18 @@ impl DNSHandler {
             warn!("no ns records for: {:?}", authority.origin());
         } else {
             response.add_name_servers(ns_records.iter().cloned());
+        }
+    }
+
+    fn stamp_response_headers(request: &Message, response: &mut Message, code: ResponseCode) {
+        response.set_response_code(code);
+
+        // Stamp response with 'AA' flag (we are authoritative on served zone)
+        response.set_authoritative(true);
+
+        // Stamp response with 'RD' flag? (if requested by client)
+        if request.recursion_desired() == true {
+            response.set_recursion_desired(true);
         }
     }
 

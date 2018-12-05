@@ -141,39 +141,44 @@ impl DNSHandler {
                                     AuthLookup::NoName => {
                                         debug!("domain not found for query: {}", query);
 
-                                        Self::stamp_response_headers(
+                                        Self::stamp_response(
                                             request,
                                             &mut response,
+                                            authority,
+                                            supported_algorithms,
                                             ResponseCode::NXDomain,
+                                            false,
                                         );
                                     }
                                     AuthLookup::NameExists => {
                                         debug!("domain found for query: {}", query);
 
-                                        Self::stamp_response_headers(
+                                        Self::stamp_response(
                                             request,
                                             &mut response,
+                                            authority,
+                                            supported_algorithms,
                                             ResponseCode::NoError,
+                                            false,
                                         );
                                     }
                                     AuthLookup::Records(..) => {
                                         panic!("error, should return noerror")
                                     }
                                 };
-
-                                let soa_records = authority.soa_secure(false, supported_algorithms);
-
-                                if soa_records.is_empty() {
-                                    warn!("no soa record for: {:?}", authority.origin());
-                                } else {
-                                    response.add_name_servers(soa_records.iter().cloned());
-                                }
                             }
                         }
                         Err(err) => {
                             debug!("query refused for: {} because: {}", query, err);
 
-                            Self::stamp_response_headers(request, &mut response, err);
+                            Self::stamp_response(
+                                request,
+                                &mut response,
+                                authority,
+                                supported_algorithms,
+                                err,
+                                false,
+                            );
                         }
                     }
                 }
@@ -446,24 +451,32 @@ impl DNSHandler {
         authority: &Authority,
         supported_algorithms: SupportedAlgorithms,
     ) {
-        Self::stamp_response_headers(request, response, ResponseCode::NoError);
+        let has_records = !records.is_empty();
+
+        // Stamp response with flags and required response data
+        Self::stamp_response(
+            request,
+            response,
+            authority,
+            supported_algorithms,
+            ResponseCode::NoError,
+            has_records,
+        );
 
         // Add records to response?
-        if !records.is_empty() {
+        if has_records == true {
             response.add_answers(records);
-        }
-
-        // Add name servers to response (required)
-        let ns_records = authority.ns(false, supported_algorithms);
-
-        if ns_records.is_empty() {
-            warn!("no ns records for: {:?}", authority.origin());
-        } else {
-            response.add_name_servers(ns_records.iter().cloned());
         }
     }
 
-    fn stamp_response_headers(request: &Message, response: &mut Message, code: ResponseCode) {
+    fn stamp_response(
+        request: &Message,
+        response: &mut Message,
+        authority: &Authority,
+        supported_algorithms: SupportedAlgorithms,
+        code: ResponseCode,
+        has_records: bool,
+    ) {
         response.set_response_code(code);
 
         // Stamp response with 'AA' flag (we are authoritative on served zone)
@@ -472,6 +485,17 @@ impl DNSHandler {
         // Stamp response with 'RD' flag? (if requested by client)
         if request.recursion_desired() == true {
             response.set_recursion_desired(true);
+        }
+
+        // Add SOA records? (if response is empty)
+        if has_records == false {
+            let soa_records = authority.soa_secure(false, supported_algorithms);
+
+            if soa_records.is_empty() {
+                warn!("no soa record for: {:?}", authority.origin());
+            } else {
+                response.add_name_servers(soa_records.iter().cloned());
+            }
         }
     }
 

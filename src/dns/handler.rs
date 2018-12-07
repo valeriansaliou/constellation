@@ -216,62 +216,54 @@ impl DNSHandler {
         let (query_name, query_type) = (query.name(), query.query_type());
         let record_type = RecordType::from_trust(&query_type);
 
-        // Record type supported?
-        if let Some(record_type_inner) = record_type {
-            // Attempt with requested domain
-            let mut records = Self::records_from_store_attempt(
-                authority,
-                source,
-                &query_name,
-                &query_name,
-                &query_type,
-                &record_type_inner,
+        // Attempt with requested domain
+        let mut records = Self::records_from_store_attempt(
+            authority,
+            source,
+            &query_name,
+            &query_name,
+            &query_type,
+            &record_type,
+        );
+
+        // Check if 'records' is empty
+        let is_records_empty = if let Some(ref records_inner) = records {
+            records_inner.is_empty()
+        } else {
+            records.is_none()
+        };
+
+        // Attempt with wildcard domain? (records empty)
+        if is_records_empty == true {
+            debug!(
+                "got empty records from store, attempting wildcard for query: {}",
+                query
             );
 
-            // Check if 'records' is empty
-            let is_records_empty = if let Some(ref records_inner) = records {
-                records_inner.is_empty()
-            } else {
-                records.is_none()
-            };
+            if let Some(base_name) = query_name.to_string().splitn(2, ".").nth(1) {
+                let wildcard_name_string = format!("*.{}", base_name);
 
-            // Attempt with wildcard domain? (records empty)
-            if is_records_empty == true {
-                debug!(
-                    "got empty records from store, attempting wildcard for query: {}",
-                    query
-                );
+                if let Ok(wildcard_name) = Name::parse(&wildcard_name_string, Some(&Name::new())) {
+                    if &wildcard_name != query_name {
+                        let records_wildcard = Self::records_from_store_attempt(
+                            authority,
+                            source,
+                            &query_name,
+                            &wildcard_name,
+                            &query_type,
+                            &record_type,
+                        );
 
-                if let Some(base_name) = query_name.to_string().splitn(2, ".").nth(1) {
-                    let wildcard_name_string = format!("*.{}", base_name);
-
-                    if let Ok(wildcard_name) =
-                        Name::parse(&wildcard_name_string, Some(&Name::new()))
-                    {
-                        if &wildcard_name != query_name {
-                            let records_wildcard = Self::records_from_store_attempt(
-                                authority,
-                                source,
-                                &query_name,
-                                &wildcard_name,
-                                &query_type,
-                                &record_type_inner,
-                            );
-
-                            // Assign non-none wildcard records? (retain any NOERROR from 'records')
-                            if records_wildcard.is_none() == false {
-                                records = records_wildcard
-                            }
+                        // Assign non-none wildcard records? (retain any NOERROR from 'records')
+                        if records_wildcard.is_none() == false {
+                            records = records_wildcard
                         }
                     }
                 }
             }
-
-            Ok(records)
-        } else {
-            // Record type not supported (ie. 'not implemented')
-            Err(ResponseCode::NotImp)
         }
+
+        Ok(records)
     }
 
     fn records_from_store_attempt(
@@ -280,7 +272,7 @@ impl DNSHandler {
         query_name_client: &Name,
         query_name_effective: &Name,
         query_type: &TrustRecordType,
-        record_type: &RecordType,
+        record_type: &Option<RecordType>,
     ) -> Option<Vec<Record>> {
         let zone_name = ZoneName::from_trust(&authority.origin());
         let record_name = RecordName::from_trust(&authority.origin(), query_name_effective);
@@ -298,40 +290,42 @@ impl DNSHandler {
             (Some(zone_name), Some(record_name)) => {
                 let mut records = Vec::new();
 
-                if let Ok(record) = APP_STORE.get(&zone_name, &record_name, record_type) {
-                    debug!(
-                        "found record in store for query: {} {} with result: {:?}",
-                        query_name_effective,
-                        query_type,
-                        record
-                    );
-
-                    // Append record direct results
-                    Self::parse_from_records(query_name_client, source, &record, &mut records);
-                }
-
-                // Look for a CNAME result?
-                if record_type != &RecordType::CNAME {
-                    if let Ok(record_cname) = APP_STORE.get(
-                        &zone_name,
-                        &record_name,
-                        &RecordType::CNAME,
-                    )
-                    {
+                if let &Some(ref record_type_inner) = record_type {
+                    if let Ok(record) = APP_STORE.get(&zone_name, &record_name, record_type_inner) {
                         debug!(
-                            "found cname hint record in store for query: {} {} with result: {:?}",
+                            "found record in store for query: {} {}; result: {:?}",
                             query_name_effective,
                             query_type,
-                            record_cname
+                            record
                         );
 
-                        // Append CNAME hint results
-                        Self::parse_from_records(
-                            query_name_client,
-                            source,
-                            &record_cname,
-                            &mut records,
-                        );
+                        // Append record direct results
+                        Self::parse_from_records(query_name_client, source, &record, &mut records);
+                    }
+
+                    // Look for a CNAME result?
+                    if record_type_inner != &RecordType::CNAME {
+                        if let Ok(record_cname) = APP_STORE.get(
+                            &zone_name,
+                            &record_name,
+                            &RecordType::CNAME,
+                        )
+                        {
+                            debug!(
+                                "found cname hint record in store for query: {} {}; result: {:?}",
+                                query_name_effective,
+                                query_type,
+                                record_cname
+                            );
+
+                            // Append CNAME hint results
+                            Self::parse_from_records(
+                                query_name_client,
+                                source,
+                                &record_cname,
+                                &mut records,
+                            );
+                        }
                     }
                 }
 

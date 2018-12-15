@@ -4,9 +4,8 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use rocket::response::Failure;
 use rocket::http::Status;
-use rocket_contrib::Json;
+use rocket_contrib::json::Json;
 
 use super::record_guard::RecordGuard;
 use dns::zone::ZoneName;
@@ -34,26 +33,26 @@ pub struct RecordGetResponse {
 }
 
 #[head("/zone/<zone_name>/record/<record_name>/<record_type>")]
-fn head_zone_record(
+pub fn head_zone_record(
     _auth: RecordGuard,
     zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
-) -> Result<(), Failure> {
+) -> Result<(), Status> {
     APP_STORE.check(&zone_name, &record_name, &record_type).or(
         Err(
-            Failure(Status::NotFound),
+            Status::NotFound,
         ),
     )
 }
 
 #[get("/zone/<zone_name>/record/<record_name>/<record_type>")]
-fn get_zone_record(
+pub fn get_zone_record(
     _auth: RecordGuard,
     zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
-) -> Result<Json<RecordGetResponse>, Failure> {
+) -> Result<Json<RecordGetResponse>, Status> {
     APP_STORE
         .get(&zone_name, &record_name, &record_type)
         .map(|record| {
@@ -65,18 +64,18 @@ fn get_zone_record(
                 values: record.values,
             })
         })
-        .or(Err(Failure(Status::NotFound)))
+        .or(Err(Status::NotFound))
 }
 
 #[put("/zone/<zone_name>/record/<record_name>/<record_type>", data = "<data>",
       format = "application/json")]
-fn put_zone_record(
+pub fn put_zone_record(
     _auth: RecordGuard,
     zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
     data: Json<RecordData>,
-) -> Result<(), Failure> {
+) -> Result<(), Status> {
     APP_STORE
         .set(
             &zone_name,
@@ -88,17 +87,17 @@ fn put_zone_record(
                 values: data.values.to_owned(),
             },
         )
-        .or(Err(Failure(Status::InternalServerError)))
+        .or(Err(Status::InternalServerError))
 }
 
 #[delete("/zone/<zone_name>/record/<record_name>/<record_type>")]
-fn delete_zone_record(
+pub fn delete_zone_record(
     _auth: RecordGuard,
     zone_name: ZoneName,
     record_name: RecordName,
     record_type: RecordType,
-) -> Result<(), Failure> {
+) -> Result<(), Status> {
     APP_STORE
         .remove(&zone_name, &record_name, &record_type)
-        .or(Err(Failure(Status::InternalServerError)))
+        .or(Err(Status::InternalServerError))
 }

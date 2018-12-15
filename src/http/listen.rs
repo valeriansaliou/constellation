@@ -31,7 +31,7 @@ impl HTTPListen {
             .unwrap();
 
         // Build and run Rocket instance
-        rocket::custom(config, false)
+        rocket::custom(config)
             .mount(
                 "/",
                 routes![
@@ -41,7 +41,7 @@ impl HTTPListen {
                     routes::delete_zone_record,
                 ],
             )
-            .catch(catchers![
+            .register(catchers![
                 catchers::bad_request,
                 catchers::unauthorized,
                 catchers::forbidden,

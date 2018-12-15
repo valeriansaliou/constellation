@@ -4,7 +4,7 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use rocket_contrib::Json;
+use rocket_contrib::json::Json;
 
 #[derive(Serialize)]
 pub struct CatcherResponse {

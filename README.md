@@ -39,7 +39,7 @@ _👋 You use Constellation and you want to be listed there? [Contact me](https:
 
 Constellation is built in Rust. To install it, either download a version from the [Constellation releases](https://github.com/valeriansaliou/constellation/releases) page, use `cargo install` or pull the source code from `master`.
 
-> Ensure that you build Constellation using Rust `nightly-2018-08-01` (use the `nightly` toolchain). Some Constellation dependencies will not compile with later versions of the compiler.
+> Ensure that you build Constellation using Rust `nightly-2018-12-14` (use the `nightly` toolchain). Some Constellation dependencies will not compile with later versions of the compiler.
 
 **Install from source:**
 

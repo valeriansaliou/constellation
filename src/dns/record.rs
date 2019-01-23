@@ -50,7 +50,11 @@ pub struct RecordRegions {
     pub nam: Option<RecordValues>,
     pub sam: Option<RecordValues>,
     pub oc: Option<RecordValues>,
+    pub me: Option<RecordValues>,
     pub af: Option<RecordValues>,
+
+    #[serde(rename = "in")]
+    pub _in: Option<RecordValues>,
 
     #[serde(rename = "as")]
     pub _as: Option<RecordValues>,

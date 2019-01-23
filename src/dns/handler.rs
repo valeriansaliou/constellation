@@ -371,8 +371,10 @@ impl DNSHandler {
                             RegionCode::NAM => (country, region, &regions.nam),
                             RegionCode::SAM => (country, region, &regions.sam),
                             RegionCode::OC => (country, region, &regions.oc),
-                            RegionCode::AF => (country, region, &regions.af),
+                            RegionCode::ME => (country, region, &regions.me),
+                            RegionCode::IN => (country, region, &regions._in),
                             RegionCode::AS => (country, region, &regions._as),
+                            RegionCode::AF => (country, region, &regions.af),
                         })
                     }
                     None => None,

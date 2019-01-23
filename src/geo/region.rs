@@ -10,6 +10,8 @@ pub enum RegionCode {
     NAM,
     SAM,
     OC,
+    ME,
+    IN,
     AS,
     AF,
 }
@@ -21,6 +23,8 @@ impl RegionCode {
             RegionCode::NAM => "North America",
             RegionCode::SAM => "South America",
             RegionCode::OC => "Oceania",
+            RegionCode::ME => "Middle East",
+            RegionCode::IN => "India",
             RegionCode::AS => "Asia",
             RegionCode::AF => "Africa",
         }

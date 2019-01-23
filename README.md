@@ -149,6 +149,8 @@ If you want to serve records to the nearest server using the Geo-DNS feature, yo
 * `nam`: North America
 * `sam`: South America
 * `oc`: Oceania
+* `me`: Middle East
+* `in`: India
 * `as`: Asia
 * `af`: Africa
 
@@ -212,7 +214,7 @@ PUT /zone/crisp.email/record/@/mx HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
-{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"regions":{"eu":["10 inbound-geo.europe.crisp.email"],"nam":["10 inbound-geo.americas.crisp.email"],"sam":["10 inbound-geo.americas.crisp.email"],"oc":["10 inbound-geo.asia.crisp.email"],"as":["10 inbound-geo.asia.crisp.email"],"af":["10 inbound-geo.europe.crisp.email"]},"ttl":600}
+{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"regions":{"eu":["10 inbound-geo.europe.crisp.email"],"nam":["10 inbound-geo.northamerica.crisp.email"],"sam":["10 inbound-geo.southamerica.crisp.email"],"oc":["10 inbound-geo.oceania.crisp.email"],"me":["10 inbound-geo.middleeast.crisp.email"],"in":["10 inbound-geo.india.crisp.email"],"as":["10 inbound-geo.asia.crisp.email"],"af":["10 inbound-geo.africa.crisp.email"]},"ttl":600}
 ```
 
 **Example response:**

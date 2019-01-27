@@ -5,10 +5,11 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use std::thread;
-use std::io::{copy, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom};
 use std::time::Duration;
 use std::fs::File;
-use reqwest;
+use http_req::request as HTTPRequest;
+use http_req::error as HTTPError;
 use tempfile::tempfile;
 use flate2::read::GzDecoder;
 use tar::{Archive, Entries};
@@ -86,62 +87,56 @@ impl GeoUpdater {
         return false;
     }
 
-    fn update_database() -> Result<(), Option<reqwest::Error>> {
+    fn update_database() -> Result<(), Option<HTTPError::Error>> {
         debug!("acquiring updated geo database");
 
-        match reqwest::get(&APP_CONF.geo.update_url) {
-            Ok(mut response) => {
-                info!("acquired updated geo database archive");
+        match tempfile() {
+            Ok(mut tmp_file) => {
+                match HTTPRequest::get(&APP_CONF.geo.update_url, &mut tmp_file) {
+                    Ok(_) => {
+                        debug!(
+                            "downloaded updated geo database archive to file: {:?}",
+                            tmp_file
+                        );
 
-                match tempfile() {
-                    Ok(mut tmp_file) => {
-                        if copy(&mut response, &mut tmp_file).is_ok() == true {
-                            debug!(
-                                "downloaded updated geo database archive to file: {:?}",
-                                tmp_file
-                            );
+                        // Reset file cursor to the beginning (prepare for reading)
+                        tmp_file.seek(SeekFrom::Start(0)).unwrap();
 
-                            // Reset file cursor to the beginning (prepare for reading)
-                            tmp_file.seek(SeekFrom::Start(0)).unwrap();
+                        // Extract archive
+                        let tar = GzDecoder::new(tmp_file);
 
-                            // Extract archive
-                            let tar = GzDecoder::new(tmp_file);
-
-                            match Archive::new(tar).entries() {
-                                Ok(entries) => {
-                                    if Self::extract_archive(entries) == true {
-                                        Ok(())
-                                    } else {
-                                        error!(
-                                            "no matching mmdb file found in geo database archive"
-                                        );
-
-                                        Err(None)
-                                    }
-                                }
-                                Err(_) => {
-                                    error!("failed to list entries in geo database archive");
+                        match Archive::new(tar).entries() {
+                            Ok(entries) => {
+                                if Self::extract_archive(entries) == true {
+                                    Ok(())
+                                } else {
+                                    error!("no matching mmdb file found in geo database archive");
 
                                     Err(None)
                                 }
                             }
-                        } else {
-                            error!("failed to download updated geo database archive");
+                            Err(_) => {
+                                error!("failed to list entries in geo database archive");
 
-                            Err(None)
+                                Err(None)
+                            }
                         }
                     }
                     Err(err) => {
-                        error!(
-                            "failed to create temporary file for geo database download: {:?}",
-                            err
-                        );
+                        error!("failed to download updated geo database archive");
 
-                        Err(None)
+                        Err(Some(err))
                     }
                 }
             }
-            Err(err) => Err(Some(err)),
+            Err(err) => {
+                error!(
+                    "failed to create temporary file for geo database download: {:?}",
+                    err
+                );
+
+                Err(None)
+            }
         }
     }
 }

@@ -28,7 +28,7 @@ extern crate regex;
 extern crate trust_dns;
 extern crate trust_dns_server;
 extern crate farmhash;
-extern crate reqwest;
+extern crate http_req;
 extern crate maxminddb;
 extern crate tempfile;
 extern crate flate2;

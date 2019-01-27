@@ -62,7 +62,7 @@ pub fn geo_update_interval() -> u64 {
 }
 
 pub fn geo_update_url() -> String {
-    "http://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz".to_string()
+    "https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz".to_string()
 }
 
 pub fn http_inet() -> SocketAddr {

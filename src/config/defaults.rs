@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use super::config::ConfigDNSZone;
 
 pub fn server_log_level() -> String {
-    "warn".to_string()
+    "error".to_string()
 }
 
 pub fn dns_inets() -> Vec<SocketAddr> {

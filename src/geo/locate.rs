@@ -13,10 +13,14 @@ use maxminddb::{geoip2, Reader as GeoReader, MaxMindDBError};
 use super::country::CountryCode;
 use APP_CONF;
 
+type GeoReaderType = GeoReader<Vec<u8>>;
+
 pub struct Locator;
 
 lazy_static! {
-    pub static ref DB_READER: Arc<RwLock<GeoReader>> = Arc::new(RwLock::new(Locator::geo_open()));
+    pub static ref DB_READER: Arc<RwLock<GeoReaderType>> = Arc::new(
+        RwLock::new(Locator::geo_open())
+    );
 }
 
 impl Locator {
@@ -49,19 +53,32 @@ impl Locator {
 
                 *store = reader;
 
+                info!("geo database refreshed");
+
                 Ok(())
             }
             Err(err) => Err(err),
         }
     }
 
-    fn geo_acquire() -> Result<GeoReader, MaxMindDBError> {
-        GeoReader::open(Self::get_database_full_path().to_str().unwrap())
+    fn geo_acquire() -> Result<GeoReaderType, MaxMindDBError> {
+        let database_path = Self::get_database_full_path();
+
+        debug!("acquiring geo database at: {:?}", database_path);
+
+        GeoReader::open_readfile(database_path.to_str().unwrap())
     }
 
-    fn geo_open() -> GeoReader {
-        Self::geo_acquire().expect(
-            "geo database not found; download geolite2 country and store it in [geo.database_path]",
-        )
+    fn geo_open() -> GeoReaderType {
+        match Self::geo_acquire() {
+            Ok(reader) => {
+                info!("geo database opened");
+
+                reader
+            }
+            Err(_) => {
+                panic!("geo database not found; download geolite2 country to [geo.database_path]");
+            }
+        }
     }
 }

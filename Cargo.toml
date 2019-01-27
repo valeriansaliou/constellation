@@ -38,7 +38,7 @@ trust-dns = { version = "0.13", default-features = false }
 trust-dns-server = { version = "0.13", default-features = false }
 farmhash = "1.1"
 reqwest = "0.9"
-maxminddb = "0.10"
+maxminddb = "0.13"
 tempfile = "3.0"
 flate2 = "1.0"
 tar = "0.4"

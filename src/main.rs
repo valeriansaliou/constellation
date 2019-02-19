@@ -16,33 +16,33 @@ extern crate lazy_static;
 extern crate serde_derive;
 #[macro_use]
 extern crate rocket;
-extern crate serde;
-extern crate serde_json;
-extern crate toml;
 extern crate base64;
+extern crate farmhash;
+extern crate flate2;
+extern crate http_req;
+extern crate maxminddb;
 extern crate r2d2;
 extern crate r2d2_redis;
 extern crate redis;
-extern crate rocket_contrib;
 extern crate regex;
+extern crate rocket_contrib;
+extern crate serde;
+extern crate serde_json;
+extern crate tar;
+extern crate tempfile;
+extern crate toml;
 extern crate trust_dns;
 extern crate trust_dns_server;
-extern crate farmhash;
-extern crate http_req;
-extern crate maxminddb;
-extern crate tempfile;
-extern crate flate2;
-extern crate tar;
 
 mod config;
-mod geo;
 mod dns;
+mod geo;
 mod http;
 mod store;
 
-use std::thread;
 use std::ops::Deref;
 use std::str::FromStr;
+use std::thread;
 use std::time::Duration;
 
 use clap::{App, Arg};
@@ -51,11 +51,11 @@ use log::LevelFilter;
 use config::config::Config;
 use config::logger::ConfigLogger;
 use config::reader::ConfigReader;
-use store::store::{Store, StoreBuilder};
 use dns::listen::DNSListenBuilder;
-use http::listen::HTTPListenBuilder;
-use geo::updater::GeoUpdaterBuilder;
 use geo::locate::DB_READER;
+use geo::updater::GeoUpdaterBuilder;
+use http::listen::HTTPListenBuilder;
+use store::store::{Store, StoreBuilder};
 
 struct AppArgs {
     config: String,
@@ -66,7 +66,7 @@ pub static THREAD_NAME_HTTP: &'static str = "constellation-http";
 pub static THREAD_NAME_GEO_UPDATER: &'static str = "constellation-geo-updater";
 
 macro_rules! gen_spawn_managed {
-    ($name:expr, $method:ident, $thread_name:ident, $managed_fn:expr) => (
+    ($name:expr, $method:ident, $thread_name:ident, $managed_fn:expr) => {
         fn $method() {
             debug!("spawn managed thread: {}", $name);
 
@@ -91,7 +91,7 @@ macro_rules! gen_spawn_managed {
                 $method();
             }
         }
-    )
+    };
 }
 
 lazy_static! {
@@ -135,7 +135,9 @@ fn make_app_args() -> AppArgs {
         .get_matches();
 
     // Generate owned app arguments
-    AppArgs { config: String::from(matches.value_of("config").expect("invalid config value")) }
+    AppArgs {
+        config: String::from(matches.value_of("config").expect("invalid config value")),
+    }
 }
 
 fn ensure_states() {
@@ -149,9 +151,9 @@ fn ensure_states() {
 }
 
 fn main() {
-    let _logger = ConfigLogger::init(LevelFilter::from_str(&APP_CONF.server.log_level).expect(
-        "invalid log level",
-    ));
+    let _logger = ConfigLogger::init(
+        LevelFilter::from_str(&APP_CONF.server.log_level).expect("invalid log level"),
+    );
 
     info!("starting up");
 

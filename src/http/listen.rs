@@ -9,7 +9,7 @@ use rocket::config::{Config, Environment};
 
 use crate::APP_CONF;
 
-use super::{routes, catchers};
+use super::{catchers, routes};
 
 pub struct HTTPListenBuilder;
 pub struct HTTPListen;

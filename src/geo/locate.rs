@@ -4,11 +4,11 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use std::sync::RwLock;
-use std::sync::Arc;
+use maxminddb::{geoip2, MaxMindDBError, Reader as GeoReader};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
-use maxminddb::{geoip2, Reader as GeoReader, MaxMindDBError};
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use super::country::CountryCode;
 use crate::APP_CONF;
@@ -18,9 +18,8 @@ type GeoReaderType = GeoReader<Vec<u8>>;
 pub struct Locator;
 
 lazy_static! {
-    pub static ref DB_READER: Arc<RwLock<GeoReaderType>> = Arc::new(
-        RwLock::new(Locator::geo_open())
-    );
+    pub static ref DB_READER: Arc<RwLock<GeoReaderType>> =
+        Arc::new(RwLock::new(Locator::geo_open()));
 }
 
 impl Locator {

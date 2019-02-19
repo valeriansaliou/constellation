@@ -5,16 +5,16 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use std::collections::HashMap;
-use std::sync::RwLock;
 use std::net::IpAddr;
+use std::sync::RwLock;
 use trust_dns::op::{Message, MessageType, OpCode, Query, ResponseCode};
-use trust_dns::rr::{Name, Record, RecordType as TrustRecordType};
 use trust_dns::rr::dnssec::SupportedAlgorithms;
-use trust_dns_server::server::{Request, RequestHandler};
+use trust_dns::rr::{Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{AuthLookup, Authority};
+use trust_dns_server::server::{Request, RequestHandler};
 
-use super::zone::ZoneName;
 use super::record::{RecordName, RecordType};
+use super::zone::ZoneName;
 use crate::geo::locate::Locator;
 use crate::geo::region::RegionCode;
 use crate::store::store::StoreRecord;
@@ -32,26 +32,24 @@ impl RequestHandler for DNSHandler {
         trace!("request: {:?}", request_message);
 
         let response: Message = match request_message.message_type() {
-            MessageType::Query => {
-                match request_message.op_code() {
-                    OpCode::Query => {
-                        let response = self.lookup(request.src.ip(), &request_message);
+            MessageType::Query => match request_message.op_code() {
+                OpCode::Query => {
+                    let response = self.lookup(request.src.ip(), &request_message);
 
-                        trace!("query response: {:?}", response);
+                    trace!("query response: {:?}", response);
 
-                        response
-                    }
-                    code @ _ => {
-                        error!("unimplemented opcode: {:?}", code);
-
-                        Message::error_msg(
-                            request_message.id(),
-                            request_message.op_code(),
-                            ResponseCode::NotImp,
-                        )
-                    }
+                    response
                 }
-            }
+                code @ _ => {
+                    error!("unimplemented opcode: {:?}", code);
+
+                    Message::error_msg(
+                        request_message.id(),
+                        request_message.op_code(),
+                        ResponseCode::NotImp,
+                    )
+                }
+            },
             MessageType::Response => {
                 warn!(
                     "got a response as a request from id: {}",
@@ -72,7 +70,9 @@ impl RequestHandler for DNSHandler {
 
 impl DNSHandler {
     pub fn new() -> Self {
-        DNSHandler { authorities: HashMap::new() }
+        DNSHandler {
+            authorities: HashMap::new(),
+        }
     }
 
     pub fn upsert(&mut self, name: Name, authority: Authority) {
@@ -279,11 +279,7 @@ impl DNSHandler {
 
         debug!(
             "lookup record in store for query: {} {} on zone: {:?}, record: {:?}, and type: {:?}",
-            query_name_effective,
-            query_type,
-            zone_name,
-            record_name,
-            record_type
+            query_name_effective, query_type, zone_name, record_name, record_type
         );
 
         match (zone_name, record_name) {
@@ -294,9 +290,7 @@ impl DNSHandler {
                     if let Ok(record) = APP_STORE.get(&zone_name, &record_name, record_type_inner) {
                         debug!(
                             "found record in store for query: {} {}; result: {:?}",
-                            query_name_effective,
-                            query_type,
-                            record
+                            query_name_effective, query_type, record
                         );
 
                         // Append record direct results
@@ -305,17 +299,12 @@ impl DNSHandler {
 
                     // Look for a CNAME result?
                     if record_type_inner != &RecordType::CNAME {
-                        if let Ok(record_cname) = APP_STORE.get(
-                            &zone_name,
-                            &record_name,
-                            &RecordType::CNAME,
-                        )
+                        if let Ok(record_cname) =
+                            APP_STORE.get(&zone_name, &record_name, &RecordType::CNAME)
                         {
                             debug!(
                                 "found cname hint record in store for query: {} {}; result: {:?}",
-                                query_name_effective,
-                                query_type,
-                                record_cname
+                                query_name_effective, query_type, record_cname
                             );
 
                             // Append CNAME hint results
@@ -391,8 +380,7 @@ impl DNSHandler {
                     if let Some(region_values) = region_wrap_inner.2 {
                         debug!(
                             "source ip: {} region values found: {:?}",
-                            source,
-                            region_values
+                            source, region_values
                         );
 
                         region_values
@@ -501,7 +489,8 @@ impl DNSHandler {
             // A record exists for name and type?
             if APP_STORE
                 .check(zone_name, record_name, &record_type)
-                .is_ok() == true
+                .is_ok()
+                == true
             {
                 return true;
             }

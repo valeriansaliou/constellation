@@ -35,5 +35,5 @@ macro_rules! serde_string_impls {
                 deserializer.deserialize_str(FieldVisitor)
             }
         }
-    }
+    };
 }

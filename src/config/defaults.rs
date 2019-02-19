@@ -4,8 +4,8 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use std::net::SocketAddr;
 use std::collections::BTreeMap;
+use std::net::SocketAddr;
 
 use super::config::ConfigDNSZone;
 

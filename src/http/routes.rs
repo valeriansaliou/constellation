@@ -8,8 +8,8 @@ use rocket::http::Status;
 use rocket_contrib::json::Json;
 
 use super::record_guard::RecordGuard;
+use crate::dns::record::{RecordName, RecordRegions, RecordType, RecordValues};
 use crate::dns::zone::ZoneName;
-use crate::dns::record::{RecordType, RecordName, RecordRegions, RecordValues};
 use crate::store::store::StoreRecord;
 
 use crate::APP_STORE;
@@ -39,11 +39,9 @@ pub fn head_zone_record(
     record_name: RecordName,
     record_type: RecordType,
 ) -> Result<(), Status> {
-    APP_STORE.check(&zone_name, &record_name, &record_type).or(
-        Err(
-            Status::NotFound,
-        ),
-    )
+    APP_STORE
+        .check(&zone_name, &record_name, &record_type)
+        .or(Err(Status::NotFound))
 }
 
 #[get("/zone/<zone_name>/record/<record_name>/<record_type>")]
@@ -67,8 +65,11 @@ pub fn get_zone_record(
         .or(Err(Status::NotFound))
 }
 
-#[put("/zone/<zone_name>/record/<record_name>/<record_type>", data = "<data>",
-      format = "application/json")]
+#[put(
+    "/zone/<zone_name>/record/<record_name>/<record_type>",
+    data = "<data>",
+    format = "application/json"
+)]
 pub fn put_zone_record(
     _auth: RecordGuard,
     zone_name: ZoneName,

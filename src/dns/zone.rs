@@ -4,20 +4,19 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use std::{fmt, str};
 use regex::Regex;
-use rocket::request::FromParam;
 use rocket::http::RawStr;
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use serde::de::{Visitor, Unexpected, Error as DeserializeError};
+use rocket::request::FromParam;
+use serde::de::{Error as DeserializeError, Unexpected, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::{fmt, str};
 use trust_dns::rr::Name as TrustName;
 
 use crate::APP_CONF;
 
 lazy_static! {
-    static ref ZONE_NAME_REGEX: Regex = Regex::new(
-        r"^(([^\\/:@&_\*]+)\.)[^\\/:@&_\*\-\.]{2,63}$"
-    ).unwrap();
+    static ref ZONE_NAME_REGEX: Regex =
+        Regex::new(r"^(([^\\/:@&_\*]+)\.)[^\\/:@&_\*\-\.]{2,63}$").unwrap();
 }
 
 serde_string_impls!(ZoneName);

@@ -4,24 +4,23 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use std::time::Duration;
 use std::collections::BTreeMap;
 use std::net::{TcpListener, UdpSocket};
-use trust_dns::rr::{Name, RecordSet, RecordType, Record, RrKey, RData};
+use std::time::Duration;
 use trust_dns::rr::rdata::SOA;
+use trust_dns::rr::{Name, RData, Record, RecordSet, RecordType, RrKey};
+use trust_dns_server::authority::{Authority, ZoneType};
 use trust_dns_server::server::ServerFuture;
-use trust_dns_server::authority::{ZoneType, Authority};
 
 use super::handler::DNSHandler;
 use crate::APP_CONF;
 
 lazy_static! {
-    static ref NAME_SOA_MASTER: Name = Name::parse(
-        &APP_CONF.dns.soa_master, Some(&Name::new())
-    ).expect("invalid soa master");
-    static ref NAME_SOA_RESPONSIBLE: Name = Name::parse(
-        &APP_CONF.dns.soa_responsible, Some(&Name::new())
-    ).expect("invalid soa responsible");
+    static ref NAME_SOA_MASTER: Name =
+        Name::parse(&APP_CONF.dns.soa_master, Some(&Name::new())).expect("invalid soa master");
+    static ref NAME_SOA_RESPONSIBLE: Name =
+        Name::parse(&APP_CONF.dns.soa_responsible, Some(&Name::new()))
+            .expect("invalid soa responsible");
 }
 
 static SERIAL_DEFAULT: u32 = 1;
@@ -103,9 +102,10 @@ impl DNSListen {
                         name.to_owned(),
                         APP_CONF.dns.record_ttl,
                         RecordType::NS,
-                        RData::NS(Name::parse(nameserver, Some(&Name::new())).expect(
-                            "invalid nameserver",
-                        )),
+                        RData::NS(
+                            Name::parse(nameserver, Some(&Name::new()))
+                                .expect("invalid nameserver"),
+                        ),
                     ),
                     SERIAL_DEFAULT,
                 );
@@ -115,13 +115,7 @@ impl DNSListen {
 
             Ok((
                 name.to_owned(),
-                Authority::new(
-                    name,
-                    records,
-                    ZoneType::Master,
-                    false,
-                    false,
-                ),
+                Authority::new(name, records, ZoneType::Master, false, false),
             ))
         } else {
             Err(())

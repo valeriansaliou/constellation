@@ -4,17 +4,17 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use std::{fmt, str};
+use regex::Regex;
+use rocket::http::RawStr;
+use rocket::request::FromParam;
+use serde::de::{Error as DeserializeError, Unexpected, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp;
 use std::ops::Deref;
-use regex::Regex;
-use rocket::request::FromParam;
-use rocket::http::RawStr;
-use serde::{Serialize, Serializer, Deserialize, Deserializer};
-use serde::de::{Visitor, Unexpected, Error as DeserializeError};
-use trust_dns::rr::{Name as TrustName, RecordType as TrustRecordType, RData as TrustRData};
+use std::{fmt, str};
 use trust_dns::rr::rdata::mx::MX;
 use trust_dns::rr::rdata::txt::TXT;
+use trust_dns::rr::{Name as TrustName, RData as TrustRData, RecordType as TrustRecordType};
 
 lazy_static! {
     static ref RECORD_NAME_REGEX: Regex = Regex::new(r"^(\*\.)?(([^\\/:@&\*]+)\.)?@$").unwrap();
@@ -137,8 +137,8 @@ impl RecordName {
             let zone_string = zone_name.to_string().to_lowercase();
             let zone_len = zone_string.len();
 
-            if query_string.get((query_len - 1)..query_len) == Some(".") &&
-                query_string.ends_with(&zone_string)
+            if query_string.get((query_len - 1)..query_len) == Some(".")
+                && query_string.ends_with(&zone_string)
             {
                 query_string.truncate(query_len - zone_len);
             }
@@ -168,9 +168,9 @@ impl RecordValue {
             }
             RecordType::AAAA => {
                 // Parse AAAA into actual IPv6
-                self.parse().map(|value| TrustRData::AAAA(value)).or(
-                    Err(()),
-                )
+                self.parse()
+                    .map(|value| TrustRData::AAAA(value))
+                    .or(Err(()))
             }
             RecordType::CNAME => {
                 // Parse CNAME into domain name
@@ -185,12 +185,10 @@ impl RecordValue {
                 let priority_str = mx_parts.next().unwrap_or("0");
                 let exchange_str = mx_parts.next().unwrap_or("");
 
-                if let (Ok(priority), Ok(exchange)) =
-                    (
-                        priority_str.parse::<u16>(),
-                        TrustName::parse(exchange_str, Some(&TrustName::new())),
-                    )
-                {
+                if let (Ok(priority), Ok(exchange)) = (
+                    priority_str.parse::<u16>(),
+                    TrustName::parse(exchange_str, Some(&TrustName::new())),
+                ) {
                     Ok(TrustRData::MX(MX::new(priority, exchange)))
                 } else {
                     Err(())
@@ -216,11 +214,9 @@ impl RecordValue {
                     Err(())
                 }
             }
-            RecordType::PTR => {
-                TrustName::parse(self, Some(&TrustName::new()))
-                    .map(|value| TrustRData::PTR(value))
-                    .or(Err(()))
-            }
+            RecordType::PTR => TrustName::parse(self, Some(&TrustName::new()))
+                .map(|value| TrustRData::PTR(value))
+                .or(Err(())),
         }
     }
 }

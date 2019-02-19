@@ -4,15 +4,15 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use std::thread;
-use std::io::{Seek, SeekFrom};
-use std::time::Duration;
-use std::fs::File;
-use http_req::request as HTTPRequest;
-use http_req::error as HTTPError;
-use tempfile::tempfile;
 use flate2::read::GzDecoder;
+use http_req::error as HTTPError;
+use http_req::request as HTTPRequest;
+use std::fs::File;
+use std::io::{Seek, SeekFrom};
+use std::thread;
+use std::time::Duration;
 use tar::{Archive, Entries};
+use tempfile::tempfile;
 
 use super::locate::Locator;
 use crate::APP_CONF;

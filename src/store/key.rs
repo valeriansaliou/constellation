@@ -6,8 +6,8 @@
 
 use farmhash;
 
+use crate::dns::record::{RecordName, RecordType};
 use crate::dns::zone::ZoneName;
-use crate::dns::record::{RecordType, RecordName};
 
 pub struct StoreKey;
 

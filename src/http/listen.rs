@@ -7,7 +7,7 @@
 use rocket;
 use rocket::config::{Config, Environment};
 
-use APP_CONF;
+use crate::APP_CONF;
 
 use super::{routes, catchers};
 

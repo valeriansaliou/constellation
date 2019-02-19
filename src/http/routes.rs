@@ -8,11 +8,11 @@ use rocket::http::Status;
 use rocket_contrib::json::Json;
 
 use super::record_guard::RecordGuard;
-use dns::zone::ZoneName;
-use dns::record::{RecordType, RecordName, RecordRegions, RecordValues};
-use store::store::StoreRecord;
+use crate::dns::zone::ZoneName;
+use crate::dns::record::{RecordType, RecordName, RecordRegions, RecordValues};
+use crate::store::store::StoreRecord;
 
-use APP_STORE;
+use crate::APP_STORE;
 
 #[derive(Deserialize)]
 pub struct RecordData {

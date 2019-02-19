@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use maxminddb::{geoip2, Reader as GeoReader, MaxMindDBError};
 
 use super::country::CountryCode;
-use APP_CONF;
+use crate::APP_CONF;
 
 type GeoReaderType = GeoReader<Vec<u8>>;
 

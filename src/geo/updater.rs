@@ -15,7 +15,7 @@ use flate2::read::GzDecoder;
 use tar::{Archive, Entries};
 
 use super::locate::Locator;
-use APP_CONF;
+use crate::APP_CONF;
 
 pub struct GeoUpdaterBuilder;
 pub struct GeoUpdater;

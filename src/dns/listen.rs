@@ -13,7 +13,7 @@ use trust_dns_server::server::ServerFuture;
 use trust_dns_server::authority::{ZoneType, Authority};
 
 use super::handler::DNSHandler;
-use APP_CONF;
+use crate::APP_CONF;
 
 lazy_static! {
     static ref NAME_SOA_MASTER: Name = Name::parse(

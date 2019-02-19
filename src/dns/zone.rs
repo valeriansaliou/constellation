@@ -12,7 +12,7 @@ use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde::de::{Visitor, Unexpected, Error as DeserializeError};
 use trust_dns::rr::Name as TrustName;
 
-use APP_CONF;
+use crate::APP_CONF;
 
 lazy_static! {
     static ref ZONE_NAME_REGEX: Regex = Regex::new(

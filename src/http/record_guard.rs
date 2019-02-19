@@ -9,7 +9,7 @@ use rocket::Outcome;
 use rocket::http::Status;
 use rocket::request::{self, Request, FromRequest};
 
-use APP_CONF;
+use crate::APP_CONF;
 
 pub struct RecordGuard;
 

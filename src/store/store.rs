@@ -11,10 +11,10 @@ use redis::{RedisError, Commands};
 use serde_json::{self, Error as SerdeJSONError};
 
 use super::key::StoreKey;
-use dns::zone::ZoneName;
-use dns::record::{RecordType, RecordName, RecordRegions, RecordValues};
+use crate::dns::zone::ZoneName;
+use crate::dns::record::{RecordType, RecordName, RecordRegions, RecordValues};
 
-use APP_CONF;
+use crate::APP_CONF;
 
 static KEY_TYPE: &'static str = "t";
 static KEY_NAME: &'static str = "n";

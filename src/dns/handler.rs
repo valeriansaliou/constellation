@@ -13,13 +13,13 @@ use trust_dns::rr::dnssec::SupportedAlgorithms;
 use trust_dns_server::server::{Request, RequestHandler};
 use trust_dns_server::authority::{AuthLookup, Authority};
 
-use dns::zone::ZoneName;
-use dns::record::{RecordName, RecordType};
-use geo::locate::Locator;
-use geo::region::RegionCode;
-use store::store::StoreRecord;
-use APP_CONF;
-use APP_STORE;
+use super::zone::ZoneName;
+use super::record::{RecordName, RecordType};
+use crate::geo::locate::Locator;
+use crate::geo::region::RegionCode;
+use crate::store::store::StoreRecord;
+use crate::APP_CONF;
+use crate::APP_STORE;
 
 pub struct DNSHandler {
     authorities: HashMap<Name, RwLock<Authority>>,

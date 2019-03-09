@@ -121,7 +121,7 @@ Execute the provided script:
 
 `./scripts/init_geoip.sh`
 
-_Note that once Constellation started from the GeoIP database you have initialized manually, it will keep the database up-to-date by checking and applying updates automatically in the background. This is a one-time operation._
+_Note that once Constellation started from the GeoIP database you have manually initialized, it will keep the database up-to-date by checking and applying updates automatically in the background. This is a one-time operation._
 
 ### Run Constellation
 

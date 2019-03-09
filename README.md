@@ -113,6 +113,14 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `idle_timeout_seconds` (type: _integer_, allowed: seconds, default: `600`) — Timeout of idle/dead pool connections to Redis
 * `connection_timeout_seconds` (type: _integer_, allowed: seconds, default: `5`) — Timeout in seconds to consider Redis dead and reject DNS and HTTP API queries
 
+### Initialize GeoIP
+
+As Constellation does not distribute the base GeoIP database, you will need to fetch it from MaxMind before you can run Constellation for the first time.
+
+Execute the provided script: `./scripts/init_geoip.sh`
+
+_Note that once Constellation started from the GeoIP database you have initialized manually, it will keep the database up-to-date by checking and applying updates automatically in the background. This is a one-time operation._
+
 ### Run Constellation
 
 Constellation can be run as such:

@@ -115,7 +115,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 ### Initialize GeoIP
 
-As Constellation does not distribute the base GeoIP database, you will need to fetch it from MaxMind before you can run Constellation for the first time.
+As Constellation does not distribute a GeoIP database in its repository, you will need to fetch it from MaxMind before you run Constellation for the first time (Constellation will refuse to start otherwise).
 
 Execute the provided script: `./scripts/init_geoip.sh`
 

@@ -17,7 +17,7 @@ GEOIP_DB_PATH="./GeoLite2-Country.mmdb"
 rc=0
 
 pushd "$BASE_DIR" > /dev/null
-  pushd ./res/geoip > /dev/null
+  pushd ./res/geo > /dev/null
     # Fail by default, if not marked as successful.
     cur_rc=1
 

@@ -4,4 +4,4 @@ target/*
 *#
 .cargo
 
-res/geoip/
+# res/geo/

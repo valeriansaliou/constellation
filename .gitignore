@@ -4,4 +4,4 @@ target/*
 *#
 .cargo
 
-# res/geo/
+res/geo/

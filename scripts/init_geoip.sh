@@ -11,7 +11,7 @@
 ABSPATH=$(cd "$(dirname "$0")"; pwd)
 BASE_DIR="$ABSPATH/../"
 
-GEOIP_DB_URL="https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz"
+GEOIP_DB_URL="https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz"
 GEOIP_DB_PATH="./GeoLite2-Country.mmdb"
 
 rc=0

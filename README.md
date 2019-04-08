@@ -153,32 +153,32 @@ Where:
 
 If you want to serve records to the nearest server using the Geo-DNS feature, you will need to set `regions` via the API, where:
 
-* Americas
+* _Americas_
   * `nnam`: Northern North America
   * `snam`: Southern North America
   * `nsam`: Northern South America
   * `ssam`: Southern South America
 
-* Europe
+* _Europe_
   * `weu`: Western Europe
   * `ceu`: Central Europe
   * `eeu`: Eastern Europe
   * `ru`: Russia
 
-* Middle East
+* _Middle East_
   * `me`: Middle East
 
-* Africa
+* _Africa_
   * `naf`: Northern Africa
   * `maf`: Middle Africa
   * `saf`: Southern Africa
 
-* Asia
+* _Asia_
   * `in`: India
   * `seas`: Southeast Asia
   * `neas`: Northeast Asia
 
-* Oceania
+* _Oceania_
   * `oc`: Oceania
 
 #### API routes

@@ -46,18 +46,24 @@ pub struct RecordValues(Vec<RecordValue>);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RecordRegions {
-    pub eu: Option<RecordValues>,
-    pub nam: Option<RecordValues>,
-    pub sam: Option<RecordValues>,
-    pub oc: Option<RecordValues>,
+    pub nnam: Option<RecordValues>,
+    pub snam: Option<RecordValues>,
+    pub nsam: Option<RecordValues>,
+    pub ssam: Option<RecordValues>,
+    pub weu: Option<RecordValues>,
+    pub ceu: Option<RecordValues>,
+    pub eeu: Option<RecordValues>,
+    pub ru: Option<RecordValues>,
     pub me: Option<RecordValues>,
-    pub af: Option<RecordValues>,
+    pub naf: Option<RecordValues>,
+    pub maf: Option<RecordValues>,
+    pub saf: Option<RecordValues>,
+    pub seas: Option<RecordValues>,
+    pub neas: Option<RecordValues>,
+    pub oc: Option<RecordValues>,
 
     #[serde(rename = "in")]
     pub _in: Option<RecordValues>,
-
-    #[serde(rename = "as")]
-    pub _as: Option<RecordValues>,
 }
 
 impl RecordType {

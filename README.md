@@ -153,14 +153,33 @@ Where:
 
 If you want to serve records to the nearest server using the Geo-DNS feature, you will need to set `regions` via the API, where:
 
-* `eu`: Europe
-* `nam`: North America
-* `sam`: South America
-* `oc`: Oceania
-* `me`: Middle East
-* `in`: India
-* `as`: Asia
-* `af`: Africa
+* Americas
+  * `nnam`: Northern North America
+  * `snam`: Southern North America
+  * `nsam`: Northern South America
+  * `ssam`: Southern South America
+
+* Europe
+  * `weu`: Western Europe
+  * `ceu`: Central Europe
+  * `eeu`: Eastern Europe
+  * `ru`: Russia
+
+* Middle East
+  * `me`: Middle East
+
+* Africa
+  * `naf`: Northern Africa
+  * `maf`: Middle Africa
+  * `saf`: Southern Africa
+
+* Asia
+  * `in`: India
+  * `seas`: Southeast Asia
+  * `neas`: Northeast Asia
+
+* Oceania
+  * `oc`: Oceania
 
 #### API routes
 
@@ -222,7 +241,7 @@ PUT /zone/crisp.email/record/@/mx HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
-{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"regions":{"eu":["10 inbound-geo.europe.crisp.email"],"nam":["10 inbound-geo.northamerica.crisp.email"],"sam":["10 inbound-geo.southamerica.crisp.email"],"oc":["10 inbound-geo.oceania.crisp.email"],"me":["10 inbound-geo.middleeast.crisp.email"],"in":["10 inbound-geo.india.crisp.email"],"as":["10 inbound-geo.asia.crisp.email"],"af":["10 inbound-geo.africa.crisp.email"]},"ttl":600}
+{"regions":{"nnam":["10 inbound-geo.nnam.crisp.email"],"snam":["10 inbound-geo.snam.crisp.email"],"nsam":["10 inbound-geo.nsam.crisp.email"],"ssam":["10 inbound-geo.ssam.crisp.email"],"weu":["10 inbound-geo.weu.crisp.email"],"ceu":["10 inbound-geo.ceu.crisp.email"],"eeu":["10 inbound-geo.eeu.crisp.email"],"ru":["10 inbound-geo.ru.crisp.email"],"me":["10 inbound-geo.me.crisp.email"],"naf":["10 inbound-geo.naf.crisp.email"],"maf":["10 inbound-geo.maf.crisp.email"],"saf":["10 inbound-geo.saf.crisp.email"],"in":["10 inbound-geo.in.crisp.email"],"seas":["10 inbound-geo.seas.crisp.email"],"neas":["10 inbound-geo.neas.crisp.email"],"oc":["10 inbound-geo.oc.crisp.email"]},"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"ttl":600}
 ```
 
 **Example response:**

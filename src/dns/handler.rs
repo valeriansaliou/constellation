@@ -356,14 +356,22 @@ impl DNSHandler {
                         let region = country.to_region_code();
 
                         Some(match region {
-                            RegionCode::EU => (country, region, &regions.eu),
-                            RegionCode::NAM => (country, region, &regions.nam),
-                            RegionCode::SAM => (country, region, &regions.sam),
-                            RegionCode::OC => (country, region, &regions.oc),
+                            RegionCode::NNAM => (country, region, &regions.nnam),
+                            RegionCode::SNAM => (country, region, &regions.snam),
+                            RegionCode::NSAM => (country, region, &regions.nsam),
+                            RegionCode::SSAM => (country, region, &regions.ssam),
+                            RegionCode::WEU => (country, region, &regions.weu),
+                            RegionCode::CEU => (country, region, &regions.ceu),
+                            RegionCode::EEU => (country, region, &regions.eeu),
+                            RegionCode::RU => (country, region, &regions.ru),
                             RegionCode::ME => (country, region, &regions.me),
+                            RegionCode::NAF => (country, region, &regions.naf),
+                            RegionCode::MAF => (country, region, &regions.maf),
+                            RegionCode::SAF => (country, region, &regions.saf),
                             RegionCode::IN => (country, region, &regions._in),
-                            RegionCode::AS => (country, region, &regions._as),
-                            RegionCode::AF => (country, region, &regions.af),
+                            RegionCode::SEAS => (country, region, &regions.seas),
+                            RegionCode::NEAS => (country, region, &regions.neas),
+                            RegionCode::OC => (country, region, &regions.oc),
                         })
                     }
                     None => None,

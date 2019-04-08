@@ -6,27 +6,43 @@
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RegionCode {
-    EU,
-    NAM,
-    SAM,
-    OC,
+    NNAM,
+    SNAM,
+    NSAM,
+    SSAM,
+    WEU,
+    CEU,
+    EEU,
+    RU,
     ME,
+    NAF,
+    MAF,
+    SAF,
     IN,
-    AS,
-    AF,
+    SEAS,
+    NEAS,
+    OC,
 }
 
 impl RegionCode {
     pub fn to_name(&self) -> &'static str {
         match *self {
-            RegionCode::EU => "Europe",
-            RegionCode::NAM => "North America",
-            RegionCode::SAM => "South America",
-            RegionCode::OC => "Oceania",
+            RegionCode::NNAM => "Northern North America",
+            RegionCode::SNAM => "Southern North America",
+            RegionCode::NSAM => "Northern South America",
+            RegionCode::SSAM => "Southern South America",
+            RegionCode::WEU => "Western Europe",
+            RegionCode::CEU => "Central Europe",
+            RegionCode::EEU => "Eastern Europe",
+            RegionCode::RU => "Russia",
             RegionCode::ME => "Middle East",
+            RegionCode::NAF => "Northern Africa",
+            RegionCode::MAF => "Middle Africa",
+            RegionCode::SAF => "Southern Africa",
             RegionCode::IN => "India",
-            RegionCode::AS => "Asia",
-            RegionCode::AF => "Africa",
+            RegionCode::SEAS => "Southeast Asia",
+            RegionCode::NEAS => "Northeast Asia",
+            RegionCode::OC => "Oceania",
         }
     }
 }

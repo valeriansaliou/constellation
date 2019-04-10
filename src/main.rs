@@ -17,6 +17,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate rocket;
 extern crate base64;
+extern crate rand;
 extern crate farmhash;
 extern crate flate2;
 extern crate http_req;

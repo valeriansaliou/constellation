@@ -12,6 +12,8 @@ use trust_dns::rr::dnssec::SupportedAlgorithms;
 use trust_dns::rr::{Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{AuthLookup, Authority};
 use trust_dns_server::server::{Request, RequestHandler};
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
@@ -439,7 +441,7 @@ impl DNSHandler {
     fn serve_response_records(
         request: &Message,
         response: &mut Message,
-        records: Vec<Record>,
+        mut records: Vec<Record>,
         authority: &Authority,
         supported_algorithms: SupportedAlgorithms,
     ) {
@@ -457,6 +459,9 @@ impl DNSHandler {
 
         // Add records to response?
         if has_records == true {
+            // Randomize records order, as most DNS servers do to balance eg. IP resource usage
+            records.shuffle(&mut thread_rng());
+
             response.add_answers(records);
         }
     }

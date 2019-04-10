@@ -460,7 +460,9 @@ impl DNSHandler {
         // Add records to response?
         if has_records == true {
             // Randomize records order, as most DNS servers do to balance eg. IP resource usage
-            records.shuffle(&mut thread_rng());
+            if records.len() > 1 {
+                records.shuffle(&mut thread_rng());
+            }
 
             response.add_answers(records);
         }

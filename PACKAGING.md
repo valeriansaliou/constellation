@@ -15,19 +15,14 @@ We consider here the packaging flow of Constellation version `1.0.0` for Linux, 
 
 3. **How to build Constellation for Linux on MacOS:**
     1. `rust-musl-builder-nightly cargo build --target=x86_64-unknown-linux-musl --release`
+    2. `rust-musl-builder-nightly strip ./target/x86_64-unknown-linux-musl/release/constellation`
 
 4. **How to package built binary:**
     1. `mkdir constellation`
     2. `mv target/x86_64-unknown-linux-musl/release/constellation constellation/`
-    3. `strip constellation/constellation`
     4. `cp -r config.cfg constellation/`
     5. `tar -czvf v1.0.0-x86_64.tar.gz constellation`
     6. `rm -r constellation/`
 
-5. **How to update Docker:**
-    1. `docker build .`
-    2. `docker tag [DOCKER_IMAGE_ID] valeriansaliou/constellation:v1.0.0` (insert the built image identifier)
-    3. `docker push valeriansaliou/constellation:v1.0.0`
-
-6. **How to update Crates:**
+5. **How to update Crates:**
     1. Publish package on Crates: `cargo publish`

@@ -23,6 +23,7 @@ We consider here the packaging flow of Constellation version `1.0.0` for Linux, 
     4. `cp -r config.cfg constellation/`
     5. `tar -czvf v1.0.0-x86_64.tar.gz constellation`
     6. `rm -r constellation/`
+    7. Upload the archive on the GitHub release page
 
 5. **How to update Crates:**
     1. Publish package on Crates: `cargo publish`

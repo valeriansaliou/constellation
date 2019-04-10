@@ -14,7 +14,7 @@ We consider here the packaging flow of Constellation version `1.0.0` for Linux, 
     2. Execute `cargo update` to bump `Cargo.lock`
 
 3. **How to build Constellation for Linux on MacOS:**
-    1. `rust-musl-builder cargo build --target=x86_64-unknown-linux-musl --release`
+    1. `rust-musl-builder-nightly cargo build --target=x86_64-unknown-linux-musl --release`
 
 4. **How to package built binary:**
     1. `mkdir constellation`

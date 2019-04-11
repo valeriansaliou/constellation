@@ -13,4 +13,4 @@ RUN apt-get install -y libssl-dev
 
 CMD [ "constellation", "-c", "/etc/constellation.cfg" ]
 
-EXPOSE 53 8080
+EXPOSE 53/udp 8080

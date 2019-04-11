@@ -76,7 +76,7 @@ docker pull valeriansaliou/constellation:v1.6.1
 Then, seed it a configuration file and run it (replace `/path/to/your/constellation/config.cfg` with the path to your configuration file):
 
 ```bash
-docker run -p 53:53 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg valeriansaliou/constellation:v1.6.1
+docker run -p 53:53 -p 8080:8080 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg valeriansaliou/constellation:v1.6.1
 ```
 
 In the configuration file, ensure that:

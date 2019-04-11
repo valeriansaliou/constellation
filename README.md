@@ -76,15 +76,18 @@ docker pull valeriansaliou/constellation:v1.6.1
 Then, seed it a configuration file and run it (replace `/path/to/your/constellation/config.cfg` with the path to your configuration file):
 
 ```bash
-docker run -p 53:53 -p 8080:8080 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg valeriansaliou/constellation:v1.6.1
+docker run -p 53:53 -p 8080:8080 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg -v /path/to/your/constellation/res/:/var/lib/constellation/ valeriansaliou/constellation:v1.6.1
 ```
 
 In the configuration file, ensure that:
 
 * `dns.inets` is set to `[0.0.0.0:53]` (this lets Constellation DNS be reached from outside the container)
 * `http.inet` is set to `0.0.0.0:8080` (this lets Constellation REST API be reached from outside the container)
+* `geo.database_path` is set to `/var/lib/constellation/geo/` (this is where the GeoIP database is stored)
 
 Constellation will be reachable by DNS resolvers from `udp://localhost:53`; while its internal REST API will be reachable from `http://localhost:8080`.
+
+Also, do not forget to initialize the GeoIP database in the `./res/geo/` folder (refer to the part on how to [Initialize GeoIP](https://github.com/valeriansaliou/constellation#initialize-geoip) below).
 
 ### Configuration
 

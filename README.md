@@ -61,6 +61,26 @@ cargo install constellation-server
 
 Ensure that your `$PATH` is properly configured to source the Crates binaries, and then run Constellation using the `constellation` command.
 
+**Install from Docker Hub:**
+
+You might find it convenient to run Constellation via Docker. You can find the pre-built Constellation image on Docker Hub as [valeriansaliou/constellation](https://hub.docker.com/r/valeriansaliou/constellation/).
+
+> Pre-built Docker version may not be the latest version of Constellation available.
+
+First, pull the `valeriansaliou/constellation` image:
+
+```bash
+docker pull valeriansaliou/constellation:v1.6.1
+```
+
+Then, seed it a configuration file and run it (replace `/path/to/your/constellation/config.cfg` with the path to your configuration file):
+
+```bash
+docker run -p 53:53 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg valeriansaliou/constellation:v1.6.1
+```
+
+Constellation will be reachable by DNS resolvers from `udp://localhost:53`.
+
 ### Configuration
 
 Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob/master/config.cfg) configuration file and adjust it to your own environment.

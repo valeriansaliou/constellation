@@ -25,5 +25,10 @@ We consider here the packaging flow of Constellation version `1.0.0` for Linux, 
     6. `rm -r constellation/`
     7. Publish the archive on the [releases](https://github.com/valeriansaliou/constellation/releases) page on GitHub
 
-5. **How to update Crates:**
+5. **How to update Docker:**
+    1. `docker build .`
+    2. `docker tag [DOCKER_IMAGE_ID] valeriansaliou/constellation:v1.0.0` (insert the built image identifier)
+    3. `docker push valeriansaliou/constellation:v1.0.0`
+
+6. **How to update Crates:**
     1. Publish package on Crates: `cargo publish`

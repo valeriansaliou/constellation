@@ -8,7 +8,7 @@ use rocket::http::Status;
 use rocket_contrib::json::Json;
 
 use super::record_guard::RecordGuard;
-use crate::dns::record::{RecordName, RecordRegions, RecordType, RecordValues};
+use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
 use crate::dns::zone::ZoneName;
 use crate::store::store::StoreRecord;
 
@@ -17,6 +17,7 @@ use crate::APP_STORE;
 #[derive(Deserialize)]
 pub struct RecordData {
     ttl: Option<u32>,
+    blackhole: Option<RecordBlackhole>,
     regions: Option<RecordRegions>,
     values: RecordValues,
 }
@@ -28,6 +29,7 @@ pub struct RecordGetResponse {
 
     name: RecordName,
     ttl: Option<u32>,
+    blackhole: Option<RecordBlackhole>,
     regions: Option<RecordRegions>,
     values: RecordValues,
 }
@@ -58,6 +60,7 @@ pub fn get_zone_record(
                 _type: record.kind,
                 name: record.name,
                 ttl: record.ttl,
+                blackhole: record.blackhole,
                 regions: record.regions,
                 values: record.values,
             })
@@ -84,6 +87,7 @@ pub fn put_zone_record(
                 kind: record_type,
                 name: record_name,
                 ttl: data.ttl,
+                blackhole: data.blackhole.to_owned(),
                 regions: data.regions.to_owned(),
                 values: data.values.to_owned(),
             },

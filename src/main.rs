@@ -17,13 +17,13 @@ extern crate serde_derive;
 #[macro_use]
 extern crate rocket;
 extern crate base64;
-extern crate rand;
 extern crate farmhash;
 extern crate flate2;
 extern crate http_req;
 extern crate maxminddb;
 extern crate r2d2;
 extern crate r2d2_redis;
+extern crate rand;
 extern crate redis;
 extern crate regex;
 extern crate rocket_contrib;

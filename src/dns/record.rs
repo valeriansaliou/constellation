@@ -10,11 +10,14 @@ use rocket::request::FromParam;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp;
+use std::collections::HashSet;
 use std::ops::Deref;
 use std::{fmt, str};
 use trust_dns::rr::rdata::mx::MX;
 use trust_dns::rr::rdata::txt::TXT;
 use trust_dns::rr::{Name as TrustName, RData as TrustRData, RecordType as TrustRecordType};
+
+use crate::geo::country::CountryCode;
 
 lazy_static! {
     static ref RECORD_NAME_REGEX: Regex = Regex::new(r"^(\*\.)?(([^\\/:@&\*]+)\.)?@$").unwrap();
@@ -43,6 +46,9 @@ pub struct RecordValue(String);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RecordValues(Vec<RecordValue>);
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RecordBlackhole(HashSet<CountryCode>);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RecordRegions {
@@ -224,6 +230,16 @@ impl RecordValue {
                 .map(|value| TrustRData::PTR(value))
                 .or(Err(())),
         }
+    }
+}
+
+impl RecordBlackhole {
+    pub fn has_items(&self) -> bool {
+        !self.0.is_empty()
+    }
+
+    pub fn has_country(&self, country: &CountryCode) -> bool {
+        self.0.contains(country)
     }
 }
 

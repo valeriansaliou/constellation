@@ -9,7 +9,7 @@ use super::region::RegionCode;
 //- Source: https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/blob/master/all/all.csv
 //- Last update: 13 August 2018
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum CountryCode {
     AF,
     AX,

@@ -4,6 +4,8 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::RwLock;
@@ -12,8 +14,6 @@ use trust_dns::rr::dnssec::SupportedAlgorithms;
 use trust_dns::rr::{Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{AuthLookup, Authority};
 use trust_dns_server::server::{Request, RequestHandler};
-use rand::thread_rng;
-use rand::seq::SliceRandom;
 
 use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
@@ -345,15 +345,48 @@ impl DNSHandler {
         records: &mut Vec<Record>,
     ) {
         if let Ok(type_data) = record.kind.to_trust() {
+            // Check if should resolve IP to country?
+            let ip_country =
+                if record.blackhole.is_some() == true || record.regions.is_some() == true {
+                    debug!(
+                        "record is location-aware, looking up location for source ip: {}",
+                        source
+                    );
+
+                    Locator::ip_to_country(source)
+                } else {
+                    None
+                };
+
+            // Check if country is blackholed
+            let mut is_blackholed = false;
+
+            if let Some(ref blackhole) = record.blackhole {
+                debug!("record has blackhole");
+
+                if let Some(ref ip_country) = ip_country {
+                    if blackhole.has_country(ip_country) == true {
+                        debug!(
+                            "source ip: {} country: {:?} appears in blackhole",
+                            source, ip_country
+                        );
+
+                        is_blackholed = true;
+                    } else {
+                        debug!(
+                            "source ip: {} country: {:?} does not appear in blackhole",
+                            source, ip_country
+                        );
+                    }
+                }
+            }
+
             // Pick record value (either from Geo-DNS or global)
             let values = if let Some(ref regions) = record.regions {
-                debug!(
-                    "record has regions, looking up location for source ip: {}",
-                    source
-                );
+                debug!("record has regions");
 
                 // Pick relevant region (from country)
-                let region_wrap = match Locator::ip_to_country(source) {
+                let region_wrap = match ip_country {
                     Some(country) => {
                         let region = country.to_region_code();
 
@@ -414,21 +447,26 @@ impl DNSHandler {
                 &record.values
             };
 
-            for value in values.iter() {
-                if let Ok(value_data) = value.to_trust(&record.kind) {
-                    records.push(Record::from_rdata(
-                        query_name_client.to_owned(),
-                        record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
-                        type_data,
-                        value_data,
-                    ));
-                } else {
-                    warn!(
-                        "could not convert to dns record type: {} with value: {:?}",
-                        record.kind.to_str(),
-                        value
-                    );
+            // Not blackholed? (push values)
+            if is_blackholed == false {
+                for value in values.iter() {
+                    if let Ok(value_data) = value.to_trust(&record.kind) {
+                        records.push(Record::from_rdata(
+                            query_name_client.to_owned(),
+                            record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
+                            type_data,
+                            value_data,
+                        ));
+                    } else {
+                        warn!(
+                            "could not convert to dns record type: {} with value: {:?}",
+                            record.kind.to_str(),
+                            value
+                        );
+                    }
                 }
+            } else {
+                info!("did not push record values because country is blackholed");
             }
         } else {
             warn!(

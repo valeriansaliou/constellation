@@ -11,7 +11,7 @@ use serde_json::{self, Error as SerdeJSONError};
 use std::time::Duration;
 
 use super::key::StoreKey;
-use crate::dns::record::{RecordName, RecordRegions, RecordType, RecordValues};
+use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
 use crate::dns::zone::ZoneName;
 
 use crate::APP_CONF;
@@ -19,6 +19,7 @@ use crate::APP_CONF;
 static KEY_TYPE: &'static str = "t";
 static KEY_NAME: &'static str = "n";
 static KEY_TTL: &'static str = "e";
+static KEY_BLACKHOLE: &'static str = "b";
 static KEY_REGION: &'static str = "r";
 static KEY_VALUE: &'static str = "v";
 
@@ -33,6 +34,7 @@ pub struct StoreRecord {
     pub kind: RecordType,
     pub name: RecordName,
     pub ttl: Option<u32>,
+    pub blackhole: Option<RecordBlackhole>,
     pub regions: Option<RecordRegions>,
     pub values: RecordValues,
 }
@@ -122,15 +124,15 @@ impl Store {
         record_type: &RecordType,
     ) -> Result<StoreRecord, StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            match client.hget::<_, _, (String, String, u32, Option<String>, String)>(
+            match client.hget::<_, _, (String, String, u32, Option<String>, Option<String>, String)>(
                 StoreKey::to_key(zone_name, record_name, record_type),
-                (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_REGION, KEY_VALUE),
+                (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_VALUE),
             ) {
                 Ok(values) => {
                     if let (Some(kind_value), Some(name_value), Ok(value_value)) = (
                         RecordType::from_str(&values.0),
                         RecordName::from_str(&values.1),
-                        serde_json::from_str(&values.4)
+                        serde_json::from_str(&values.5)
                     ) {
                         let ttl = if values.2 > 0 {
                             Some(values.2)
@@ -138,7 +140,10 @@ impl Store {
                             None
                         };
 
-                        let regions = values.3.and_then(|region_raw| {
+                        let blackhole = values.3.and_then(|blackhole_raw| {
+                            serde_json::from_str::<RecordBlackhole>(&blackhole_raw).ok()
+                        });
+                        let regions = values.4.and_then(|region_raw| {
                             serde_json::from_str::<RecordRegions>(&region_raw).ok()
                         });
 
@@ -149,6 +154,14 @@ impl Store {
                             value_value
                         );
 
+                        if blackhole.is_some() == true {
+                            debug!(
+                                "store record with kind: {:?}, name: {:?} has blackhole: {:?}",
+                                kind_value,
+                                name_value,
+                                blackhole
+                            );
+                        }
                         if regions.is_some() == true {
                             debug!(
                                 "store record with kind: {:?}, name: {:?} has regions: {:?}",
@@ -162,6 +175,7 @@ impl Store {
                             kind: kind_value,
                             name: name_value,
                             ttl: ttl,
+                            blackhole: blackhole,
                             regions: regions,
                             values: value_value,
                         })
@@ -176,18 +190,29 @@ impl Store {
 
     pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
+            let blackhole_encoder = match record.blackhole {
+                Some(ref blackhole) => {
+                    if blackhole.has_items() == true {
+                        serde_json::to_string(blackhole)
+                    } else {
+                        Ok("".to_owned())
+                    }
+                },
+                None => Ok("".to_owned())
+            };
             let region_encoder = match record.regions {
                 Some(ref regions) => serde_json::to_string(regions),
                 None => Ok("".to_owned())
             };
 
-            match (serde_json::to_string(&record.values), region_encoder) {
-                (Ok(values), Ok(regions)) => {
+            match (serde_json::to_string(&record.values), blackhole_encoder, region_encoder) {
+                (Ok(values), Ok(blackhole), Ok(regions)) => {
                     client.hset_multiple(
                         StoreKey::to_key(zone_name, &record.name, &record.kind), &[
                             (KEY_TYPE, record.kind.to_str()),
                             (KEY_NAME, record.name.to_str()),
                             (KEY_TTL, &record.ttl.unwrap_or(0).to_string()),
+                            (KEY_BLACKHOLE, &blackhole),
                             (KEY_REGION, &regions),
                             (KEY_VALUE, &values),
                         ]
@@ -195,7 +220,9 @@ impl Store {
                         StoreError::Connector(err)
                     })
                 },
-                (Err(err), _) | (_, Err(err)) => Err(StoreError::Encoding(err))
+                (Err(err), _, _) | (_, Err(err), _) | (_, _, Err(err)) => {
+                    Err(StoreError::Encoding(err))
+                }
             }
         })
     }

@@ -209,6 +209,10 @@ If you want to serve records to the nearest server using the Geo-DNS feature, yo
 * _Oceania_
   * `oc`: Oceania
 
+**Geo-DNS blackhole:**
+
+If you want to return an empty DNS response for blocked countries using the Geo-DNS feature, you will need to set `blackhole` via the API, to a list of blackholed ISO-3166 country codes (eg. `FR` for France).
+
 #### API routes
 
 ##### Check if a DNS record exists
@@ -245,7 +249,7 @@ Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"type":"mx","name":"@","ttl":600,"regions": null,"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"]}
+{"type":"mx","name":"@","ttl":600,"blackhole": null,"regions": null,"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"]}
 ```
 
 ##### Write a DNS record (or overwrite existing)

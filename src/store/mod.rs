@@ -10,4 +10,5 @@ mod macros;
 mod cache;
 mod key;
 
+pub mod flush;
 pub mod store;

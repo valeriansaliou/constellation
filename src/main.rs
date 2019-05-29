@@ -56,6 +56,7 @@ use dns::listen::DNSListenBuilder;
 use geo::locate::DB_READER;
 use geo::updater::GeoUpdaterBuilder;
 use http::listen::HTTPListenBuilder;
+use store::flush::StoreFlushBuilder;
 use store::store::{Store, StoreBuilder};
 
 struct AppArgs {
@@ -64,6 +65,7 @@ struct AppArgs {
 
 pub static THREAD_NAME_DNS: &'static str = "constellation-dns";
 pub static THREAD_NAME_HTTP: &'static str = "constellation-http";
+pub static THREAD_NAME_STORE_FLUSH: &'static str = "constellation-store-flush";
 pub static THREAD_NAME_GEO_UPDATER: &'static str = "constellation-geo-updater";
 
 macro_rules! gen_spawn_managed {
@@ -114,6 +116,12 @@ gen_spawn_managed!(
     HTTPListenBuilder::new().run()
 );
 gen_spawn_managed!(
+    "store_flush",
+    spawn_store_flush,
+    THREAD_NAME_STORE_FLUSH,
+    StoreFlushBuilder::new().run()
+);
+gen_spawn_managed!(
     "geo_updater",
     spawn_geo_updater,
     THREAD_NAME_GEO_UPDATER,
@@ -160,6 +168,9 @@ fn main() {
 
     // Ensure all states are bound
     ensure_states();
+
+    // Spawn store flush
+    thread::spawn(spawn_store_flush);
 
     // Spawn geo updater? (background thread)
     if APP_CONF.geo.update_enable == true {

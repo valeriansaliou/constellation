@@ -10,6 +10,7 @@ use redis::{Commands, RedisError};
 use serde_json::{self, Error as SerdeJSONError};
 use std::time::Duration;
 
+use super::cache::StoreCache;
 use super::key::StoreKey;
 use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
 use crate::dns::zone::ZoneName;
@@ -23,13 +24,15 @@ static KEY_BLACKHOLE: &'static str = "b";
 static KEY_REGION: &'static str = "r";
 static KEY_VALUE: &'static str = "v";
 
+type StoreGetType = (String, String, u32, Option<String>, Option<String>, String);
+
 pub struct StoreBuilder;
 
 pub struct Store {
     pool: Pool<RedisConnectionManager>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StoreRecord {
     pub kind: RecordType,
     pub name: RecordName,
@@ -102,8 +105,16 @@ impl Store {
         record_name: &RecordName,
         record_type: &RecordType,
     ) -> Result<(), StoreError> {
+        let store_key = StoreKey::to_key(zone_name, record_name, record_type);
+
+        // Check from local cache?
+        if StoreCache::has(&store_key) == true {
+            return Ok(());
+        }
+
+        // Check from store
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            client.exists::<&str, bool>(&StoreKey::to_key(zone_name, record_name, record_type))
+            client.exists::<&str, bool>(&store_key)
             .map_err(|err| {
                 StoreError::Connector(err)
             })
@@ -123,9 +134,20 @@ impl Store {
         record_name: &RecordName,
         record_type: &RecordType,
     ) -> Result<StoreRecord, StoreError> {
+        let store_key = StoreKey::to_key(zone_name, record_name, record_type);
+
+        // Get from local cache?
+        if let Ok(cached_records) = StoreCache::get(&store_key) {
+            return match cached_records {
+                Some(cached_records) => Ok(cached_records),
+                None => Err(StoreError::NotFound),
+            };
+        }
+
+        // Get from store
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            match client.hget::<_, _, (String, String, u32, Option<String>, Option<String>, String)>(
-                StoreKey::to_key(zone_name, record_name, record_type),
+            match client.hget::<_, _, StoreGetType>(
+                &store_key,
                 (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_VALUE),
             ) {
                 Ok(values) => {
@@ -171,19 +193,30 @@ impl Store {
                             );
                         }
 
-                        Ok(StoreRecord {
+                        let record = StoreRecord {
                             kind: kind_value,
                             name: name_value,
                             ttl: ttl,
                             blackhole: blackhole,
                             regions: regions,
                             values: value_value,
-                        })
+                        };
+
+                        // Store in local cache
+                        StoreCache::push(&store_key, Some(record.clone()));
+
+                        Ok(record)
                     } else {
                         Err(StoreError::Corrupted)
                     }
                 },
-                Err(err) => Err(StoreError::Connector(err)),
+                Err(_) => {
+                    // Store in local cache (no value)
+                    StoreCache::push(&store_key, None);
+
+                    // Consider as not found
+                    Err(StoreError::NotFound)
+                },
             }
         })
     }
@@ -207,8 +240,14 @@ impl Store {
 
             match (serde_json::to_string(&record.values), blackhole_encoder, region_encoder) {
                 (Ok(values), Ok(blackhole), Ok(regions)) => {
+                    let store_key = StoreKey::to_key(zone_name, &record.name, &record.kind);
+
+                    // Clean from local cache
+                    StoreCache::pop(&store_key);
+
+                    // Store in remote
                     client.hset_multiple(
-                        StoreKey::to_key(zone_name, &record.name, &record.kind), &[
+                        store_key, &[
                             (KEY_TYPE, record.kind.to_str()),
                             (KEY_NAME, record.name.to_str()),
                             (KEY_TTL, &record.ttl.unwrap_or(0).to_string()),
@@ -234,7 +273,13 @@ impl Store {
         record_type: &RecordType,
     ) -> Result<(), StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            client.del(StoreKey::to_key(zone_name, record_name, record_type)).map_err(|err| {
+            let store_key = StoreKey::to_key(zone_name, record_name, record_type);
+
+            // Clean from local cache
+            StoreCache::pop(&store_key);
+
+            // Delete from remote
+            client.del(store_key).map_err(|err| {
                 StoreError::Connector(err)
             })
         })

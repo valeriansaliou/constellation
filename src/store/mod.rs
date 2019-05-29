@@ -7,6 +7,7 @@
 #[macro_use]
 mod macros;
 
+mod cache;
 mod key;
 
 pub mod store;

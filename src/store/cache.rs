@@ -12,24 +12,36 @@ use super::store::StoreRecord;
 use crate::APP_CONF;
 
 lazy_static! {
-    pub static ref RECORD_CACHE: RwLock<HashMap<String, (Option<StoreRecord>, SystemTime)>> =
-        RwLock::new(HashMap::new());
+    pub static ref STORE_CACHE: StoreCache = StoreCacheBuilder::new();
 }
 
-pub struct StoreCache;
+struct StoreCacheBuilder;
+
+pub struct StoreCache {
+    cache: RwLock<HashMap<String, (Option<StoreRecord>, SystemTime)>>,
+}
+
 pub struct StoreCacheFlush;
 
+impl StoreCacheBuilder {
+    fn new() -> StoreCache {
+        StoreCache {
+            cache: RwLock::new(HashMap::new()),
+        }
+    }
+}
+
 impl StoreCache {
-    pub fn has(store_key: &str) -> bool {
-        let cache_read = RECORD_CACHE.read().unwrap();
+    pub fn has(&self, store_key: &str) -> bool {
+        let cache_read = self.cache.read().unwrap();
 
         debug!("store cache has on key: {}", store_key);
 
         cache_read.contains_key(store_key)
     }
 
-    pub fn get(store_key: &str) -> Result<Option<StoreRecord>, ()> {
-        let cache_read = RECORD_CACHE.read().unwrap();
+    pub fn get(&self, store_key: &str) -> Result<Option<StoreRecord>, ()> {
+        let cache_read = self.cache.read().unwrap();
 
         debug!("store cache get on key: {}", store_key);
 
@@ -44,16 +56,16 @@ impl StoreCache {
         }
     }
 
-    pub fn push(store_key: &str, store_record: Option<StoreRecord>) {
-        let mut cache_write = RECORD_CACHE.write().unwrap();
+    pub fn push(&self, store_key: &str, store_record: Option<StoreRecord>) {
+        let mut cache_write = self.cache.write().unwrap();
 
         debug!("store cache push on key: {}", store_key);
 
         cache_write.insert(store_key.to_string(), (store_record, SystemTime::now()));
     }
 
-    pub fn pop(store_key: &str) {
-        let mut cache_write = RECORD_CACHE.write().unwrap();
+    pub fn pop(&self, store_key: &str) {
+        let mut cache_write = self.cache.write().unwrap();
 
         debug!("store cache pop on key: {}", store_key);
 
@@ -69,7 +81,7 @@ impl StoreCacheFlush {
 
         // Scan for expired store items
         {
-            let cache_read = RECORD_CACHE.read().unwrap();
+            let cache_read = STORE_CACHE.cache.read().unwrap();
             let now_time = SystemTime::now();
 
             for (store_key, store) in cache_read.iter() {
@@ -83,7 +95,7 @@ impl StoreCacheFlush {
 
         // Any store item to flush?
         if flush_register.is_empty() == false {
-            let mut cache_write = RECORD_CACHE.write().unwrap();
+            let mut cache_write = STORE_CACHE.cache.write().unwrap();
 
             for store_key in &flush_register {
                 cache_write.remove(store_key);

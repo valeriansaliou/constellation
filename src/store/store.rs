@@ -10,7 +10,7 @@ use redis::{Commands, RedisError};
 use serde_json::{self, Error as SerdeJSONError};
 use std::time::Duration;
 
-use super::cache::StoreCache;
+use super::cache::STORE_CACHE;
 use super::key::StoreKey;
 use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
 use crate::dns::zone::ZoneName;
@@ -108,7 +108,7 @@ impl Store {
         let store_key = StoreKey::to_key(zone_name, record_name, record_type);
 
         // Check from local cache?
-        if StoreCache::has(&store_key) == true {
+        if STORE_CACHE.has(&store_key) == true {
             return Ok(());
         }
 
@@ -123,7 +123,7 @@ impl Store {
                     Ok(())
                 } else {
                     // Store in local cache (no value)
-                    StoreCache::push(&store_key, None);
+                    STORE_CACHE.push(&store_key, None);
 
                     // Consider as not found
                     Err(StoreError::NotFound)
@@ -141,7 +141,7 @@ impl Store {
         let store_key = StoreKey::to_key(zone_name, record_name, record_type);
 
         // Get from local cache?
-        if let Ok(cached_records) = StoreCache::get(&store_key) {
+        if let Ok(cached_records) = STORE_CACHE.get(&store_key) {
             return match cached_records {
                 Some(cached_records) => Ok(cached_records),
                 None => Err(StoreError::NotFound),
@@ -207,7 +207,7 @@ impl Store {
                         };
 
                         // Store in local cache
-                        StoreCache::push(&store_key, Some(record.clone()));
+                        STORE_CACHE.push(&store_key, Some(record.clone()));
 
                         Ok(record)
                     } else {
@@ -216,7 +216,7 @@ impl Store {
                 },
                 Err(_) => {
                     // Store in local cache (no value)
-                    StoreCache::push(&store_key, None);
+                    STORE_CACHE.push(&store_key, None);
 
                     // Consider as not found
                     Err(StoreError::NotFound)
@@ -247,7 +247,7 @@ impl Store {
                     let store_key = StoreKey::to_key(zone_name, &record.name, &record.kind);
 
                     // Clean from local cache
-                    StoreCache::pop(&store_key);
+                    STORE_CACHE.pop(&store_key);
 
                     // Store in remote
                     client.hset_multiple(
@@ -280,7 +280,7 @@ impl Store {
             let store_key = StoreKey::to_key(zone_name, record_name, record_type);
 
             // Clean from local cache
-            StoreCache::pop(&store_key);
+            STORE_CACHE.pop(&store_key);
 
             // Delete from remote
             client.del(store_key).map_err(|err| {

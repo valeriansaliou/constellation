@@ -39,7 +39,7 @@ trust-dns = { version = "0.13", default-features = false }
 trust-dns-server = { version = "0.13", default-features = false }
 rand = "0.6"
 farmhash = "1.1"
-http_req = "0.4"
+http_req = "0.5"
 maxminddb = "0.13"
 tempfile = "3.0"
 flate2 = "1.0"

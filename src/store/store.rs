@@ -122,6 +122,10 @@ impl Store {
                 if exists == true {
                     Ok(())
                 } else {
+                    // Store in local cache (no value)
+                    StoreCache::push(&store_key, None);
+
+                    // Consider as not found
                     Err(StoreError::NotFound)
                 }
             })

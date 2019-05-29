@@ -100,3 +100,7 @@ pub fn redis_idle_timeout_seconds() -> u64 {
 pub fn redis_connection_timeout_seconds() -> u64 {
     5
 }
+
+pub fn redis_cache_expire_seconds() -> u64 {
+    60
+}

@@ -9,6 +9,7 @@ use std::sync::RwLock;
 use std::time::SystemTime;
 
 use super::store::StoreRecord;
+use crate::APP_CONF;
 
 lazy_static! {
     pub static ref RECORD_CACHE: RwLock<HashMap<String, (Option<StoreRecord>, SystemTime)>> =
@@ -17,8 +18,6 @@ lazy_static! {
 
 pub struct StoreCache;
 pub struct StoreCacheFlush;
-
-const CACHE_EXPIRED_AFTER_SECONDS: u64 = 60;
 
 impl StoreCache {
     pub fn has(store_key: &str) -> bool {
@@ -76,7 +75,7 @@ impl StoreCacheFlush {
             for (store_key, store) in cache_read.iter() {
                 let store_elapsed = now_time.duration_since(store.1).unwrap().as_secs();
 
-                if store_elapsed >= CACHE_EXPIRED_AFTER_SECONDS {
+                if store_elapsed >= APP_CONF.redis.cache_expire_seconds {
                     flush_register.push(store_key.to_owned());
                 }
             }

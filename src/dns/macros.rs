@@ -41,7 +41,7 @@ macro_rules! serde_string_impls {
 macro_rules! gen_metrics_tick_perform_item {
     ($Store:ident, $Backlog:ident) => {
         // Move all minutes up in the list (sliding window)
-        for index in (0..($Backlog - 1)).rev() {
+        for index in (0..$Backlog).rev() {
             $Store[index + 1] = $Store[index].clone();
         }
 
@@ -64,7 +64,7 @@ macro_rules! gen_metrics_aggregate_item {
     ($Store:ident, $Limit:ident, $Backlog:ident) => {{
         let mut aggregated_map = HashMap::new();
 
-        for index in 0..min($Limit as usize, $Backlog) {
+        for index in 1..(min($Limit as usize, $Backlog) + 1) {
             let point_map = &$Store[index];
 
             for (key, count) in point_map.iter() {

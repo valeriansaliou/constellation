@@ -43,9 +43,9 @@ pub struct MetricsStore {
 
 #[derive(Default)]
 pub struct MetricsStoreZone {
-    pub query_type: [MetricsStoreQueryTypeType; METRICS_BACKLOG_MINUTES],
-    pub query_origin: [MetricsStoreQueryOriginType; METRICS_BACKLOG_MINUTES],
-    pub answer_code: [MetricsStoreAnswerCodeType; METRICS_BACKLOG_MINUTES],
+    pub query_type: [MetricsStoreQueryTypeType; (METRICS_BACKLOG_MINUTES + 1)],
+    pub query_origin: [MetricsStoreQueryOriginType; (METRICS_BACKLOG_MINUTES + 1)],
+    pub answer_code: [MetricsStoreAnswerCodeType; (METRICS_BACKLOG_MINUTES + 1)],
 }
 
 pub enum MetricsType {

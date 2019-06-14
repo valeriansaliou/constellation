@@ -6,12 +6,13 @@
 
 use rocket::http::Status;
 use rocket_contrib::json::Json;
+use std::collections::HashMap;
 
 use super::record_guard::RecordGuard;
+use crate::dns::metrics::{MetricsStoreCountType, MetricsTimespan, MetricsType, METRICS_STORE};
 use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
 use crate::dns::zone::ZoneName;
 use crate::store::store::StoreRecord;
-
 use crate::APP_STORE;
 
 #[derive(Deserialize)]
@@ -33,6 +34,8 @@ pub struct RecordGetResponse {
     regions: Option<RecordRegions>,
     values: RecordValues,
 }
+
+type MetricsGenericGetResponse = HashMap<String, MetricsStoreCountType>;
 
 #[head("/zone/<zone_name>/record/<record_name>/<record_type>")]
 pub fn head_zone_record(
@@ -105,4 +108,40 @@ pub fn delete_zone_record(
     APP_STORE
         .remove(&zone_name, &record_name, &record_type)
         .or(Err(Status::InternalServerError))
+}
+
+#[get("/zone/<zone_name>/metrics/<metrics_timespan>/query/types")]
+pub fn get_metrics_query_types(
+    _auth: RecordGuard,
+    zone_name: ZoneName,
+    metrics_timespan: MetricsTimespan,
+) -> Result<Json<MetricsGenericGetResponse>, Status> {
+    METRICS_STORE
+        .aggregate(&zone_name, MetricsType::QueryType, metrics_timespan)
+        .ok_or(Status::NotFound)
+        .map(|aggregated| Json(aggregated))
+}
+
+#[get("/zone/<zone_name>/metrics/<metrics_timespan>/query/origins")]
+pub fn get_metrics_query_origins(
+    _auth: RecordGuard,
+    zone_name: ZoneName,
+    metrics_timespan: MetricsTimespan,
+) -> Result<Json<MetricsGenericGetResponse>, Status> {
+    METRICS_STORE
+        .aggregate(&zone_name, MetricsType::QueryOrigin, metrics_timespan)
+        .ok_or(Status::NotFound)
+        .map(|aggregated| Json(aggregated))
+}
+
+#[get("/zone/<zone_name>/metrics/<metrics_timespan>/answer/codes")]
+pub fn get_metrics_answer_codes(
+    _auth: RecordGuard,
+    zone_name: ZoneName,
+    metrics_timespan: MetricsTimespan,
+) -> Result<Json<MetricsGenericGetResponse>, Status> {
+    METRICS_STORE
+        .aggregate(&zone_name, MetricsType::AnswerCode, metrics_timespan)
+        .ok_or(Status::NotFound)
+        .map(|aggregated| Json(aggregated))
 }

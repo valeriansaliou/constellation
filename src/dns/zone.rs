@@ -21,7 +21,7 @@ lazy_static! {
 
 serde_string_impls!(ZoneName);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ZoneName(String);
 
 impl ZoneName {

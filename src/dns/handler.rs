@@ -15,6 +15,8 @@ use trust_dns::rr::{Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{AuthLookup, Authority};
 use trust_dns_server::server::{Request, RequestHandler};
 
+use super::code::CodeName;
+use super::metrics::{MetricsValue, METRICS_STORE};
 use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
 use crate::geo::locate::Locator;
@@ -92,6 +94,7 @@ impl DNSHandler {
         for query in request.queries() {
             if let Some(ref_authority) = self.find_auth_recurse(query.name()) {
                 let authority = &ref_authority.read().unwrap();
+                let zone_name = ZoneName::from_trust(&authority.origin());
 
                 info!(
                     "request: {} found authority: {}",
@@ -115,12 +118,13 @@ impl DNSHandler {
                     Self::serve_response_records(
                         request,
                         &mut response,
+                        &zone_name,
                         records_local_vec,
                         &authority,
                         supported_algorithms,
                     );
                 } else {
-                    match Self::records_from_store(authority, source, query) {
+                    match Self::records_from_store(authority, &zone_name, source, query) {
                         Ok(records_remote) => {
                             if let Some(records_remote_inner) = records_remote {
                                 debug!(
@@ -132,6 +136,7 @@ impl DNSHandler {
                                 Self::serve_response_records(
                                     request,
                                     &mut response,
+                                    &zone_name,
                                     records_remote_inner,
                                     &authority,
                                     supported_algorithms,
@@ -149,6 +154,7 @@ impl DNSHandler {
                                             authority,
                                             supported_algorithms,
                                             ResponseCode::NXDomain,
+                                            &zone_name,
                                             false,
                                         );
                                     }
@@ -161,6 +167,7 @@ impl DNSHandler {
                                             authority,
                                             supported_algorithms,
                                             ResponseCode::NoError,
+                                            &zone_name,
                                             false,
                                         );
                                     }
@@ -179,6 +186,7 @@ impl DNSHandler {
                                 authority,
                                 supported_algorithms,
                                 err,
+                                &zone_name,
                                 false,
                             );
                         }
@@ -212,16 +220,23 @@ impl DNSHandler {
 
     fn records_from_store(
         authority: &Authority,
+        zone_name: &Option<ZoneName>,
         source: IpAddr,
         query: &Query,
     ) -> Result<Option<Vec<Record>>, ResponseCode> {
         let (query_name, query_type) = (query.name(), query.query_type());
         let record_type = RecordType::from_trust(&query_type);
 
+        // Stack query type to metrics?
+        if let Some(ref zone_name) = zone_name {
+            METRICS_STORE.stack(zone_name, MetricsValue::QueryType(&record_type));
+        }
+
         // Attempt with requested domain
         let mut records = Self::records_from_store_attempt(
             authority,
             source,
+            zone_name,
             &query_name,
             &query_name,
             &query_type,
@@ -250,6 +265,7 @@ impl DNSHandler {
                         let records_wildcard = Self::records_from_store_attempt(
                             authority,
                             source,
+                            &zone_name,
                             &query_name,
                             &wildcard_name,
                             &query_type,
@@ -271,12 +287,12 @@ impl DNSHandler {
     fn records_from_store_attempt(
         authority: &Authority,
         source: IpAddr,
+        zone_name: &Option<ZoneName>,
         query_name_client: &Name,
         query_name_effective: &Name,
         query_type: &TrustRecordType,
         record_type: &Option<RecordType>,
     ) -> Option<Vec<Record>> {
-        let zone_name = ZoneName::from_trust(&authority.origin());
         let record_name = RecordName::from_trust(&authority.origin(), query_name_effective);
 
         debug!(
@@ -284,7 +300,7 @@ impl DNSHandler {
             query_name_effective, query_type, zone_name, record_name, record_type
         );
 
-        match (zone_name, record_name) {
+        match (zone_name.as_ref(), record_name) {
             (Some(zone_name), Some(record_name)) => {
                 let mut records = Vec::new();
 
@@ -296,7 +312,13 @@ impl DNSHandler {
                         );
 
                         // Append record direct results
-                        Self::parse_from_records(query_name_client, source, &record, &mut records);
+                        Self::parse_from_records(
+                            query_name_client,
+                            source,
+                            &zone_name,
+                            &record,
+                            &mut records,
+                        );
                     }
 
                     // Look for a CNAME result?
@@ -313,6 +335,7 @@ impl DNSHandler {
                             Self::parse_from_records(
                                 query_name_client,
                                 source,
+                                &zone_name,
                                 &record_cname,
                                 &mut records,
                             );
@@ -341,6 +364,7 @@ impl DNSHandler {
     fn parse_from_records(
         query_name_client: &Name,
         source: IpAddr,
+        zone_name: &ZoneName,
         record: &StoreRecord,
         records: &mut Vec<Record>,
     ) {
@@ -357,6 +381,11 @@ impl DNSHandler {
                 } else {
                     None
                 };
+
+            // Stack query origin to metrics (country will be 'none' if not resolved)
+            // Notice: it will not be resolved for metrics purposes only, so in that case the \
+            //   country will be 'none' even if it could have been detected.
+            METRICS_STORE.stack(zone_name, MetricsValue::QueryOrigin(&ip_country));
 
             // Check if country is blackholed
             let mut is_blackholed = false;
@@ -479,6 +508,7 @@ impl DNSHandler {
     fn serve_response_records(
         request: &Message,
         response: &mut Message,
+        zone_name: &Option<ZoneName>,
         mut records: Vec<Record>,
         authority: &Authority,
         supported_algorithms: SupportedAlgorithms,
@@ -492,6 +522,7 @@ impl DNSHandler {
             authority,
             supported_algorithms,
             ResponseCode::NoError,
+            zone_name,
             has_records,
         );
 
@@ -512,8 +543,17 @@ impl DNSHandler {
         authority: &Authority,
         supported_algorithms: SupportedAlgorithms,
         code: ResponseCode,
+        zone_name: &Option<ZoneName>,
         has_records: bool,
     ) {
+        // Stack answer code to metrics?
+        if let Some(ref zone_name) = zone_name {
+            let code_name = CodeName::from_trust(&code);
+
+            METRICS_STORE.stack(zone_name, MetricsValue::AnswerCode(&code_name));
+        }
+
+        // Stamp with response code
         response.set_response_code(code);
 
         // Stamp response with 'AA' flag (we are authoritative on served zone)

@@ -37,3 +37,52 @@ macro_rules! serde_string_impls {
         }
     };
 }
+
+macro_rules! gen_metrics_tick_perform_item {
+    ($Store:ident, $Backlog:ident) => {
+        // Move all minutes up in the list (sliding window)
+        for index in (0..($Backlog - 1)).rev() {
+            $Store[index + 1] = $Store[index].clone();
+        }
+
+        // Start a new 'minute' (this begins a new timespan storage for the current minute)
+        $Store[0] = HashMap::new();
+    };
+}
+
+macro_rules! gen_metrics_stack_item {
+    ($Counters:ident, $Key:ident) => {
+        if let Some(count) = $Counters.get_mut($Key) {
+            *count += 1;
+        } else {
+            $Counters.insert($Key.to_owned(), 1);
+        }
+    };
+}
+
+macro_rules! gen_metrics_aggregate_item {
+    ($Store:ident, $Limit:ident, $Backlog:ident) => {{
+        let mut aggregated_map = HashMap::new();
+
+        for index in 0..min($Limit as usize, $Backlog) {
+            let point_map = &$Store[index];
+
+            for (key, count) in point_map.iter() {
+                let final_key = if let Some(key_inner) = key {
+                    key_inner.to_str().to_lowercase()
+                } else {
+                    "other".to_string()
+                };
+
+                // Increment existing count, or insert
+                if let Some(existing_count) = aggregated_map.get_mut(&final_key) {
+                    *existing_count = *existing_count + *count
+                } else {
+                    aggregated_map.insert(final_key, *count);
+                }
+            }
+        }
+
+        aggregated_map
+    }};
+}

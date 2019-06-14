@@ -35,10 +35,15 @@ impl HTTPListen {
             .mount(
                 "/",
                 routes![
+                    // Zone
                     routes::head_zone_record,
                     routes::get_zone_record,
                     routes::put_zone_record,
                     routes::delete_zone_record,
+                    // Metrics
+                    routes::get_metrics_query_types,
+                    routes::get_metrics_query_origins,
+                    routes::get_metrics_answer_codes,
                 ],
             )
             .register(catchers![

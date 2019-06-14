@@ -28,7 +28,7 @@ static DATA_TXT_CHUNK_MAXIMUM: usize = 255;
 serde_string_impls!(RecordType);
 serde_string_impls!(RecordName);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum RecordType {
     A,
     AAAA,

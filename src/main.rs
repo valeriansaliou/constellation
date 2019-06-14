@@ -53,6 +53,7 @@ use config::config::Config;
 use config::logger::ConfigLogger;
 use config::reader::ConfigReader;
 use dns::listen::DNSListenBuilder;
+use dns::metrics::DNSMetricsTickBuilder;
 use geo::locate::DB_READER;
 use geo::updater::GeoUpdaterBuilder;
 use http::listen::HTTPListenBuilder;
@@ -66,6 +67,7 @@ struct AppArgs {
 pub static THREAD_NAME_DNS: &'static str = "constellation-dns";
 pub static THREAD_NAME_HTTP: &'static str = "constellation-http";
 pub static THREAD_NAME_STORE_FLUSH: &'static str = "constellation-store-flush";
+pub static THREAD_NAME_DNS_METRICS: &'static str = "constellation-dns-metrics";
 pub static THREAD_NAME_GEO_UPDATER: &'static str = "constellation-geo-updater";
 
 macro_rules! gen_spawn_managed {
@@ -122,6 +124,12 @@ gen_spawn_managed!(
     StoreFlushBuilder::new().run()
 );
 gen_spawn_managed!(
+    "dns_metrics",
+    spawn_dns_metrics,
+    THREAD_NAME_DNS_METRICS,
+    DNSMetricsTickBuilder::new().run()
+);
+gen_spawn_managed!(
     "geo_updater",
     spawn_geo_updater,
     THREAD_NAME_GEO_UPDATER,
@@ -171,6 +179,9 @@ fn main() {
 
     // Spawn store flush
     thread::spawn(spawn_store_flush);
+
+    // Spawn DNS metrics
+    thread::spawn(spawn_dns_metrics);
 
     // Spawn geo updater? (background thread)
     if APP_CONF.geo.update_enable == true {

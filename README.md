@@ -158,7 +158,7 @@ Constellation can be run as such:
 
 `./constellation -c /path/to/config.cfg`
 
-## HTTP REST API
+## 🛰 HTTP REST API
 
 The Constellation HTTP REST API listens on the configured `http.inet` interface from your `config.cfg` file. You can use it for your management and monitoring needs.
 

@@ -158,7 +158,9 @@ Constellation can be run as such:
 
 `./constellation -c /path/to/config.cfg`
 
-### DNS records management (HTTP REST API)
+## HTTP REST API
+
+### DNS records management
 
 To check, read, insert, modify and delete DNS records, you need to use the Constellation HTTP REST API, that listens on the configured `http.inet` interface from your `config.cfg` file.
 

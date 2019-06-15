@@ -312,7 +312,7 @@ To obtain server usage metrics (eg. which countries DNS requests come), you can 
 
 **Endpoint URL:**
 
-`HTTP http://constellation.local:8080/zone/<zone_name>/metrics/<metrics_timespan>/<metrics_type>`
+`HTTP http://constellation.local:8080/zone/<zone_name>/metrics/<metrics_timespan>/<metrics_category>/<metrics_type>`
 
 Where:
 
@@ -329,7 +329,7 @@ Where:
 
 ##### Get metrics
 
-`HTTP GET http://constellation.local:8080/zone/<zone_name>/metrics/<metrics_timespan>/<metrics_type>/`
+`HTTP GET http://constellation.local:8080/zone/<zone_name>/metrics/<metrics_timespan>/<metrics_category>/<metrics_type>/`
 
 **Example request:**
 

@@ -160,9 +160,11 @@ Constellation can be run as such:
 
 ## HTTP REST API
 
-### DNS records management
+The Constellation HTTP REST API listens on the configured `http.inet` interface from your `config.cfg` file. You can use it for your management and monitoring needs.
 
-To check, read, insert, modify and delete DNS records, you need to use the Constellation HTTP REST API, that listens on the configured `http.inet` interface from your `config.cfg` file.
+### 1. DNS records management
+
+To check, read, insert, modify and delete DNS records, you can use the `zone` API resource.
 
 #### API overview
 
@@ -300,6 +302,49 @@ Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 
 ```http
 HTTP/1.1 200 OK
+```
+
+### 2. Server usage metrics retrieval
+
+To obtain server usage metrics (eg. which countries DNS requests come), you can use the `metrics` API resource.
+
+#### API overview
+
+**Endpoint URL:**
+
+`HTTP http://constellation.local:8080/zone/<zone_name>/metrics/<metrics_timespan>/<metrics_type>`
+
+Where:
+
+* `zone_name`: The zone name (ie. base domain), eg. `crisp.email`
+* `metrics_timespan`: The timespan over which metrics should be returned (either: `1m`, `5m` or `15m`), which stands for: _metrics for the last 'n-th' minutes_
+* `metrics_category`: The metrics category (either: `query` or `answer`)
+* `metrics_type`: The metrics type in category (either: `types` or `origins` if category is `query`, or `codes` if category is `answer`)
+
+**Request headers:**
+
+* Add an `Authorization` header with a `Basic` authentication where the password is your configured `http.record_token`.
+
+#### API routes
+
+##### Get metrics
+
+`HTTP GET http://constellation.local:8080/zone/<zone_name>/metrics/<metrics_timespan>/<metrics_type>/`
+
+**Example request:**
+
+```http
+GET /zone/crisp.email/metrics/5m/query/origins HTTP/1.1
+Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
+```
+
+**Example response:**
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"fr":1203,"us":899,"lv":23,"gb":10,"other":2}
 ```
 
 ## :fire: Report A Vulnerability

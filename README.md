@@ -9,6 +9,8 @@ Constellation is a small authoritative server that lets you manage DNS entries f
 
 DNS entries are stored in Redis. The DNS database can thus be easily modified and dumped for backup purposes.
 
+_Tested at Rust version: `rustc 1.35.0-nightly (e3428db7c 2019-03-31)`_
+
 **🇫🇷 Crafted in Angers, France.**
 
 ![Constellation](https://valeriansaliou.github.io/constellation/images/constellation.jpg)

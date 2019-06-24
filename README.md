@@ -228,7 +228,7 @@ If you want to serve records to the nearest server using the Geo-DNS feature, yo
 
 **Geo-DNS blackhole:**
 
-If you want to return an empty DNS response for blocked countries using the Geo-DNS feature, you will need to set `blackhole` via the API, to a list of blackholed ISO-3166 country codes (eg. `FR` for France).
+If you want to return an empty DNS response for blocked countries using the Geo-DNS feature, you will need to set `blackhole` via the API, to a list of blackholed [ISO-3166 Alpha-2 country codes](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes) (eg. `FR` for France).
 
 #### API routes
 

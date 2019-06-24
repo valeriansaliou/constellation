@@ -166,7 +166,7 @@ Once running, DNS queries can be made against Constellation over the local netwo
 
 `dig subdomain.crisp.email @::1`
 
-_Note that the `dig` utility can be pointed to a custom nameserver with the `@` modifier, here with the IPv6 localhost value: `::1`._
+_Note that the `dig` utility can be pointed to a specific server with the `@` modifier, here with the IPv6 localhost: `::1`._
 
 ## 🛰 HTTP REST API
 

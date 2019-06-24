@@ -172,7 +172,7 @@ _Note that the `dig` utility can be pointed to a specific server with the `@` mo
 
 The Constellation HTTP REST API listens on the configured `http.inet` interface from your `config.cfg` file. You can use it for your management and monitoring needs.
 
-_If you want to play with the API the easy way, an [up-to-date Paw file](https://github.com/valeriansaliou/constellation/tree/master/dev/workspaces) is available with all API routes and example requests. Download the [Paw app for your Mac there](https://paw.cloud/)._
+_If you want to play with the API the easy way, an [up-to-date Paw file](https://github.com/valeriansaliou/constellation/tree/master/dev/workspaces) is available with all API routes and example requests. Download the [Paw app for your Mac there](https://paw.cloud/) (Paw a tool developers use to test their APIs)._
 
 ### 1. DNS records management
 

@@ -160,6 +160,14 @@ Constellation can be run as such:
 
 `./constellation -c /path/to/config.cfg`
 
+### Test Constellation
+
+Once running, DNS queries can be made against Constellation over the local network (using the default configuration):
+
+`dig subdomain.crisp.email @::1`
+
+_Note that the `dig` utility can be pointed to a custom nameserver with the `@` modifier, here with the IPv6 localhost value: `::1`._
+
 ## 🛰 HTTP REST API
 
 The Constellation HTTP REST API listens on the configured `http.inet` interface from your `config.cfg` file. You can use it for your management and monitoring needs.

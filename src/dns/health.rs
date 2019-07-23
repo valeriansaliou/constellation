@@ -7,6 +7,7 @@
 use std::thread;
 use std::time::Duration;
 
+use crate::config::config::ConfigDNSHealthHTTP;
 use crate::APP_CONF;
 
 pub struct DNSHealthBuilder;
@@ -30,9 +31,37 @@ impl DNSHealth {
 
             info!("running a dns health check operation...");
 
-            // TODO
+            // Hold on 1 second
+            thread::sleep(Duration::from_secs(1));
+
+            Self::run_checks();
 
             info!("ran dns health check operation");
         }
+    }
+
+    fn run_checks() {
+        // Run HTTP checks
+        Self::run_checks_http();
+    }
+
+    fn run_checks_http() {
+        debug!("running dns health checks for the http protocol...");
+
+        for check_domain in &APP_CONF.dns.health.http {
+            Self::run_check_http_domain(check_domain);
+        }
+
+        debug!("ran dns health checks for the http protocol");
+    }
+
+    fn run_check_http_domain(check_domain: &ConfigDNSHealthHTTP) {
+        debug!(
+            "triggered a dns health check on http target: {} on zone: {}",
+            check_domain.name.to_str(),
+            check_domain.zone.to_str()
+        );
+
+        // TODO
     }
 }

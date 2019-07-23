@@ -31,8 +31,8 @@ serde_json = "1.0"
 base64 = "0.10"
 regex = "1.0"
 r2d2 = "0.8"
-r2d2_redis = "0.9"
-redis = "0.10"
+r2d2_redis = "0.10"
+redis = "0.11"
 rocket = { version = "0.4", default-features = false }
 rocket_contrib = { version = "0.4", features = ["json"], default-features = false }
 trust-dns = { version = "0.13", default-features = false }

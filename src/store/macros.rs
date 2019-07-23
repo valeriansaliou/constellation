@@ -7,7 +7,7 @@
 macro_rules! get_cache_store_client {
     ($pool:expr, $error:expr, $client:ident $code:block) => {
         match $pool.get() {
-            Ok($client) => $code,
+            Ok(mut $client) => $code,
             _ => Err($error),
         }
     };

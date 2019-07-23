@@ -125,8 +125,8 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[[dns.health.http]]**
 
-* `zone` (type: _string_, allowed: any zone root domain, default: no default) — Root domain for zone to be checked
-* `name` (type: _string_, allowed: any zone subdomain, default: no default) — Subdomain for zone to be checked
+* `zone` (type: _string_, allowed: any zone root domain, default: no default) — Root domain for zone to be checked (eg. `crisp.email`)
+* `name` (type: _string_, allowed: any subdomain on zone, default: no default) — Subdomain for zone to be checked (eg. `inbound.@`, for expanded domain `inbound.crisp.email`)
 * `method` (type: _string_, allowed: `HEAD`, `GET`, default: `GET`) — HTTP method to be used by HTTP health probe to perform the check request
 * `path` (type: _string_, allowed: HTTP path, default: `/`) — HTTP path to be requested upon check
 * `port` (type: _integer_, allowed: TCP ports, default: `443`) — TCP port used for HTTP check
@@ -135,7 +135,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `secure` (type: _boolean_, allowed: `true`, `false`, default: `true`) — Whether to perform health checks over HTTPS or not
 * `allow_invalid_certificate` (type: _boolean_, allowed: `true`, `false`, default: `false`) — Whether to allow invalid certificates or not (if health check is performed over HTTPS)
 * `expected_status` (type: _integer_, allowed: HTTP status codes, default: `200`) — HTTP response status code to expect
-* `expected_body` (type: _string_, allowed: text values, default: empty) — Body contents to expect (sub-string can be contained in response body)
+* `expected_body` (type: _string_, allowed: text values, default: empty) — Body contents to expect (sub-string can be contained in response body; only applicable if `method` is set to `GET`)
 
 **[geo]**
 

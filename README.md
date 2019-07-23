@@ -118,6 +118,25 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 > Specify your zone name eg. as: `[[dns.zone.'crisp.email']]` for zone base: `crisp.email`.
 
+**[dns.health]**
+
+* `check_enable` (type: _boolean_, allowed: `true`, `false`, default: `false`) — Whether to perform periodic health checks or not
+* `check_interval` (type: _integer_, allowed: seconds, default: `60`) — Interval for which to perform health checks in seconds (from 1 minute to 5 minutes is recommended)
+
+**[[dns.health.http]]**
+
+* `zone` (type: _string_, allowed: any zone root domain, default: no default) — Root domain for zone to be checked
+* `name` (type: _string_, allowed: any zone subdomain, default: no default) — Subdomain for zone to be checked
+* `method` (type: _string_, allowed: `HEAD`, `GET`, default: `GET`) — HTTP method to be used by HTTP health probe to perform the check request
+* `path` (type: _string_, allowed: HTTP path, default: `/`) — HTTP path to be requested upon check
+* `port` (type: _integer_, allowed: TCP ports, default: `443`) — TCP port used for HTTP check
+* `timeout` (type: _integer_, allowed: seconds, default: `10`) — Timeout of a single HTTP check attempt
+* `retries` (type: _integer_, allowed: numbers, default: `3`) — Maximum number of times to retry a given health check in a row, in the event of a failed health check
+* `secure` (type: _boolean_, allowed: `true`, `false`, default: `true`) — Whether to perform health checks over HTTPS or not
+* `allow_invalid_certificate` (type: _boolean_, allowed: `true`, `false`, default: `false`) — Whether to allow invalid certificates or not (if health check is performed over HTTPS)
+* `expected_status` (type: _integer_, allowed: HTTP status codes, default: `200`) — HTTP response status code to expect
+* `expected_body` (type: _string_, allowed: text values, default: empty) — Body contents to expect (sub-string can be contained in response body)
+
 **[geo]**
 
 * `database_path` (type: _string_, allowed: folder path, default: `./res/geo/`) — Path to the folder containing the GeoIP database

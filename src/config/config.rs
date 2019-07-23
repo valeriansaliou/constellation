@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 use std::net::SocketAddr;
 
 use super::defaults;
+use crate::dns::record::RecordName;
+use crate::dns::zone::ZoneName;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -54,10 +56,66 @@ pub struct ConfigDNS {
 
     #[serde(default = "defaults::dns_zone")]
     pub zone: BTreeMap<String, ConfigDNSZone>,
+
+    #[serde(default = "defaults::dns_health")]
+    pub health: ConfigDNSHealth,
 }
 
 #[derive(Deserialize)]
 pub struct ConfigDNSZone {}
+
+#[derive(Default, Deserialize)]
+pub struct ConfigDNSHealth {
+    #[serde(default = "defaults::dns_health_check_enable")]
+    pub check_enable: bool,
+
+    #[serde(default = "defaults::dns_health_check_interval")]
+    pub check_interval: u64,
+
+    #[serde(default = "defaults::dns_health_http")]
+    pub http: Vec<ConfigDNSHealthHTTP>,
+}
+
+#[derive(Deserialize)]
+pub struct ConfigDNSHealthHTTP {
+    pub zone: ZoneName,
+    pub name: RecordName,
+
+    #[serde(default = "defaults::dns_health_http_method")]
+    pub method: ConfigDNSHealthHTTPMethod,
+
+    #[serde(default = "defaults::dns_health_http_path")]
+    pub path: String,
+
+    #[serde(default = "defaults::dns_health_http_port")]
+    pub port: u16,
+
+    #[serde(default = "defaults::dns_health_http_timeout")]
+    pub timeout: u16,
+
+    #[serde(default = "defaults::dns_health_http_retries")]
+    pub retries: u8,
+
+    #[serde(default = "defaults::dns_health_http_secure")]
+    pub secure: bool,
+
+    #[serde(default = "defaults::dns_health_http_allow_invalid_certificate")]
+    pub allow_invalid_certificate: bool,
+
+    #[serde(default = "defaults::dns_health_http_expected_status")]
+    pub expected_status: u16,
+
+    pub expected_body: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub enum ConfigDNSHealthHTTPMethod {
+    #[serde(rename = "HEAD")]
+    Head,
+
+    #[serde(rename = "GET")]
+    Get,
+}
 
 #[derive(Deserialize)]
 pub struct ConfigGeo {

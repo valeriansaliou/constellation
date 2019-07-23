@@ -7,7 +7,9 @@
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 
-use super::config::ConfigDNSZone;
+use super::config::{
+    ConfigDNSHealth, ConfigDNSHealthHTTP, ConfigDNSHealthHTTPMethod, ConfigDNSZone,
+};
 
 pub fn server_log_level() -> String {
     "error".to_string()
@@ -43,6 +45,54 @@ pub fn dns_record_ttl() -> u32 {
 
 pub fn dns_zone() -> BTreeMap<String, ConfigDNSZone> {
     BTreeMap::new()
+}
+
+pub fn dns_health() -> ConfigDNSHealth {
+    ConfigDNSHealth::default()
+}
+
+pub fn dns_health_check_enable() -> bool {
+    false
+}
+
+pub fn dns_health_check_interval() -> u64 {
+    60
+}
+
+pub fn dns_health_http() -> Vec<ConfigDNSHealthHTTP> {
+    Vec::new()
+}
+
+pub fn dns_health_http_method() -> ConfigDNSHealthHTTPMethod {
+    ConfigDNSHealthHTTPMethod::Get
+}
+
+pub fn dns_health_http_path() -> String {
+    "/".to_string()
+}
+
+pub fn dns_health_http_port() -> u16 {
+    443
+}
+
+pub fn dns_health_http_timeout() -> u16 {
+    10
+}
+
+pub fn dns_health_http_retries() -> u8 {
+    3
+}
+
+pub fn dns_health_http_secure() -> bool {
+    true
+}
+
+pub fn dns_health_http_allow_invalid_certificate() -> bool {
+    false
+}
+
+pub fn dns_health_http_expected_status() -> u16 {
+    200
 }
 
 pub fn geo_database_path() -> String {

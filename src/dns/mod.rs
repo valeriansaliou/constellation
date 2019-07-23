@@ -10,6 +10,7 @@ mod macros;
 mod code;
 mod handler;
 
+pub mod health;
 pub mod listen;
 pub mod metrics;
 pub mod record;

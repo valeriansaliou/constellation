@@ -90,25 +90,22 @@ pub struct ConfigDNSHealthHTTP {
     #[serde(default = "defaults::dns_health_http_port")]
     pub port: u16,
 
-    #[serde(default = "defaults::dns_health_http_timeout")]
-    pub timeout: u16,
-
-    #[serde(default = "defaults::dns_health_http_retries")]
-    pub retries: u8,
-
     #[serde(default = "defaults::dns_health_http_secure")]
     pub secure: bool,
 
-    #[serde(default = "defaults::dns_health_http_allow_invalid_certificate")]
-    pub allow_invalid_certificate: bool,
+    #[serde(default = "defaults::dns_health_http_timeout")]
+    pub timeout: u64,
+
+    #[serde(default = "defaults::dns_health_http_max_attempts")]
+    pub max_attempts: u8,
 
     #[serde(default = "defaults::dns_health_http_expected_status")]
-    pub expected_status: u16,
+    pub expected_status: Vec<u16>,
 
-    pub expected_body: Option<String>,
+    pub expected_body: Option<Vec<String>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, PartialEq)]
 pub enum ConfigDNSHealthHTTPMethod {
     #[serde(rename = "HEAD")]
     Head,

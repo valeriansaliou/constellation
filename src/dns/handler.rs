@@ -16,6 +16,7 @@ use trust_dns_server::authority::{AuthLookup, Authority};
 use trust_dns_server::server::{Request, RequestHandler};
 
 use super::code::CodeName;
+use super::health::{DNSHealth, DNSHealthStatus};
 use super::metrics::{MetricsValue, METRICS_STORE};
 use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
@@ -314,6 +315,7 @@ impl DNSHandler {
                         // Append record direct results
                         Self::parse_from_records(
                             query_name_client,
+                            record_type_inner,
                             source,
                             &zone_name,
                             &record,
@@ -334,6 +336,7 @@ impl DNSHandler {
                             // Append CNAME hint results
                             Self::parse_from_records(
                                 query_name_client,
+                                record_type_inner,
                                 source,
                                 &zone_name,
                                 &record_cname,
@@ -363,6 +366,7 @@ impl DNSHandler {
 
     fn parse_from_records(
         query_name_client: &Name,
+        record_type: &RecordType,
         source: IpAddr,
         zone_name: &ZoneName,
         record: &StoreRecord,
@@ -480,12 +484,22 @@ impl DNSHandler {
             if is_blackholed == false {
                 for value in values.iter() {
                     if let Ok(value_data) = value.to_trust(&record.kind) {
-                        records.push(Record::from_rdata(
-                            query_name_client.to_owned(),
-                            record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
-                            type_data,
-                            value_data,
-                        ));
+                        // Check if value was not checked as dead for zone name and record name
+                        if DNSHealth::status(zone_name, record_type, &record.name, value)
+                            != DNSHealthStatus::Dead
+                        {
+                            records.push(Record::from_rdata(
+                                query_name_client.to_owned(),
+                                record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
+                                type_data,
+                                value_data,
+                            ));
+                        } else {
+                            info!(
+                                "did not push dns record with value: {:?} because it is dead",
+                                value
+                            );
+                        }
                     } else {
                         warn!(
                             "could not convert to dns record type: {} with value: {:?}",

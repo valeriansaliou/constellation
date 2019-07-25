@@ -8,11 +8,14 @@ use r2d2::Pool;
 use r2d2_redis::RedisConnectionManager;
 use redis::{Commands, RedisError};
 use serde_json::{self, Error as SerdeJSONError};
+use std::collections::HashSet;
 use std::time::Duration;
 
 use super::cache::STORE_CACHE;
 use super::key::StoreKey;
-use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
+use crate::dns::record::{
+    RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValue, RecordValues,
+};
 use crate::dns::zone::ZoneName;
 
 use crate::APP_CONF;
@@ -287,5 +290,50 @@ impl Store {
                 StoreError::Connector(err)
             })
         })
+    }
+}
+
+impl StoreRecord {
+    pub fn list_record_values<'a>(&'a self) -> HashSet<&'a RecordValue> {
+        let mut unique_values = HashSet::new();
+
+        // Insert base values
+        for value in self.values.iter() {
+            unique_values.insert(value);
+        }
+
+        // Insert all geographic region values?
+        if let Some(ref regions) = self.regions {
+            self.insert_record_values(&regions.nnam, &mut unique_values);
+            self.insert_record_values(&regions.snam, &mut unique_values);
+            self.insert_record_values(&regions.nsam, &mut unique_values);
+            self.insert_record_values(&regions.ssam, &mut unique_values);
+            self.insert_record_values(&regions.weu, &mut unique_values);
+            self.insert_record_values(&regions.ceu, &mut unique_values);
+            self.insert_record_values(&regions.eeu, &mut unique_values);
+            self.insert_record_values(&regions.ru, &mut unique_values);
+            self.insert_record_values(&regions.me, &mut unique_values);
+            self.insert_record_values(&regions.naf, &mut unique_values);
+            self.insert_record_values(&regions.maf, &mut unique_values);
+            self.insert_record_values(&regions.saf, &mut unique_values);
+            self.insert_record_values(&regions.seas, &mut unique_values);
+            self.insert_record_values(&regions.neas, &mut unique_values);
+            self.insert_record_values(&regions.oc, &mut unique_values);
+            self.insert_record_values(&regions._in, &mut unique_values);
+        }
+
+        unique_values
+    }
+
+    fn insert_record_values<'a>(
+        &'a self,
+        record_values: &'a Option<RecordValues>,
+        unique_values: &mut HashSet<&'a RecordValue>,
+    ) {
+        if let Some(record_values) = record_values {
+            for value in record_values.iter() {
+                unique_values.insert(value);
+            }
+        }
     }
 }

@@ -75,24 +75,20 @@ pub fn dns_health_http_port() -> u16 {
     443
 }
 
-pub fn dns_health_http_timeout() -> u16 {
-    10
-}
-
-pub fn dns_health_http_retries() -> u8 {
-    3
-}
-
 pub fn dns_health_http_secure() -> bool {
     true
 }
 
-pub fn dns_health_http_allow_invalid_certificate() -> bool {
-    false
+pub fn dns_health_http_timeout() -> u64 {
+    10
 }
 
-pub fn dns_health_http_expected_status() -> u16 {
-    200
+pub fn dns_health_http_max_attempts() -> u8 {
+    3
+}
+
+pub fn dns_health_http_expected_status() -> Vec<u16> {
+    vec![200]
 }
 
 pub fn geo_database_path() -> String {

@@ -38,10 +38,10 @@ pub enum RecordType {
     PTR,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct RecordName(String);
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct RecordValue(String);
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -164,6 +164,16 @@ impl RecordName {
 
     pub fn to_str(&self) -> &str {
         &self.0
+    }
+
+    pub fn to_subdomain(&self) -> &str {
+        let raw_str = self.to_str();
+
+        if raw_str.len() > 1 {
+            &raw_str[..(raw_str.len() - 1)]
+        } else {
+            ""
+        }
     }
 
     pub fn validate(value: &str) -> bool {

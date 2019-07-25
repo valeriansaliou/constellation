@@ -130,12 +130,11 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `method` (type: _string_, allowed: `HEAD`, `GET`, default: `GET`) — HTTP method to be used by HTTP health probe to perform the check request
 * `path` (type: _string_, allowed: HTTP paths, default: `/`) — HTTP path to be requested upon check
 * `port` (type: _integer_, allowed: TCP ports, default: `443`) — TCP port used for HTTP check (port value will likely be `80` if HTTP is used)
-* `timeout` (type: _integer_, allowed: seconds, default: `10`) — Timeout of a single HTTP check attempt in seconds
-* `retries` (type: _integer_, allowed: numbers, default: `3`) — Maximum number of times to retry a given health check in a row, in the event of a failed health check
 * `secure` (type: _boolean_, allowed: `true`, `false`, default: `true`) — Whether to perform health checks over secure HTTPS or plain HTTP
-* `allow_invalid_certificate` (type: _boolean_, allowed: `true`, `false`, default: `false`) — Whether to allow invalid certificates or not (if health check is performed over HTTPS)
-* `expected_status` (type: _integer_, allowed: HTTP status codes, default: `200`) — HTTP status code to expect
-* `expected_body` (type: _string_, allowed: text values, default: empty) — Body contents to expect (sub-string can be contained in response body; only applicable if `method` is set to `GET`)
+* `timeout` (type: _integer_, allowed: seconds, default: `10`) — Timeout of a single HTTP check attempt in seconds
+* `max_attempts` (type: _integer_, allowed: numbers, default: `3`) — Maximum number of times to attempt a given health check in a row, in the event of a failed health check (network-related failures only)
+* `expected_status` (type: _array[integer]_, allowed: HTTP status codes, default: `200`) — List of HTTP status codes to expect
+* `expected_body` (type: _array[string]_, allowed: text values, default: empty) — List of body contents to expect (sub-string can be contained in response body; only applicable if `method` is set to `GET`)
 
 **[geo]**
 

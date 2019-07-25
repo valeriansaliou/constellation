@@ -116,7 +116,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[[dns.zone.'{name}']]**
 
-> Specify your zone name eg. as: `[[dns.zone.'crisp.email']]` for zone base: `crisp.email`.
+> Specify your zone name eg. as: `[[dns.zone.'relay.crisp.chat']]` for zone base: `relay.crisp.chat`.
 
 **[dns.health]**
 
@@ -125,8 +125,8 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[[dns.health.http]]**
 
-* `zone` (type: _string_, allowed: any zone root domain, default: no default) — Root domain for zone to be checked (eg. `crisp.email`)
-* `name` (type: _string_, allowed: any subdomain on zone, default: no default) — Subdomain for zone to be checked (eg. `inbound.@`, for expanded domain `inbound.crisp.email`)
+* `zone` (type: _string_, allowed: any zone root domain, default: no default) — Root domain for zone to be checked (eg. `relay.crisp.chat`)
+* `name` (type: _string_, allowed: any subdomain on zone, default: no default) — Subdomain for zone to be checked (eg. `client.@`, for expanded domain `client.relay.crisp.chat`)
 * `method` (type: _string_, allowed: `HEAD`, `GET`, default: `GET`) — HTTP method to be used by HTTP health probe to perform the check request
 * `path` (type: _string_, allowed: HTTP paths, default: `/`) — HTTP path to be requested upon check
 * `port` (type: _integer_, allowed: TCP ports, default: `443`) — TCP port used for HTTP check (port value will likely be `80` if HTTP is used)
@@ -183,7 +183,7 @@ Constellation can be run as such:
 
 Once running, DNS queries can be made against Constellation over the local network (using the default configuration):
 
-`dig subdomain.crisp.email @::1`
+`dig subdomain.relay.crisp.chat @::1`
 
 _Note that the `dig` utility can be pointed to a specific server with the `@` modifier, here with IPv6 localhost: `::1`._
 
@@ -205,8 +205,8 @@ To check, read, insert, modify and delete DNS records, you can use the `zone` AP
 
 Where:
 
-* `zone_name`: The zone name (ie. base domain), eg. `crisp.email`
-* `record_name`: The record name to read or alter (ie. sub-domain or base domain), eg. `inbound.@` for the `inbound.crisp.email` FQDN, or `@` for the `crisp.email` FQDN
+* `zone_name`: The zone name (ie. base domain), eg. `relay.crisp.chat`
+* `record_name`: The record name to read or alter (ie. sub-domain or base domain), eg. `client.@` for the `client.relay.crisp.chat` FQDN, or `@` for the `relay.crisp.chat` FQDN
 * `record_type`: The DNS record type to read or alter for the `record_name`; either: `a`, `aaaa`, `cname`, `mx`, `txt` or `ptr` ([open an issue](https://github.com/valeriansaliou/constellation/issues) if you need support for another record type)
 
 **Request headers:**
@@ -258,7 +258,7 @@ If you want to return an empty DNS response for blocked countries using the Geo-
 **Example request:**
 
 ```http
-HEAD /zone/crisp.email/record/@/mx HTTP/1.1
+HEAD /zone/relay.crisp.chat/record/@/a HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 ```
 
@@ -275,7 +275,7 @@ HTTP/1.1 200 OK
 **Example request:**
 
 ```http
-GET /zone/crisp.email/record/@/mx HTTP/1.1
+GET /zone/relay.crisp.chat/record/@/a HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 ```
 
@@ -285,7 +285,7 @@ Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"type":"mx","name":"@","ttl":600,"blackhole": null,"regions": null,"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"]}
+{"type":"a","name":"@","ttl":600,"blackhole": null,"regions": null,"values":["159.89.97.13","46.101.18.133"]}
 ```
 
 ##### Write a DNS record (or overwrite existing)
@@ -295,21 +295,21 @@ Content-Type: application/json
 **Example request (standard):**
 
 ```http
-PUT /zone/crisp.email/record/@/mx HTTP/1.1
+PUT /zone/relay.crisp.chat/record/@/a HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
-{"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"ttl":600}
+{"values":["159.89.97.13","46.101.18.133"],"ttl":600}
 ```
 
 **Example request (Geo-DNS):**
 
 ```http
-PUT /zone/crisp.email/record/@/mx HTTP/1.1
+PUT /zone/relay.crisp.chat/record/@/cname HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
-{"regions":{"nnam":["10 inbound-geo.nnam.crisp.email"],"snam":["10 inbound-geo.snam.crisp.email"],"nsam":["10 inbound-geo.nsam.crisp.email"],"ssam":["10 inbound-geo.ssam.crisp.email"],"weu":["10 inbound-geo.weu.crisp.email"],"ceu":["10 inbound-geo.ceu.crisp.email"],"eeu":["10 inbound-geo.eeu.crisp.email"],"ru":["10 inbound-geo.ru.crisp.email"],"me":["10 inbound-geo.me.crisp.email"],"naf":["10 inbound-geo.naf.crisp.email"],"maf":["10 inbound-geo.maf.crisp.email"],"saf":["10 inbound-geo.saf.crisp.email"],"in":["10 inbound-geo.in.crisp.email"],"seas":["10 inbound-geo.seas.crisp.email"],"neas":["10 inbound-geo.neas.crisp.email"],"oc":["10 inbound-geo.oc.crisp.email"]},"values":["1 inbound.crisp.email","10 inbound-failover.crisp.email"],"ttl":600}
+{"regions":{"nnam":["client.nnam.geo.relay.crisp.net"],"snam":["client.snam.geo.relay.crisp.net"],"nsam":["client.nsam.geo.relay.crisp.net"],"ssam":["client.ssam.geo.relay.crisp.net"],"weu":["client.weu.geo.relay.crisp.net"],"ceu":["client.ceu.geo.relay.crisp.net"],"eeu":["client.eeu.geo.relay.crisp.net"],"ru":["client.ru.geo.relay.crisp.net"],"me":["client.me.geo.relay.crisp.net"],"naf":["client.naf.geo.relay.crisp.net"],"maf":["client.maf.geo.relay.crisp.net"],"saf":["client.saf.geo.relay.crisp.net"],"in":["client.in.geo.relay.crisp.net"],"seas":["client.seas.geo.relay.crisp.net"],"neas":["client.neas.geo.relay.crisp.net"],"oc":["client.oc.geo.relay.crisp.net"]},"values":["client.default.geo.relay.crisp.net"],"ttl":600}
 ```
 
 **Example response:**
@@ -325,7 +325,7 @@ HTTP/1.1 200 OK
 **Example request:**
 
 ```http
-DELETE /zone/crisp.email/record/@/mx HTTP/1.1
+DELETE /zone/relay.crisp.chat/record/@/a HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 ```
 
@@ -347,7 +347,7 @@ To obtain server usage metrics (eg. which countries DNS requests come), you can 
 
 Where:
 
-* `zone_name`: The zone name (ie. base domain), eg. `crisp.email`
+* `zone_name`: The zone name (ie. base domain), eg. `relay.crisp.chat`
 * `metrics_timespan`: The timespan over which metrics should be returned (either: `1m`, `5m` or `15m`), which stands for: _metrics for the last 'n-th' minutes_
 * `metrics_category`: The metrics category (either: `query` or `answer`)
 * `metrics_type`: The metrics type in category (either: `types` or `origins` if category is `query`, or `codes` if category is `answer`)
@@ -365,7 +365,7 @@ Where:
 **Example request:**
 
 ```http
-GET /zone/crisp.email/metrics/5m/query/origins HTTP/1.1
+GET /zone/relay.crisp.chat/metrics/5m/query/origins HTTP/1.1
 Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 ```
 

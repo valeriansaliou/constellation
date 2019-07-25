@@ -241,6 +241,10 @@ impl RecordValue {
                 .or(Err(())),
         }
     }
+
+    pub fn to_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl RecordBlackhole {

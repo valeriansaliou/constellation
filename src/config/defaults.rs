@@ -8,7 +8,8 @@ use std::collections::BTreeMap;
 use std::net::SocketAddr;
 
 use super::config::{
-    ConfigDNSHealth, ConfigDNSHealthHTTP, ConfigDNSHealthHTTPMethod, ConfigDNSZone,
+    ConfigDNSHealth, ConfigDNSHealthHTTP, ConfigDNSHealthHTTPMethod, ConfigDNSHealthNotify,
+    ConfigDNSZone,
 };
 
 pub fn server_log_level() -> String {
@@ -57,6 +58,10 @@ pub fn dns_health_check_enable() -> bool {
 
 pub fn dns_health_check_interval() -> u64 {
     60
+}
+
+pub fn dns_health_notify() -> ConfigDNSHealthNotify {
+    ConfigDNSHealthNotify::default()
 }
 
 pub fn dns_health_http() -> Vec<ConfigDNSHealthHTTP> {

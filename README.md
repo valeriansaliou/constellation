@@ -123,6 +123,10 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `check_enable` (type: _boolean_, allowed: `true`, `false`, default: `false`) — Whether to perform periodic health checks or not
 * `check_interval` (type: _integer_, allowed: seconds, default: `60`) — Interval for which to perform health checks in seconds (from 1 minute to 5 minutes is recommended)
 
+**[dns.health.notify]**
+
+* `slack_hook_url` (type: _string_, allowed: URL, default: no default) — Slack hook URL for notifications (ie. `https://hooks.slack.com/[..]`)
+
 **[[dns.health.http]]**
 
 * `zone` (type: _string_, allowed: any zone root domain, default: no default) — Root domain for zone to be checked (eg. `relay.crisp.chat`)

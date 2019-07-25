@@ -34,6 +34,7 @@ extern crate tempfile;
 extern crate toml;
 extern crate trust_dns;
 extern crate trust_dns_server;
+extern crate url_serde;
 
 mod config;
 mod dns;

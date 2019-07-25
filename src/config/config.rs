@@ -6,6 +6,7 @@
 
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
+use url_serde::SerdeUrl;
 
 use super::defaults;
 use crate::dns::record::RecordName;
@@ -72,8 +73,16 @@ pub struct ConfigDNSHealth {
     #[serde(default = "defaults::dns_health_check_interval")]
     pub check_interval: u64,
 
+    #[serde(default = "defaults::dns_health_notify")]
+    pub notify: ConfigDNSHealthNotify,
+
     #[serde(default = "defaults::dns_health_http")]
     pub http: Vec<ConfigDNSHealthHTTP>,
+}
+
+#[derive(Default, Deserialize)]
+pub struct ConfigDNSHealthNotify {
+    pub slack_hook_url: Option<SerdeUrl>,
 }
 
 #[derive(Deserialize)]

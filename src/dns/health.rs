@@ -5,13 +5,15 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use http_req::error::Error;
-use http_req::request::{Method, RequestBuilder};
+use http_req::request::{Method, Request, RequestBuilder};
 use http_req::response::{Headers, Response, StatusCode};
 use http_req::tls;
 use http_req::uri::Uri;
+use serde_json;
 use std::collections::HashSet;
 use std::io;
 use std::net::{TcpStream, ToSocketAddrs};
+use std::str::FromStr;
 use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
@@ -30,14 +32,47 @@ lazy_static! {
 const HEALTH_CHECK_RECORD_TYPES: [RecordType; 3] =
     [RecordType::A, RecordType::AAAA, RecordType::CNAME];
 const HEALTH_CHECK_FAILED_STATUS: StatusCode = StatusCode::new(503);
-const HEALTH_CHECK_PROBE_USERAGENT: &'static str = "constellation (health-check)";
+
+const HEALTH_CHECK_PROBE_USERAGENT: &'static str = "constellation (health-check-probe)";
+const HEALTH_CHECK_NOTIFY_USERAGENT: &'static str = "constellation (health-check-notify)";
+const HEALTH_CHECK_NOTIFY_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct DNSHealthBuilder;
 pub struct DNSHealth;
 
 struct DNSHealthHTTP;
 
-#[derive(PartialEq)]
+struct DNSHealthNotify {
+    events: Vec<(
+        ZoneName,
+        RecordName,
+        RecordValue,
+        DNSHealthStatus,
+        Option<String>,
+    )>,
+}
+
+#[derive(Serialize)]
+struct DNSHealthNotifySlackPayload<'a> {
+    text: String,
+    attachments: Vec<DNSHealthNotifySlackPayloadAttachment<'a>>,
+}
+
+#[derive(Serialize)]
+struct DNSHealthNotifySlackPayloadAttachment<'a> {
+    fallback: String,
+    color: &'a str,
+    fields: Vec<DNSHealthNotifySlackPayloadAttachmentField>,
+}
+
+#[derive(Serialize)]
+struct DNSHealthNotifySlackPayloadAttachmentField {
+    title: String,
+    value: String,
+    short: bool,
+}
+
+#[derive(PartialEq, Debug)]
 pub enum DNSHealthStatus {
     Unchecked,
     Healthy,
@@ -86,12 +121,7 @@ impl DNSHealth {
 
             // Record contained in dead register?
             // Notice: there is unfortunately no other way around than doing clones there
-            if HEALTH_DEAD_REGISTER.read().unwrap().contains(&(
-                zone_name.clone(),
-                record_name.clone(),
-                record_value.clone(),
-            )) == true
-            {
+            if Self::register_has(&(zone_name.clone(), record_name.clone(), record_value.clone())) {
                 DNSHealthStatus::Dead
             } else {
                 DNSHealthStatus::Healthy
@@ -99,6 +129,10 @@ impl DNSHealth {
         } else {
             DNSHealthStatus::Unchecked
         }
+    }
+
+    pub fn register_has(chain: &(ZoneName, RecordName, RecordValue)) -> bool {
+        HEALTH_DEAD_REGISTER.read().unwrap().contains(chain)
     }
 
     fn should_check_record(record_type: &RecordType) -> bool {
@@ -109,23 +143,29 @@ impl DNSHealth {
     }
 
     fn run_checks() {
+        // Build shared notifier
+        let mut notifier = DNSHealthNotify::new();
+
         // Run HTTP checks
-        DNSHealthHTTP::run();
+        DNSHealthHTTP::run(&mut notifier);
+
+        // Dispatch notifier (if any notification to be processed)
+        notifier.dispatch();
     }
 }
 
 impl DNSHealthHTTP {
-    fn run() {
+    fn run(notifier: &mut DNSHealthNotify) {
         debug!("running dns health checks for the http protocol...");
 
         for domain in &APP_CONF.dns.health.http {
-            Self::check_domain(domain);
+            Self::check_domain(domain, notifier);
         }
 
         debug!("ran dns health checks for the http protocol");
     }
 
-    fn check_domain(domain: &ConfigDNSHealthHTTP) {
+    fn check_domain(domain: &ConfigDNSHealthHTTP, notifier: &mut DNSHealthNotify) {
         for record_type in HEALTH_CHECK_RECORD_TYPES.iter() {
             debug!(
                 "checking dns health for target: {} on zone: {} with type: {:?}",
@@ -138,13 +178,18 @@ impl DNSHealthHTTP {
                 let unique_values = record.list_record_values();
 
                 for value in unique_values {
-                    Self::check_domain_record(domain, value, 1);
+                    Self::check_domain_record(domain, value, notifier, 1);
                 }
             }
         }
     }
 
-    fn check_domain_record(domain: &ConfigDNSHealthHTTP, record_value: &RecordValue, attempt: u8) {
+    fn check_domain_record(
+        domain: &ConfigDNSHealthHTTP,
+        record_value: &RecordValue,
+        notifier: &mut DNSHealthNotify,
+        attempt: u8,
+    ) {
         // Generate request URL
         let request_url = Self::generate_request_url(
             &domain.zone,
@@ -209,6 +254,7 @@ impl DNSHealthHTTP {
                         record_value,
                         response_headers.status_code(),
                         response_body,
+                        notifier,
                     );
                 }
                 Err(_) => {
@@ -224,7 +270,7 @@ impl DNSHealthHTTP {
                         thread::sleep(Duration::from_millis(500));
 
                         // Dispatch new attempt
-                        Self::check_domain_record(domain, record_value, attempt + 1);
+                        Self::check_domain_record(domain, record_value, notifier, attempt + 1);
                     } else {
                         warn!(
                             "dns health check error on target: {} on zone: {}, stopping there",
@@ -238,6 +284,7 @@ impl DNSHealthHTTP {
                             record_value,
                             HEALTH_CHECK_FAILED_STATUS,
                             response_body,
+                            notifier,
                         );
                     }
                 }
@@ -312,6 +359,7 @@ impl DNSHealthHTTP {
         record_value: &RecordValue,
         status_code: StatusCode,
         body: Vec<u8>,
+        notifier: &mut DNSHealthNotify,
     ) {
         // Notice: there is unfortunately no other way around than doing clones there
         let record_key = (
@@ -330,6 +378,17 @@ impl DNSHealthHTTP {
                 status_code
             );
 
+            // Dispatch 'healthy' notification? (record key was set as 'dead')
+            if DNSHealth::register_has(&record_key) {
+                notifier.stack(
+                    &domain.zone,
+                    &domain.name,
+                    record_value,
+                    DNSHealthStatus::Healthy,
+                    None,
+                );
+            }
+
             // Consider record as healthy (remove from register)
             HEALTH_DEAD_REGISTER.write().unwrap().remove(&record_key);
         } else {
@@ -339,6 +398,17 @@ impl DNSHealthHTTP {
                 domain.zone.to_str(),
                 status_code
             );
+
+            // Dispatch 'dead' notification? (record key was set as 'healthy')
+            if !DNSHealth::register_has(&record_key) {
+                notifier.stack(
+                    &domain.zone,
+                    &domain.name,
+                    record_value,
+                    DNSHealthStatus::Dead,
+                    Some(format!("Got HTTP status: {} or invalid body", status_code)),
+                );
+            }
 
             // Consider record as dead (add to register)
             HEALTH_DEAD_REGISTER.write().unwrap().insert(record_key);
@@ -403,5 +473,130 @@ impl DNSHealthHTTP {
             request_url.parse(),
             format!("{}{}", name.to_subdomain(), zone.to_str()),
         );
+    }
+}
+
+impl DNSHealthNotify {
+    fn new() -> DNSHealthNotify {
+        DNSHealthNotify { events: Vec::new() }
+    }
+
+    fn dispatch(&self) {
+        if self.events.len() > 0 {
+            info!("should dispatch notifications for dns health check");
+
+            // Dispatch on each configured channel
+            self.dispatch_slack();
+        } else {
+            debug!("no notifications to dispatch for dns health check");
+        }
+    }
+
+    fn dispatch_slack(&self) {
+        if let Some(ref slack_hook_url) = APP_CONF.dns.health.notify.slack_hook_url {
+            debug!("will dispatch notification to slack hooks for dns health check");
+
+            // Build paylaod
+            let message_text = String::from("DNS health check probe events occured.");
+
+            let mut payload = DNSHealthNotifySlackPayload {
+                text: format!("<!channel> {}", &message_text),
+                attachments: Vec::new(),
+            };
+
+            let mut attachment = DNSHealthNotifySlackPayloadAttachment {
+                fallback: message_text,
+                color: "warning",
+                fields: Vec::new(),
+            };
+
+            // Append attachment fields
+            for event in &self.events {
+                attachment
+                    .fields
+                    .push(DNSHealthNotifySlackPayloadAttachmentField {
+                        title: format!("{}{}", event.1.to_subdomain(), event.0.to_str()),
+                        value: if event.3 == DNSHealthStatus::Healthy {
+                            format!("✅ {}", event.2.to_str())
+                        } else {
+                            let mut dead_value = format!("🆘 {}", event.2.to_str());
+
+                            if let Some(ref dead_reason) = event.4 {
+                                dead_value.push_str(" `");
+                                dead_value.push_str(dead_reason);
+                                dead_value.push_str("`");
+                            }
+
+                            dead_value
+                        },
+                        short: false,
+                    });
+            }
+
+            // Append attachment
+            payload.attachments.push(attachment);
+
+            // Encore payload to string
+            // Notice: fail hard if payload is invalid (it should never be)
+            let payload_json = serde_json::to_vec(&payload).expect("invalid slack hooks payload");
+
+            // Submit payload to Slack
+            // Notice: fail hard if Slack Hooks URI is invalid
+            let (slack_hook_url_raw, mut response_sink) = (slack_hook_url.as_str(), io::sink());
+
+            let response =
+                Request::new(&Uri::from_str(slack_hook_url_raw).expect("invalid slack hooks uri"))
+                    .connect_timeout(Some(HEALTH_CHECK_NOTIFY_TIMEOUT))
+                    .read_timeout(Some(HEALTH_CHECK_NOTIFY_TIMEOUT))
+                    .write_timeout(Some(HEALTH_CHECK_NOTIFY_TIMEOUT))
+                    .method(Method::POST)
+                    .header("User-Agent", HEALTH_CHECK_NOTIFY_USERAGENT)
+                    .header("Content-Type", "application/json")
+                    .header("Content-Length", &payload_json.len())
+                    .body(&payload_json)
+                    .send(&mut response_sink);
+
+            match response {
+                Ok(response) => {
+                    if response.status_code().is_success() {
+                        info!("dispatched notification to slack hooks for dns health check");
+                    } else {
+                        error!(
+                            "got invalid status in slack hooks for dns health check: {}",
+                            response.status_code()
+                        );
+                    }
+                }
+                Err(err) => {
+                    error!(
+                        "notification dispatch to slack hooks for dns health check failed: {}",
+                        err
+                    );
+                }
+            }
+        }
+    }
+
+    fn stack(
+        &mut self,
+        zone: &ZoneName,
+        name: &RecordName,
+        value: &RecordValue,
+        health_status: DNSHealthStatus,
+        reason: Option<String>,
+    ) {
+        debug!(
+            "stacked {:?} notification for dns health check for chain: {:?} / {:?} / {:?}",
+            zone, name, value, health_status
+        );
+
+        // Notice: there is unfortunately no other way around than doing clones there
+        self.events.push((
+            zone.clone(),
+            name.clone(),
+            value.clone(),
+            health_status,
+            reason,
+        ));
     }
 }

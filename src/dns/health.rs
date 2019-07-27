@@ -527,6 +527,12 @@ impl DNSHealthNotify {
                 fields: Vec::new(),
             };
 
+            // Reveal origin replica identifier
+            let replica_origin = format!(" Replica: *{}*.", APP_CONF.server.identifier);
+
+            payload.text.push_str(&replica_origin);
+            attachment.fallback.push_str(&replica_origin);
+
             // Append attachment fields
             for event in &self.events {
                 attachment

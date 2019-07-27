@@ -16,6 +16,10 @@ pub fn server_log_level() -> String {
     "error".to_string()
 }
 
+pub fn server_identifier() -> String {
+    "constellation/0".to_string()
+}
+
 pub fn dns_inets() -> Vec<SocketAddr> {
     vec!["0.0.0.0:53".parse().unwrap(), "[::]:53".parse().unwrap()]
 }

@@ -25,6 +25,9 @@ pub struct Config {
 pub struct ConfigServer {
     #[serde(default = "defaults::server_log_level")]
     pub log_level: String,
+
+    #[serde(default = "defaults::server_identifier")]
+    pub identifier: String,
 }
 
 #[derive(Deserialize)]

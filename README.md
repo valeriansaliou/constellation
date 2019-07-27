@@ -100,6 +100,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 **[server]**
 
 * `log_level` (type: _string_, allowed: `debug`, `info`, `warn`, `error`, default: `error`) — Verbosity of logging, set it to `error` in production
+* `identifier` (type: _string_, allowed: text values, default: `constellation/0`) — Identifier of this Constellation server in the pool of replicas (used for identification and notification purposes)
 
 **[dns]**
 

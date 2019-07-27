@@ -25,9 +25,18 @@ static KEY_NAME: &'static str = "n";
 static KEY_TTL: &'static str = "e";
 static KEY_BLACKHOLE: &'static str = "b";
 static KEY_REGION: &'static str = "r";
+static KEY_RESCUE: &'static str = "f"; // Alias for 'failover'
 static KEY_VALUE: &'static str = "v";
 
-type StoreGetType = (String, String, u32, Option<String>, Option<String>, String);
+type StoreGetType = (
+    String,
+    String,
+    u32,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    String,
+);
 
 pub struct StoreBuilder;
 
@@ -42,6 +51,7 @@ pub struct StoreRecord {
     pub ttl: Option<u32>,
     pub blackhole: Option<RecordBlackhole>,
     pub regions: Option<RecordRegions>,
+    pub rescue: Option<RecordValues>,
     pub values: RecordValues,
 }
 
@@ -155,13 +165,13 @@ impl Store {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
             match client.hget::<_, _, StoreGetType>(
                 &store_key,
-                (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_VALUE),
+                (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_RESCUE, KEY_VALUE),
             ) {
                 Ok(values) => {
                     if let (Some(kind_value), Some(name_value), Ok(value_value)) = (
                         RecordType::from_str(&values.0),
                         RecordName::from_str(&values.1),
-                        serde_json::from_str(&values.5)
+                        serde_json::from_str(&values.6)
                     ) {
                         let ttl = if values.2 > 0 {
                             Some(values.2)
@@ -174,6 +184,9 @@ impl Store {
                         });
                         let regions = values.4.and_then(|region_raw| {
                             serde_json::from_str::<RecordRegions>(&region_raw).ok()
+                        });
+                        let rescue = values.5.and_then(|rescue_raw| {
+                            serde_json::from_str::<RecordValues>(&rescue_raw).ok()
                         });
 
                         debug!(
@@ -199,6 +212,14 @@ impl Store {
                                 regions
                             );
                         }
+                        if rescue.is_some() == true {
+                             debug!(
+                                "store record with kind: {:?}, name: {:?} has rescue: {:?}",
+                                kind_value,
+                                name_value,
+                                rescue
+                            );
+                        }
 
                         let record = StoreRecord {
                             kind: kind_value,
@@ -206,6 +227,7 @@ impl Store {
                             ttl: ttl,
                             blackhole: blackhole,
                             regions: regions,
+                            rescue: rescue,
                             values: value_value,
                         };
 
@@ -244,9 +266,24 @@ impl Store {
                 Some(ref regions) => serde_json::to_string(regions),
                 None => Ok("".to_owned())
             };
+            let rescue_encoder = match record.rescue {
+                Some(ref rescue) => {
+                    if rescue.is_empty() == false {
+                        serde_json::to_string(rescue)
+                    } else {
+                        Ok("".to_owned())
+                    }
+                },
+                None => Ok("".to_owned())
+            };
 
-            match (serde_json::to_string(&record.values), blackhole_encoder, region_encoder) {
-                (Ok(values), Ok(blackhole), Ok(regions)) => {
+            match (
+                serde_json::to_string(&record.values),
+                blackhole_encoder,
+                region_encoder,
+                rescue_encoder
+            ) {
+                (Ok(values), Ok(blackhole), Ok(regions), Ok(rescue)) => {
                     let store_key = StoreKey::to_key(zone_name, &record.name, &record.kind);
 
                     // Clean from local cache
@@ -260,13 +297,17 @@ impl Store {
                             (KEY_TTL, &record.ttl.unwrap_or(0).to_string()),
                             (KEY_BLACKHOLE, &blackhole),
                             (KEY_REGION, &regions),
+                            (KEY_RESCUE, &rescue),
                             (KEY_VALUE, &values),
                         ]
                     ).map_err(|err| {
                         StoreError::Connector(err)
                     })
                 },
-                (Err(err), _, _) | (_, Err(err), _) | (_, _, Err(err)) => {
+                (Err(err), _, _, _) |
+                (_, Err(err), _, _) |
+                (_, _, Err(err), _) |
+                (_, _, _, Err(err)) => {
                     Err(StoreError::Encoding(err))
                 }
             }

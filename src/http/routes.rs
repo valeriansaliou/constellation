@@ -20,6 +20,7 @@ pub struct RecordData {
     ttl: Option<u32>,
     blackhole: Option<RecordBlackhole>,
     regions: Option<RecordRegions>,
+    rescue: Option<RecordValues>,
     values: RecordValues,
 }
 
@@ -32,6 +33,7 @@ pub struct RecordGetResponse {
     ttl: Option<u32>,
     blackhole: Option<RecordBlackhole>,
     regions: Option<RecordRegions>,
+    rescue: Option<RecordValues>,
     values: RecordValues,
 }
 
@@ -65,6 +67,7 @@ pub fn get_zone_record(
                 ttl: record.ttl,
                 blackhole: record.blackhole,
                 regions: record.regions,
+                rescue: record.rescue,
                 values: record.values,
             })
         })
@@ -92,6 +95,7 @@ pub fn put_zone_record(
                 ttl: data.ttl,
                 blackhole: data.blackhole.to_owned(),
                 regions: data.regions.to_owned(),
+                rescue: data.rescue.to_owned(),
                 values: data.values.to_owned(),
             },
         )

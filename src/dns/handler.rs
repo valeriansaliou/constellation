@@ -482,24 +482,36 @@ impl DNSHandler {
 
             // Not blackholed? (push values)
             if is_blackholed == false {
-                for value in values.iter() {
-                    if let Ok(value_data) = value.to_trust(&record.kind) {
+                // Aggregate values (healthy ones only for DNS health check)
+                let mut prepared_values = values
+                    .iter()
+                    .filter(|value| {
                         // Check if value was not checked as dead for zone name and record name
-                        if DNSHealth::status(zone_name, record_type, &record.name, value)
+                        DNSHealth::status(zone_name, record_type, &record.name, &value)
                             != DNSHealthStatus::Dead
-                        {
-                            records.push(Record::from_rdata(
-                                query_name_client.to_owned(),
-                                record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
-                                type_data,
-                                value_data,
-                            ));
-                        } else {
-                            info!(
-                                "did not push dns record with value: {:?} because it is dead",
-                                value
-                            );
-                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                // No aggregated value? Fallback on 'rescue' records? (if any)
+                if prepared_values.is_empty() == true {
+                    info!(
+                        "all dns record values reported as dead, attempting to use rescue values"
+                    );
+
+                    if let Some(ref rescue) = record.rescue {
+                        prepared_values.extend(rescue.iter());
+                    }
+                }
+
+                // Push record values
+                for value in prepared_values {
+                    if let Ok(value_data) = value.to_trust(&record.kind) {
+                        records.push(Record::from_rdata(
+                            query_name_client.to_owned(),
+                            record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
+                            type_data,
+                            value_data,
+                        ));
                     } else {
                         warn!(
                             "could not convert to dns record type: {} with value: {:?}",

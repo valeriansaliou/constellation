@@ -10,6 +10,7 @@ use std::time::SystemTime;
 
 use super::store::StoreRecord;
 use crate::APP_CONF;
+use crate::APP_STORE;
 
 lazy_static! {
     pub static ref STORE_CACHE: StoreCache = StoreCacheBuilder::new();
@@ -18,10 +19,16 @@ lazy_static! {
 struct StoreCacheBuilder;
 
 pub struct StoreCache {
-    cache: RwLock<HashMap<String, (Option<StoreRecord>, SystemTime)>>,
+    cache: RwLock<HashMap<String, StoreCacheEntry>>,
 }
 
 pub struct StoreCacheFlush;
+
+struct StoreCacheEntry {
+    record: Option<StoreRecord>,
+    refreshed_at: SystemTime,
+    accessed_at: SystemTime,
+}
 
 impl StoreCacheBuilder {
     fn new() -> StoreCache {
@@ -48,7 +55,7 @@ impl StoreCache {
         if let Some(store_record) = cache_read.get(store_key) {
             debug!("store cache get got records for key: {}", store_key);
 
-            Ok(store_record.0.clone())
+            Ok(store_record.record.clone())
         } else {
             debug!("store cache get did not get records for key: {}", store_key);
 
@@ -61,7 +68,7 @@ impl StoreCache {
 
         debug!("store cache push on key: {}", store_key);
 
-        cache_write.insert(store_key.to_string(), (store_record, SystemTime::now()));
+        cache_write.insert(store_key.to_string(), StoreCacheEntry::new(store_record));
     }
 
     pub fn pop(&self, store_key: &str) {
@@ -74,10 +81,10 @@ impl StoreCache {
 }
 
 impl StoreCacheFlush {
-    pub fn expired() {
+    pub fn expire() {
         debug!("flushing expired store cache records");
 
-        let mut flush_register: Vec<String> = Vec::new();
+        let mut expire_register: Vec<String> = Vec::new();
 
         // Scan for expired store items
         {
@@ -85,26 +92,76 @@ impl StoreCacheFlush {
             let now_time = SystemTime::now();
 
             for (store_key, store) in cache_read.iter() {
-                let store_elapsed = now_time.duration_since(store.1).unwrap().as_secs();
+                let store_elapsed = now_time
+                    .duration_since(store.accessed_at)
+                    .unwrap()
+                    .as_secs();
 
                 if store_elapsed >= APP_CONF.redis.cache_expire_seconds {
-                    flush_register.push(store_key.to_owned());
+                    expire_register.push(store_key.to_owned());
                 }
             }
         }
 
-        // Any store item to flush?
-        if flush_register.is_empty() == false {
+        // Any store item to expire?
+        if expire_register.is_empty() == false {
             let mut cache_write = STORE_CACHE.cache.write().unwrap();
 
-            for store_key in &flush_register {
+            for store_key in &expire_register {
                 cache_write.remove(store_key);
             }
         }
 
         debug!(
             "flushed expired store cache records (count: {})",
-            flush_register.len()
+            expire_register.len()
         );
+    }
+
+    pub fn refresh() {
+        debug!("flushing to-be-refreshed store cache records");
+
+        let mut refresh_register: Vec<String> = Vec::new();
+
+        // Scan for to-be-refreshed store items
+        {
+            let cache_read = STORE_CACHE.cache.read().unwrap();
+            let now_time = SystemTime::now();
+
+            for (store_key, store) in cache_read.iter() {
+                let store_elapsed = now_time
+                    .duration_since(store.refreshed_at)
+                    .unwrap()
+                    .as_secs();
+
+                if store_elapsed >= APP_CONF.redis.cache_refresh_seconds {
+                    refresh_register.push(store_key.to_owned());
+                }
+            }
+        }
+
+        // Any store item to refresh?
+        if refresh_register.is_empty() == false {
+            for store_key in &refresh_register {
+                APP_STORE.raw_get_remote(store_key).ok();
+            }
+        }
+
+        debug!(
+            "flushed to-be-refreshed store cache records (count: {})",
+            refresh_register.len()
+        );
+    }
+}
+
+impl StoreCacheEntry {
+    fn new(record: Option<StoreRecord>) -> StoreCacheEntry {
+        let time_now = SystemTime::now();
+
+        StoreCacheEntry {
+            record: record,
+            refreshed_at: time_now,
+            accessed_at: time_now,
+        }
     }
 }

@@ -162,92 +162,7 @@ impl Store {
         }
 
         // Get from store
-        get_cache_store_client!(self.pool, StoreError::Disconnected, client {
-            match client.hget::<_, _, StoreGetType>(
-                &store_key,
-                (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_RESCUE, KEY_VALUE),
-            ) {
-                Ok(values) => {
-                    if let (Some(kind_value), Some(name_value), Ok(value_value)) = (
-                        RecordType::from_str(&values.0),
-                        RecordName::from_str(&values.1),
-                        serde_json::from_str(&values.6)
-                    ) {
-                        let ttl = if values.2 > 0 {
-                            Some(values.2)
-                        } else {
-                            None
-                        };
-
-                        let blackhole = values.3.and_then(|blackhole_raw| {
-                            serde_json::from_str::<RecordBlackhole>(&blackhole_raw).ok()
-                        });
-                        let regions = values.4.and_then(|region_raw| {
-                            serde_json::from_str::<RecordRegions>(&region_raw).ok()
-                        });
-                        let rescue = values.5.and_then(|rescue_raw| {
-                            serde_json::from_str::<RecordValues>(&rescue_raw).ok()
-                        });
-
-                        debug!(
-                            "read store record with kind: {:?}, name: {:?} and values: {:?}",
-                            kind_value,
-                            name_value,
-                            value_value
-                        );
-
-                        if blackhole.is_some() == true {
-                            debug!(
-                                "store record with kind: {:?}, name: {:?} has blackhole: {:?}",
-                                kind_value,
-                                name_value,
-                                blackhole
-                            );
-                        }
-                        if regions.is_some() == true {
-                            debug!(
-                                "store record with kind: {:?}, name: {:?} has regions: {:?}",
-                                kind_value,
-                                name_value,
-                                regions
-                            );
-                        }
-                        if rescue.is_some() == true {
-                             debug!(
-                                "store record with kind: {:?}, name: {:?} has rescue: {:?}",
-                                kind_value,
-                                name_value,
-                                rescue
-                            );
-                        }
-
-                        let record = StoreRecord {
-                            kind: kind_value,
-                            name: name_value,
-                            ttl: ttl,
-                            blackhole: blackhole,
-                            regions: regions,
-                            rescue: rescue,
-                            values: value_value,
-                        };
-
-                        // Store in local cache
-                        STORE_CACHE.push(&store_key, Some(record.clone()));
-
-                        Ok(record)
-                    } else {
-                        Err(StoreError::Corrupted)
-                    }
-                },
-                Err(_) => {
-                    // Store in local cache (no value)
-                    STORE_CACHE.push(&store_key, None);
-
-                    // Consider as not found
-                    Err(StoreError::NotFound)
-                },
-            }
-        })
+        self.raw_get_remote(&store_key)
     }
 
     pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
@@ -330,6 +245,95 @@ impl Store {
             client.del(store_key).map_err(|err| {
                 StoreError::Connector(err)
             })
+        })
+    }
+
+    pub fn raw_get_remote(&self, store_key: &str) -> Result<StoreRecord, StoreError> {
+        get_cache_store_client!(self.pool, StoreError::Disconnected, client {
+            match client.hget::<_, _, StoreGetType>(
+                store_key,
+                (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_RESCUE, KEY_VALUE),
+            ) {
+                Ok(values) => {
+                    if let (Some(kind_value), Some(name_value), Ok(value_value)) = (
+                        RecordType::from_str(&values.0),
+                        RecordName::from_str(&values.1),
+                        serde_json::from_str(&values.6)
+                    ) {
+                        let ttl = if values.2 > 0 {
+                            Some(values.2)
+                        } else {
+                            None
+                        };
+
+                        let blackhole = values.3.and_then(|blackhole_raw| {
+                            serde_json::from_str::<RecordBlackhole>(&blackhole_raw).ok()
+                        });
+                        let regions = values.4.and_then(|region_raw| {
+                            serde_json::from_str::<RecordRegions>(&region_raw).ok()
+                        });
+                        let rescue = values.5.and_then(|rescue_raw| {
+                            serde_json::from_str::<RecordValues>(&rescue_raw).ok()
+                        });
+
+                        debug!(
+                            "read store record with kind: {:?}, name: {:?} and values: {:?}",
+                            kind_value,
+                            name_value,
+                            value_value
+                        );
+
+                        if blackhole.is_some() == true {
+                            debug!(
+                                "store record with kind: {:?}, name: {:?} has blackhole: {:?}",
+                                kind_value,
+                                name_value,
+                                blackhole
+                            );
+                        }
+                        if regions.is_some() == true {
+                            debug!(
+                                "store record with kind: {:?}, name: {:?} has regions: {:?}",
+                                kind_value,
+                                name_value,
+                                regions
+                            );
+                        }
+                        if rescue.is_some() == true {
+                             debug!(
+                                "store record with kind: {:?}, name: {:?} has rescue: {:?}",
+                                kind_value,
+                                name_value,
+                                rescue
+                            );
+                        }
+
+                        let record = StoreRecord {
+                            kind: kind_value,
+                            name: name_value,
+                            ttl: ttl,
+                            blackhole: blackhole,
+                            regions: regions,
+                            rescue: rescue,
+                            values: value_value,
+                        };
+
+                        // Store in local cache
+                        STORE_CACHE.push(store_key, Some(record.clone()));
+
+                        Ok(record)
+                    } else {
+                        Err(StoreError::Corrupted)
+                    }
+                },
+                Err(_) => {
+                    // Store in local cache (no value)
+                    STORE_CACHE.push(store_key, None);
+
+                    // Consider as not found
+                    Err(StoreError::NotFound)
+                },
+            }
         })
     }
 }

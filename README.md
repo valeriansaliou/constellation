@@ -164,7 +164,8 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `max_lifetime_seconds` (type: _integer_, allowed: seconds, default: `20`) — Maximum lifetime of a connection to Redis (you want it below 5 minutes, as this affects the reconnect delay to Redis if a connection breaks)
 * `idle_timeout_seconds` (type: _integer_, allowed: seconds, default: `600`) — Timeout of idle/dead pool connections to Redis
 * `connection_timeout_seconds` (type: _integer_, allowed: seconds, default: `5`) — Timeout in seconds to consider Redis dead and reject DNS and HTTP API queries
-* `cache_expire_seconds` (type: _integer_, allowed: seconds, default: `60`) — Time in seconds after which a locally-cached record expires and should be refreshed from Redis (this should be kept low)
+* `cache_refresh_seconds` (type: _integer_, allowed: seconds, default: `60`) — Time in seconds after which a locally-cached record is refreshed from Redis (this should be kept low)
+* `cache_expire_seconds` (type: _integer_, allowed: seconds, default: `600`) — Time in seconds after which a locally-cached record expires and should be refreshed from Redis (this should be kept low)
 
 ### Initialize GeoIP
 

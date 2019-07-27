@@ -48,6 +48,9 @@ impl StoreFlush {
         // Proceed all perform actions
 
         // #1: Flush expired cache
-        StoreCacheFlush::expired();
+        StoreCacheFlush::expire();
+
+        // #2: Flush to-be-refreshed cache
+        StoreCacheFlush::refresh();
     }
 }

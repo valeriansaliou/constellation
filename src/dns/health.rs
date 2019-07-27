@@ -177,8 +177,8 @@ impl DNSHealthHTTP {
             if let Ok(record) = APP_STORE.get(&domain.zone, &domain.name, record_type) {
                 let unique_values = record.list_record_values();
 
-                for value in unique_values {
-                    Self::check_domain_record(domain, value, notifier, 1);
+                for record_value in unique_values {
+                    Self::check_domain_record(domain, record_type, record_value, notifier, 1);
                 }
             }
         }
@@ -186,6 +186,7 @@ impl DNSHealthHTTP {
 
     fn check_domain_record(
         domain: &ConfigDNSHealthHTTP,
+        record_type: &RecordType,
         record_value: &RecordValue,
         notifier: &mut DNSHealthNotify,
         attempt: u8,
@@ -197,7 +198,8 @@ impl DNSHealthHTTP {
             domain.port,
             &domain.path,
             domain.secure,
-            &record_value,
+            record_type,
+            record_value,
         );
 
         if let (Ok(request_url), request_virtual_host) = request_url {
@@ -270,7 +272,13 @@ impl DNSHealthHTTP {
                         thread::sleep(Duration::from_millis(500));
 
                         // Dispatch new attempt
-                        Self::check_domain_record(domain, record_value, notifier, attempt + 1);
+                        Self::check_domain_record(
+                            domain,
+                            record_type,
+                            record_value,
+                            notifier,
+                            attempt + 1,
+                        );
                     } else {
                         warn!(
                             "dns health check error on target: {} on zone: {}, stopping there",
@@ -444,6 +452,7 @@ impl DNSHealthHTTP {
         port: u16,
         path: &str,
         secure: bool,
+        kind: &RecordType,
         value: &RecordValue,
     ) -> (Result<Uri, Error>, String) {
         // Format: [protocol]://[name].[zone]:[port]/[path]
@@ -461,7 +470,15 @@ impl DNSHealthHTTP {
         request_url.push_str("//");
 
         // #3. Append target IP
+        if kind == &RecordType::AAAA {
+            request_url.push_str("[");
+        }
+
         request_url.push_str(value.as_str());
+
+        if kind == &RecordType::AAAA {
+            request_url.push_str("]");
+        }
 
         // #4. Append port
         request_url.push_str(&format!(":{}", port));

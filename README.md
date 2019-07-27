@@ -256,7 +256,7 @@ If you want to return an empty DNS response for blocked countries using the Geo-
 
 In case you are using health-check on the domain for zone, you may want to specify rescue records, that are served to DNS clients in the event all regular records (standard and Geo-DNS) are seen as dead. You can set the `rescue` property in the API to ensure failover servers are served, and connected to only in the event of a failure of default servers.
 
-_If you do not set any `rescue` records; in the event all regular records get reported as dead, DNS clients will be served an empty response. Thus, it is judicious that you serve fallback records._
+_If you do not set any `rescue` records; in the event all regular records get reported as dead, DNS clients will be served an empty response. Thus, it is judicious that you still serve fallback records._
 
 #### API routes
 

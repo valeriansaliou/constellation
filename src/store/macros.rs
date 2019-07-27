@@ -12,7 +12,11 @@ macro_rules! get_cache_store_client {
         //   Constellation to serve DNS answers from its internal cache.
         match $pool.try_get() {
             Some(mut $client) => $code,
-            _ => Err($error),
+            None => {
+                error!("failed getting a cache store client from pool");
+
+                Err($error)
+            }
         }
     };
 }

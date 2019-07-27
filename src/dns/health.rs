@@ -517,7 +517,7 @@ impl DNSHealthNotify {
             let message_text = String::from("DNS health check probe events occured.");
 
             let mut payload = DNSHealthNotifySlackPayload {
-                text: format!("<!channel> {}", &message_text),
+                text: message_text.to_owned(),
                 attachments: Vec::new(),
             };
 

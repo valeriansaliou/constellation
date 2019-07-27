@@ -252,6 +252,12 @@ If you want to serve records to the nearest server using the Geo-DNS feature, yo
 
 If you want to return an empty DNS response for blocked countries using the Geo-DNS feature, you will need to set `blackhole` via the API, to a list of blackholed [ISO-3166 Alpha-2 country codes](https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes) (eg. `FR` for France).
 
+**Health-checked rescue records:**
+
+In case you are using health-check on the domain for zone, you may want to specify rescue records, that are served to DNS clients in the event all regular records (standard and Geo-DNS) are seen as dead. You can set the `rescue` property in the API to ensure failover servers are served, and connected to only in the event of a failure of default servers.
+
+_If you do not set any `rescue` records and all regular records are reported as dead, DNS clients will be served an empty response. Thus, it is judicious that you serve fallback records._
+
 #### API routes
 
 ##### Check if a DNS record exists
@@ -313,6 +319,16 @@ Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
 {"regions":{"nnam":["client.nnam.geo.relay.crisp.net"],"snam":["client.snam.geo.relay.crisp.net"],"nsam":["client.nsam.geo.relay.crisp.net"],"ssam":["client.ssam.geo.relay.crisp.net"],"weu":["client.weu.geo.relay.crisp.net"],"ceu":["client.ceu.geo.relay.crisp.net"],"eeu":["client.eeu.geo.relay.crisp.net"],"ru":["client.ru.geo.relay.crisp.net"],"me":["client.me.geo.relay.crisp.net"],"naf":["client.naf.geo.relay.crisp.net"],"maf":["client.maf.geo.relay.crisp.net"],"saf":["client.saf.geo.relay.crisp.net"],"in":["client.in.geo.relay.crisp.net"],"seas":["client.seas.geo.relay.crisp.net"],"neas":["client.neas.geo.relay.crisp.net"],"oc":["client.oc.geo.relay.crisp.net"]},"values":["client.default.geo.relay.crisp.net"],"ttl":600}
+```
+
+**Example request (health-checked):**
+
+```http
+PUT /zone/relay.crisp.chat/record/@/a HTTP/1.1
+Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
+Content-Type: application/json; charset=utf-8
+
+{"values":["159.89.97.13","46.101.18.133"],"rescue":["139.59.174.13"],"ttl":60}
 ```
 
 **Example response:**

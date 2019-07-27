@@ -40,20 +40,30 @@ impl StoreCacheBuilder {
 
 impl StoreCache {
     pub fn has(&self, store_key: &str) -> bool {
-        let cache_read = self.cache.read().unwrap();
+        let mut cache_write = self.cache.write().unwrap();
 
         debug!("store cache has on key: {}", store_key);
 
-        cache_read.contains_key(store_key)
+        if let Some(ref mut store_record) = cache_write.get_mut(store_key) {
+            // Bump last cache access time
+            store_record.accessed_at = SystemTime::now();
+
+            true
+        } else {
+            false
+        }
     }
 
     pub fn get(&self, store_key: &str) -> Result<Option<StoreRecord>, ()> {
-        let cache_read = self.cache.read().unwrap();
+        let mut cache_write = self.cache.write().unwrap();
 
         debug!("store cache get on key: {}", store_key);
 
-        if let Some(store_record) = cache_read.get(store_key) {
+        if let Some(ref mut store_record) = cache_write.get_mut(store_key) {
             debug!("store cache get got records for key: {}", store_key);
+
+            // Bump last cache access time
+            store_record.accessed_at = SystemTime::now();
 
             Ok(store_record.record.clone())
         } else {
@@ -63,12 +73,20 @@ impl StoreCache {
         }
     }
 
-    pub fn push(&self, store_key: &str, store_record: Option<StoreRecord>) {
+    pub fn push(
+        &self,
+        store_key: &str,
+        store_record: Option<StoreRecord>,
+        accessed_at: Option<SystemTime>,
+    ) {
         let mut cache_write = self.cache.write().unwrap();
 
         debug!("store cache push on key: {}", store_key);
 
-        cache_write.insert(store_key.to_string(), StoreCacheEntry::new(store_record));
+        cache_write.insert(
+            store_key.to_string(),
+            StoreCacheEntry::new(store_record, accessed_at),
+        );
     }
 
     pub fn pop(&self, store_key: &str) {
@@ -121,7 +139,7 @@ impl StoreCacheFlush {
     pub fn refresh() {
         debug!("flushing to-be-refreshed store cache records");
 
-        let mut refresh_register: Vec<String> = Vec::new();
+        let mut refresh_register: Vec<(String, SystemTime)> = Vec::new();
 
         // Scan for to-be-refreshed store items
         {
@@ -135,15 +153,19 @@ impl StoreCacheFlush {
                     .as_secs();
 
                 if store_elapsed >= APP_CONF.redis.cache_refresh_seconds {
-                    refresh_register.push(store_key.to_owned());
+                    refresh_register.push((store_key.to_owned(), store.accessed_at));
                 }
             }
         }
 
         // Any store item to refresh?
         if refresh_register.is_empty() == false {
-            for store_key in &refresh_register {
-                APP_STORE.raw_get_remote(store_key).ok();
+            for (store_key, store_accessed_at) in &refresh_register {
+                // Notice: restore 'accessed_at' time, otherwise a never-accessed cache entry \
+                //   would never be expired.
+                APP_STORE
+                    .raw_get_remote(store_key, Some(*store_accessed_at))
+                    .ok();
             }
         }
 
@@ -155,13 +177,13 @@ impl StoreCacheFlush {
 }
 
 impl StoreCacheEntry {
-    fn new(record: Option<StoreRecord>) -> StoreCacheEntry {
+    fn new(record: Option<StoreRecord>, accessed_at: Option<SystemTime>) -> StoreCacheEntry {
         let time_now = SystemTime::now();
 
         StoreCacheEntry {
             record: record,
             refreshed_at: time_now,
-            accessed_at: time_now,
+            accessed_at: accessed_at.unwrap_or(time_now),
         }
     }
 }

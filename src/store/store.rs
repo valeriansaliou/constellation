@@ -9,7 +9,7 @@ use r2d2_redis::RedisConnectionManager;
 use redis::{Commands, RedisError};
 use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 
 use super::cache::STORE_CACHE;
 use super::key::StoreKey;
@@ -136,7 +136,7 @@ impl Store {
                     Ok(())
                 } else {
                     // Store in local cache (no value)
-                    STORE_CACHE.push(&store_key, None);
+                    STORE_CACHE.push(&store_key, None, None);
 
                     // Consider as not found
                     Err(StoreError::NotFound)
@@ -162,7 +162,7 @@ impl Store {
         }
 
         // Get from store
-        self.raw_get_remote(&store_key)
+        self.raw_get_remote(&store_key, None)
     }
 
     pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
@@ -248,7 +248,11 @@ impl Store {
         })
     }
 
-    pub fn raw_get_remote(&self, store_key: &str) -> Result<StoreRecord, StoreError> {
+    pub fn raw_get_remote(
+        &self,
+        store_key: &str,
+        cache_accessed_at: Option<SystemTime>,
+    ) -> Result<StoreRecord, StoreError> {
         get_cache_store_client!(self.pool, StoreError::Disconnected, client {
             match client.hget::<_, _, StoreGetType>(
                 store_key,
@@ -319,7 +323,7 @@ impl Store {
                         };
 
                         // Store in local cache
-                        STORE_CACHE.push(store_key, Some(record.clone()));
+                        STORE_CACHE.push(store_key, Some(record.clone()), cache_accessed_at);
 
                         Ok(record)
                     } else {
@@ -328,7 +332,7 @@ impl Store {
                 },
                 Err(_) => {
                     // Store in local cache (no value)
-                    STORE_CACHE.push(store_key, None);
+                    STORE_CACHE.push(store_key, None, cache_accessed_at);
 
                     // Consider as not found
                     Err(StoreError::NotFound)

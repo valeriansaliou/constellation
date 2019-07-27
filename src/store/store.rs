@@ -6,7 +6,7 @@
 
 use r2d2::Pool;
 use r2d2_redis::RedisConnectionManager;
-use redis::{Commands, RedisError};
+use redis::{Commands, RedisError, ErrorKind};
 use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
 use std::time::{Duration, SystemTime};
@@ -330,9 +330,14 @@ impl Store {
                         Err(StoreError::Corrupted)
                     }
                 },
-                Err(_) => {
-                    // Store in local cache (no value)
-                    STORE_CACHE.push(store_key, None, cache_accessed_at);
+                Err(err) => {
+                    // Store in local cache? (no value)
+                    // Notice: do not store an empty cache if error is not a type error (meaning: \
+                    //   no such value exist; this avoids storing a blank cache entry for I/O \
+                    //   and network timeout errors, which would corrupt the cache)
+                    if err.kind() == ErrorKind::TypeError {
+                        STORE_CACHE.push(store_key, None, cache_accessed_at);
+                    }
 
                     // Consider as not found
                     Err(StoreError::NotFound)

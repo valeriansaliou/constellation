@@ -22,7 +22,7 @@ use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
 use crate::geo::locate::Locator;
 use crate::geo::region::RegionCode;
-use crate::store::store::StoreRecord;
+use crate::store::store::{StoreError, StoreRecord};
 use crate::APP_CONF;
 use crate::APP_STORE;
 
@@ -242,7 +242,7 @@ impl DNSHandler {
             &query_name,
             &query_type,
             &record_type,
-        );
+        )?;
 
         // Check if 'records' is empty
         let is_records_empty = if let Some(ref records_inner) = records {
@@ -271,7 +271,7 @@ impl DNSHandler {
                             &wildcard_name,
                             &query_type,
                             &record_type,
-                        );
+                        )?;
 
                         // Assign non-none wildcard records? (retain any NOERROR from 'records')
                         if records_wildcard.is_none() == false {
@@ -293,7 +293,7 @@ impl DNSHandler {
         query_name_effective: &Name,
         query_type: &TrustRecordType,
         record_type: &Option<RecordType>,
-    ) -> Option<Vec<Record>> {
+    ) -> Result<Option<Vec<Record>>, ResponseCode> {
         let record_name = RecordName::from_trust(&authority.origin(), query_name_effective);
 
         debug!(
@@ -306,62 +306,76 @@ impl DNSHandler {
                 let mut records = Vec::new();
 
                 if let &Some(ref record_type_inner) = record_type {
-                    if let Ok(record) = APP_STORE.get(&zone_name, &record_name, record_type_inner) {
-                        debug!(
-                            "found record in store for query: {} {}; result: {:?}",
-                            query_name_effective, query_type, record
-                        );
-
-                        // Append record direct results
-                        Self::parse_from_records(
-                            query_name_client,
-                            record_type_inner,
-                            source,
-                            &zone_name,
-                            &record,
-                            &mut records,
-                        );
-                    }
-
-                    // Look for a CNAME result?
-                    if record_type_inner != &RecordType::CNAME {
-                        if let Ok(record_cname) =
-                            APP_STORE.get(&zone_name, &record_name, &RecordType::CNAME)
-                        {
+                    match APP_STORE.get(&zone_name, &record_name, record_type_inner) {
+                        Ok(record) => {
                             debug!(
-                                "found cname hint record in store for query: {} {}; result: {:?}",
-                                query_name_effective, query_type, record_cname
+                                "found record in store for query: {} {}; got: {:?}",
+                                query_name_effective, query_type, record
                             );
 
-                            // Append CNAME hint results
+                            // Append record direct results
                             Self::parse_from_records(
                                 query_name_client,
                                 record_type_inner,
                                 source,
                                 &zone_name,
-                                &record_cname,
+                                &record,
                                 &mut records,
                             );
+                        }
+                        Err(StoreError::Disconnected) => {
+                            // Store is down, consider it as a DNS server failure (this avoids \
+                            //   polluting recursive DNS caches)
+                            return Err(ResponseCode::ServFail);
+                        }
+                        _ => {}
+                    }
+
+                    // Look for a CNAME result?
+                    if record_type_inner != &RecordType::CNAME {
+                        match APP_STORE.get(&zone_name, &record_name, &RecordType::CNAME) {
+                            Ok(record_cname) => {
+                                debug!(
+                                    "found cname hint record in store for query: {} {}; got: {:?}",
+                                    query_name_effective, query_type, record_cname
+                                );
+
+                                // Append CNAME hint results
+                                Self::parse_from_records(
+                                    query_name_client,
+                                    record_type_inner,
+                                    source,
+                                    &zone_name,
+                                    &record_cname,
+                                    &mut records,
+                                );
+                            }
+                            Err(StoreError::Disconnected) => {
+                                // Store is down, consider it as a DNS server failure (this avoids \
+                                //   polluting recursive DNS caches)
+                                return Err(ResponseCode::ServFail);
+                            }
+                            _ => {}
                         }
                     }
                 }
 
                 // Records found? Return them immediately
                 if !records.is_empty() {
-                    return Some(records);
+                    return Ok(Some(records));
                 }
 
                 // No record found, exhaust all record types to check if name exists
                 // Notice: a DNS server must return NOERROR if name exists, else NXDOMAIN
-                if Self::check_name_exists(&zone_name, &record_name) == true {
+                if Self::check_name_exists(&zone_name, &record_name)? == true {
                     // Name exists, return empty records (ie. NOERROR)
-                    return Some(vec![]);
+                    return Ok(Some(vec![]));
                 }
             }
             _ => {}
         };
 
-        None
+        Ok(None)
     }
 
     fn parse_from_records(
@@ -602,19 +616,28 @@ impl DNSHandler {
         }
     }
 
-    fn check_name_exists(zone_name: &ZoneName, record_name: &RecordName) -> bool {
+    fn check_name_exists(
+        zone_name: &ZoneName,
+        record_name: &RecordName,
+    ) -> Result<bool, ResponseCode> {
         // Exhaust all record types
         for record_type in RecordType::list_choices() {
             // A record exists for name and type?
-            if APP_STORE
-                .check(zone_name, record_name, &record_type)
-                .is_ok()
-                == true
-            {
-                return true;
+            match APP_STORE.check(zone_name, record_name, &record_type) {
+                Ok(_) => {
+                    // Record exists for name and type; abort there.
+                    return Ok(true);
+                }
+                Err(StoreError::Disconnected) => {
+                    // Store is down, consider it as a DNS server failure (this avoids polluting \
+                    //   recursive DNS caches); abort there.
+                    return Err(ResponseCode::ServFail);
+                }
+                _ => {}
             }
         }
 
-        return false;
+        // No alternate record found, consider name as non-existing.
+        return Ok(false);
     }
 }

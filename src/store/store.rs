@@ -6,7 +6,7 @@
 
 use r2d2::Pool;
 use r2d2_redis::RedisConnectionManager;
-use redis::{Commands, RedisError, ErrorKind};
+use redis::{Commands, ErrorKind, RedisError};
 use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
 use std::time::{Duration, SystemTime};

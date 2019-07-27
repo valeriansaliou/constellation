@@ -48,7 +48,7 @@ impl StoreCache {
             // Bump last cache access time
             store_record.accessed_at = SystemTime::now();
 
-            true
+            store_record.record.is_some()
         } else {
             false
         }

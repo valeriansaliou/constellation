@@ -51,7 +51,7 @@ cargo build --release
 
 You can find the built binaries in the `./target/release` directory.
 
-_Install `libssl-dev` (ie. OpenSSL headers) before you compile Constellation. SSL dependencies are required for the Geo-DNS database updater._
+_Install `libssl-dev` (ie. OpenSSL headers) before you compile Constellation. SSL dependencies are required for the Geo-DNS database updater and DNS health check system (HTTPS prober)._
 
 **Install from Cargo:**
 

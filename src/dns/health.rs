@@ -227,7 +227,7 @@ impl DNSHealthHTTP {
             // Apply request headers
             let mut headers = Headers::new();
 
-            headers.insert("Host", &request_virtual_host);
+            headers.insert("Host", &format!("{}:{}", request_virtual_host, target_port));
             headers.insert("Connection", "Close");
             headers.insert("User-Agent", HEALTH_CHECK_PROBE_USERAGENT);
 

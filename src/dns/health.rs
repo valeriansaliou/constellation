@@ -210,8 +210,8 @@ impl DNSHealthHTTP {
                 request_url.to_string()
             );
 
-            // Acquire target host and port
-            let target_host = request_url.host().unwrap();
+            // Acquire target host and port (extracted inner host)
+            let target_host = Self::extract_inner_host(record_type, request_url.host().unwrap());
             let target_port = request_url.port().unwrap();
 
             // Generate request
@@ -490,6 +490,15 @@ impl DNSHealthHTTP {
             request_url.parse(),
             format!("{}{}", name.to_subdomain(), zone.to_str()),
         );
+    }
+
+    fn extract_inner_host<'a>(record_type: &RecordType, outer_host: &'a str) -> &'a str {
+        // IPv6 are formatted as `[::]`; which needs to be transformed to inner `::`
+        if record_type == &RecordType::AAAA && outer_host.len() > 2 {
+            &outer_host[1..(outer_host.len() - 1)]
+        } else {
+            outer_host
+        }
     }
 }
 

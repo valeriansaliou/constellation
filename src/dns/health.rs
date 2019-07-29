@@ -247,55 +247,65 @@ impl DNSHealthHTTP {
                 &mut response_body,
             );
 
-            // Handle response
-            match response {
-                Ok(response_headers) => {
-                    // Handle received status
+            // Handle response status code
+            let status_code = if let Ok(response_headers) = response {
+                // HTTP response received, acquire HTTP status code
+                response_headers.status_code()
+            } else {
+                // Assume a 'Service Unavailable' HTTP error
+                HEALTH_CHECK_FAILED_STATUS
+            };
+
+            // Check for expected status and body
+            let is_success = status_code.is(|code| domain.expected_status.contains(&code))
+                && Self::check_body_matches(domain, response_body);
+
+            // This check has failed expectations
+            if is_success == false {
+                // Attempt once more?
+                if attempt < domain.max_attempts {
+                    info!(
+                        "dns health check error on target: {} on zone: {}, attempting again",
+                        domain.name.to_str(),
+                        domain.zone.to_str()
+                    );
+
+                    // Hold on a bit
+                    thread::sleep(Duration::from_secs(1));
+
+                    // Dispatch new attempt
+                    Self::check_domain_record(
+                        domain,
+                        record_type,
+                        record_value,
+                        notifier,
+                        attempt + 1,
+                    );
+                } else {
+                    warn!(
+                        "dns health check error on target: {} on zone: {}, stopping there",
+                        domain.name.to_str(),
+                        domain.zone.to_str()
+                    );
+
+                    // Handle final failure
                     Self::handle_domain_record_status(
                         domain,
                         record_value,
-                        response_headers.status_code(),
-                        response_body,
+                        status_code,
                         notifier,
+                        false,
                     );
                 }
-                Err(_) => {
-                    // Attempt once more?
-                    if attempt < domain.max_attempts {
-                        info!(
-                            "dns health check error on target: {} on zone: {}, attempting again",
-                            domain.name.to_str(),
-                            domain.zone.to_str()
-                        );
-
-                        // Hold on a bit
-                        thread::sleep(Duration::from_millis(500));
-
-                        // Dispatch new attempt
-                        Self::check_domain_record(
-                            domain,
-                            record_type,
-                            record_value,
-                            notifier,
-                            attempt + 1,
-                        );
-                    } else {
-                        warn!(
-                            "dns health check error on target: {} on zone: {}, stopping there",
-                            domain.name.to_str(),
-                            domain.zone.to_str()
-                        );
-
-                        // Assume a 'Service Unavailable' HTTP error
-                        Self::handle_domain_record_status(
-                            domain,
-                            record_value,
-                            HEALTH_CHECK_FAILED_STATUS,
-                            response_body,
-                            notifier,
-                        );
-                    }
-                }
+            } else {
+                // Handle final success
+                Self::handle_domain_record_status(
+                    domain,
+                    record_value,
+                    status_code,
+                    notifier,
+                    true,
+                );
             }
         } else {
             error!(
@@ -366,8 +376,8 @@ impl DNSHealthHTTP {
         domain: &ConfigDNSHealthHTTP,
         record_value: &RecordValue,
         status_code: StatusCode,
-        body: Vec<u8>,
         notifier: &mut DNSHealthNotify,
+        is_success: bool,
     ) {
         // Notice: there is unfortunately no other way around than doing clones there
         let record_key = (
@@ -376,9 +386,7 @@ impl DNSHealthHTTP {
             record_value.clone(),
         );
 
-        if status_code.is(|code| domain.expected_status.contains(&code))
-            && Self::check_body_matches(domain, body)
-        {
+        if is_success == true {
             debug!(
                 "got healthy for dns health check on target: {} on zone: {} (status: {})",
                 domain.name.to_str(),

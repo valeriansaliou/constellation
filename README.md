@@ -137,7 +137,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `port` (type: _integer_, allowed: TCP ports, default: `443`) — TCP port used for HTTP check (port value will likely be `80` if HTTP is used)
 * `secure` (type: _boolean_, allowed: `true`, `false`, default: `true`) — Whether to perform health checks over secure HTTPS or plain HTTP
 * `timeout` (type: _integer_, allowed: seconds, default: `10`) — Timeout of a single HTTP check attempt in seconds
-* `max_attempts` (type: _integer_, allowed: numbers, default: `3`) — Maximum number of times to attempt a given health check in a row, in the event of a failed health check (network-related failures only)
+* `max_attempts` (type: _integer_, allowed: numbers, default: `3`) — Maximum number of times to attempt a given health check in a row, in the event of a failed health check (ie. an health check that neither matches expected status and expected body)
 * `expected_status` (type: _array[integer]_, allowed: HTTP status codes, default: `200`) — List of HTTP status codes to expect
 * `expected_body` (type: _array[string]_, allowed: text values, default: empty) — List of body contents to expect (sub-string can be contained in response body; only applicable if `method` is set to `GET`)
 

@@ -99,7 +99,7 @@ pub fn put_zone_record(
                 values: data.values.to_owned(),
             },
         )
-        .or(Err(Status::InternalServerError))
+        .or(Err(Status::ServiceUnavailable))
 }
 
 #[delete("/zone/<zone_name>/record/<record_name>/<record_type>")]
@@ -111,7 +111,7 @@ pub fn delete_zone_record(
 ) -> Result<(), Status> {
     APP_STORE
         .remove(&zone_name, &record_name, &record_type)
-        .or(Err(Status::InternalServerError))
+        .or(Err(Status::ServiceUnavailable))
 }
 
 #[get("/zone/<zone_name>/metrics/<metrics_timespan>/query/types")]

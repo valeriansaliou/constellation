@@ -157,13 +157,10 @@ pub struct ConfigHTTP {
 
 #[derive(Deserialize)]
 pub struct ConfigRedis {
-    #[serde(default = "defaults::redis_host")]
-    pub host: String,
+    #[serde(default = "defaults::redis_master")]
+    pub master: ConfigRedisMaster,
 
-    #[serde(default = "defaults::redis_port")]
-    pub port: u16,
-
-    pub password: Option<String>,
+    pub rescue: Option<Vec<ConfigRedisRescue>>,
 
     #[serde(default = "defaults::redis_database")]
     pub database: u8,
@@ -185,6 +182,27 @@ pub struct ConfigRedis {
 
     #[serde(default = "defaults::redis_cache_expire_seconds")]
     pub cache_expire_seconds: u64,
+}
+
+#[derive(Default, Deserialize)]
+pub struct ConfigRedisMaster {
+    #[serde(default = "defaults::redis_master_host")]
+    pub host: String,
+
+    #[serde(default = "defaults::redis_master_port")]
+    pub port: u16,
+
+    pub password: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ConfigRedisRescue {
+    pub host: String,
+
+    #[serde(default = "defaults::redis_rescue_port")]
+    pub port: u16,
+
+    pub password: Option<String>,
 }
 
 impl ConfigDNS {

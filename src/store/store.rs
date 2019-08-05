@@ -38,10 +38,12 @@ type StoreGetType = (
     String,
 );
 
+type StorePoolType = (Pool<RedisConnectionManager>, String);
+
 pub struct StoreBuilder;
 
 pub struct Store {
-    pool: Pool<RedisConnectionManager>,
+    pools: Vec<StorePoolType>,
 }
 
 #[derive(Debug, Clone)]
@@ -65,19 +67,49 @@ pub enum StoreError {
 
 impl StoreBuilder {
     pub fn new() -> Store {
-        info!(
-            "binding to store backend at {}:{}",
-            APP_CONF.redis.host, APP_CONF.redis.port
+        let mut pools = Vec::new();
+
+        // Bind to master pool
+        Self::pool_bind(
+            &mut pools,
+            &APP_CONF.redis.master.host,
+            APP_CONF.redis.master.port,
+            &APP_CONF.redis.master.password,
         );
 
-        let addr_auth = match APP_CONF.redis.password {
+        // Bind to rescue pools (if any)
+        if let Some(ref rescue_items) = APP_CONF.redis.rescue {
+            for rescue in rescue_items {
+                Self::pool_bind(&mut pools, &rescue.host, rescue.port, &rescue.password);
+            }
+        }
+
+        Store { pools: pools }
+    }
+
+    fn pool_bind(pools: &mut Vec<StorePoolType>, host: &str, port: u16, password: &Option<String>) {
+        // Establish pool connection for this Redis target
+        match Self::pool_connect(host, port, password) {
+            Ok(master_pool) => pools.push(master_pool),
+            Err(err) => panic!(err),
+        }
+    }
+
+    fn pool_connect(
+        host: &str,
+        port: u16,
+        password: &Option<String>,
+    ) -> Result<StorePoolType, &'static str> {
+        info!("binding to store backend at {}:{}", host, port);
+
+        let addr_auth = match password {
             Some(ref password) => format!(":{}@", password),
             None => "".to_string(),
         };
 
         let tcp_addr_raw = format!(
             "redis://{}{}:{}/{}",
-            &addr_auth, APP_CONF.redis.host, APP_CONF.redis.port, APP_CONF.redis.database,
+            &addr_auth, host, port, APP_CONF.redis.database,
         );
 
         debug!("will connect to redis at: {}", tcp_addr_raw);
@@ -99,14 +131,14 @@ impl StoreBuilder {
 
                 match builder.build(manager) {
                     Ok(pool) => {
-                        info!("bound to store backend");
+                        info!("connected to redis at: {}", tcp_addr_raw);
 
-                        Store { pool: pool }
+                        Ok((pool, tcp_addr_raw))
                     }
-                    Err(_) => panic!("could not spawn redis pool"),
+                    Err(_) => Err("could not spawn redis pool"),
                 }
             }
-            Err(_) => panic!("could not create redis connection manager"),
+            Err(_) => Err("could not create redis connection manager"),
         }
     }
 }
@@ -126,7 +158,7 @@ impl Store {
         }
 
         // Check from store
-        get_cache_store_client!(self.pool, StoreError::Disconnected, client {
+        get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
             client.exists::<&str, bool>(&store_key)
             .map_err(|err| {
                 StoreError::Connector(err)
@@ -166,7 +198,7 @@ impl Store {
     }
 
     pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
-        get_cache_store_client!(self.pool, StoreError::Disconnected, client {
+        get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
             let blackhole_encoder = match record.blackhole {
                 Some(ref blackhole) => {
                     if blackhole.has_items() == true {
@@ -235,7 +267,7 @@ impl Store {
         record_name: &RecordName,
         record_type: &RecordType,
     ) -> Result<(), StoreError> {
-        get_cache_store_client!(self.pool, StoreError::Disconnected, client {
+        get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
             let store_key = StoreKey::to_key(zone_name, record_name, record_type);
 
             // Clean from local cache
@@ -253,7 +285,7 @@ impl Store {
         store_key: &str,
         cache_accessed_at: Option<SystemTime>,
     ) -> Result<StoreRecord, StoreError> {
-        get_cache_store_client!(self.pool, StoreError::Disconnected, client {
+        get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
             match client.hget::<_, _, StoreGetType>(
                 store_key,
                 (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_RESCUE, KEY_VALUE),

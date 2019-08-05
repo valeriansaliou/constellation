@@ -157,9 +157,18 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[redis]**
 
-* `host` (type: _string_, allowed: hostname, IPv4, IPv6, default: `localhost`) — Target Redis host
-* `port` (type: _integer_, allowed: TCP port, default: `6379`) — Target Redis TCP port
-* `password` (type: _string_, allowed: password values, default: none) — Redis password (if no password, dont set this key)
+**[redis.master]**
+
+* `host` (type: _string_, allowed: hostname, IPv4, IPv6, default: `localhost`) — Target master Redis host
+* `port` (type: _integer_, allowed: TCP port, default: `6379`) — Target master Redis TCP port
+* `password` (type: _string_, allowed: password values, default: none) — Master Redis password (if no password, do not set this key)
+
+**[[redis.rescue]]**
+
+* `host` (type: _string_, allowed: hostname, IPv4, IPv6, default: `localhost`) — Read-only rescue Redis host
+* `port` (type: _integer_, allowed: TCP port, default: `6379`) — Read-only rescue Redis TCP port
+* `password` (type: _string_, allowed: password values, default: none) — Read-only rescue Redis password (if no password, do not set this key)
+
 * `database` (type: _integer_, allowed: `0` to `255`, default: `0`) — Target Redis database
 * `pool_size` (type: _integer_, allowed: `0` to `(2^32)-1`, default: `8`) — Redis connection pool size
 * `max_lifetime_seconds` (type: _integer_, allowed: seconds, default: `20`) — Maximum lifetime of a connection to Redis (you want it below 5 minutes, as this affects the reconnect delay to Redis if a connection breaks)

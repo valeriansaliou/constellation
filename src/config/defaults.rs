@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 
 use super::config::{
     ConfigDNSHealth, ConfigDNSHealthHTTP, ConfigDNSHealthHTTPMethod, ConfigDNSHealthNotify,
-    ConfigDNSZone,
+    ConfigDNSZone, ConfigRedisMaster,
 };
 
 pub fn server_log_level() -> String {
@@ -53,7 +53,12 @@ pub fn dns_zone() -> BTreeMap<String, ConfigDNSZone> {
 }
 
 pub fn dns_health() -> ConfigDNSHealth {
-    ConfigDNSHealth::default()
+    ConfigDNSHealth {
+        check_enable: dns_health_check_enable(),
+        check_interval: dns_health_check_interval(),
+        notify: dns_health_notify(),
+        http: Vec::new(),
+    }
 }
 
 pub fn dns_health_check_enable() -> bool {
@@ -65,7 +70,9 @@ pub fn dns_health_check_interval() -> u64 {
 }
 
 pub fn dns_health_notify() -> ConfigDNSHealthNotify {
-    ConfigDNSHealthNotify::default()
+    ConfigDNSHealthNotify {
+        slack_hook_url: None,
+    }
 }
 
 pub fn dns_health_http() -> Vec<ConfigDNSHealthHTTP> {
@@ -128,11 +135,23 @@ pub fn http_workers() -> u16 {
     2
 }
 
-pub fn redis_host() -> String {
+pub fn redis_master() -> ConfigRedisMaster {
+    ConfigRedisMaster {
+        host: redis_master_host(),
+        port: redis_master_port(),
+        password: None,
+    }
+}
+
+pub fn redis_master_host() -> String {
     "localhost".to_string()
 }
 
-pub fn redis_port() -> u16 {
+pub fn redis_master_port() -> u16 {
+    6379
+}
+
+pub fn redis_rescue_port() -> u16 {
     6379
 }
 

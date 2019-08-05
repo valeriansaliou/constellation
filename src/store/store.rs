@@ -117,7 +117,7 @@ impl StoreBuilder {
         match RedisConnectionManager::new(tcp_addr_raw.as_ref()) {
             Ok(manager) => {
                 let builder = Pool::builder()
-                    .test_on_check_out(false)
+                    .test_on_check_out(true)
                     .max_size(APP_CONF.redis.pool_size)
                     .max_lifetime(Some(Duration::from_secs(
                         APP_CONF.redis.max_lifetime_seconds,

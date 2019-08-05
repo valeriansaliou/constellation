@@ -96,6 +96,8 @@ pub struct ConfigDNSHealthHTTP {
     #[serde(default = "defaults::dns_health_http_method")]
     pub method: ConfigDNSHealthHTTPMethod,
 
+    pub host: Option<String>,
+
     #[serde(default = "defaults::dns_health_http_path")]
     pub path: String,
 

@@ -196,6 +196,7 @@ impl DNSHealthHTTP {
             &domain.zone,
             &domain.name,
             domain.port,
+            &domain.host,
             &domain.path,
             domain.secure,
             record_type,
@@ -204,10 +205,11 @@ impl DNSHealthHTTP {
 
         if let (Ok(request_url), request_virtual_host) = request_url {
             debug!(
-                "triggered a dns health check on target: {} on zone: {} with url: {}",
+                "triggered a dns health check on target: {} on zone: {} with url: {} on host: {}",
                 domain.name.to_str(),
                 domain.zone.to_str(),
-                request_url.to_string()
+                request_url.to_string(),
+                request_virtual_host
             );
 
             // Acquire target host and port (extracted inner host)
@@ -458,6 +460,7 @@ impl DNSHealthHTTP {
         zone: &ZoneName,
         name: &RecordName,
         port: u16,
+        host: &Option<String>,
         path: &str,
         secure: bool,
         kind: &RecordType,
@@ -494,10 +497,14 @@ impl DNSHealthHTTP {
         // #5. Append path
         request_url.push_str(path);
 
-        return (
-            request_url.parse(),
-            format!("{}{}", name.to_subdomain(), zone.to_str()),
-        );
+        // Generate virtual host
+        let virtual_host = if let Some(host) = host {
+            host.to_owned()
+        } else {
+            format!("{}{}", name.to_subdomain(), zone.to_str())
+        };
+
+        return (request_url.parse(), virtual_host);
     }
 
     fn extract_inner_host<'a>(record_type: &RecordType, outer_host: &'a str) -> &'a str {

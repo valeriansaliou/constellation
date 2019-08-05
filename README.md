@@ -133,6 +133,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `zone` (type: _string_, allowed: any zone root domain, default: no default) — Root domain for zone to be checked (eg. `relay.crisp.chat`)
 * `name` (type: _string_, allowed: any subdomain on zone, default: no default) — Subdomain for zone to be checked (eg. `client.@`, for expanded domain `client.relay.crisp.chat`)
 * `method` (type: _string_, allowed: `HEAD`, `GET`, default: `GET`) — HTTP method to be used by HTTP health probe to perform the check request
+* `host` (type: _string_, allowed: HTTP virtual hosts, default: empty) — HTTP virtual host to be requested upon check (if not set, it is generated from `zone` and `name`)
 * `path` (type: _string_, allowed: HTTP paths, default: `/`) — HTTP path to be requested upon check
 * `port` (type: _integer_, allowed: TCP ports, default: `443`) — TCP port used for HTTP check (port value will likely be `80` if HTTP is used)
 * `secure` (type: _boolean_, allowed: `true`, `false`, default: `true`) — Whether to perform health checks over secure HTTPS or plain HTTP

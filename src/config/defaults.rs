@@ -135,26 +135,6 @@ pub fn http_workers() -> u16 {
     2
 }
 
-pub fn redis_master() -> ConfigRedisMaster {
-    ConfigRedisMaster {
-        host: redis_master_host(),
-        port: redis_master_port(),
-        password: None,
-    }
-}
-
-pub fn redis_master_host() -> String {
-    "localhost".to_string()
-}
-
-pub fn redis_master_port() -> u16 {
-    6379
-}
-
-pub fn redis_rescue_port() -> u16 {
-    6379
-}
-
 pub fn redis_database() -> u8 {
     0
 }
@@ -181,4 +161,24 @@ pub fn redis_cache_refresh_seconds() -> u64 {
 
 pub fn redis_cache_expire_seconds() -> u64 {
     600
+}
+
+pub fn redis_master() -> ConfigRedisMaster {
+    ConfigRedisMaster {
+        host: redis_master_host(),
+        port: redis_master_port(),
+        password: None,
+    }
+}
+
+pub fn redis_master_host() -> String {
+    "localhost".to_string()
+}
+
+pub fn redis_master_port() -> u16 {
+    6379
+}
+
+pub fn redis_rescue_port() -> u16 {
+    6379
 }

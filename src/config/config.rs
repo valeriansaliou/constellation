@@ -157,11 +157,6 @@ pub struct ConfigHTTP {
 
 #[derive(Deserialize)]
 pub struct ConfigRedis {
-    #[serde(default = "defaults::redis_master")]
-    pub master: ConfigRedisMaster,
-
-    pub rescue: Option<Vec<ConfigRedisRescue>>,
-
     #[serde(default = "defaults::redis_database")]
     pub database: u8,
 
@@ -182,6 +177,11 @@ pub struct ConfigRedis {
 
     #[serde(default = "defaults::redis_cache_expire_seconds")]
     pub cache_expire_seconds: u64,
+
+    #[serde(default = "defaults::redis_master")]
+    pub master: ConfigRedisMaster,
+
+    pub rescue: Option<Vec<ConfigRedisRescue>>,
 }
 
 #[derive(Default, Deserialize)]

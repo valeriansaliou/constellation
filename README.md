@@ -157,6 +157,14 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 **[redis]**
 
+* `database` (type: _integer_, allowed: `0` to `255`, default: `0`) — Target Redis database
+* `pool_size` (type: _integer_, allowed: `0` to `(2^32)-1`, default: `8`) — Redis connection pool size
+* `max_lifetime_seconds` (type: _integer_, allowed: seconds, default: `20`) — Maximum lifetime of a connection to Redis (you want it below 5 minutes, as this affects the reconnect delay to Redis if a connection breaks)
+* `idle_timeout_seconds` (type: _integer_, allowed: seconds, default: `600`) — Timeout of idle/dead pool connections to Redis
+* `connection_timeout_seconds` (type: _integer_, allowed: seconds, default: `5`) — Timeout in seconds to consider Redis dead and reject DNS and HTTP API queries
+* `cache_refresh_seconds` (type: _integer_, allowed: seconds, default: `60`) — Time in seconds after which a locally-cached record is refreshed from Redis (this should be kept low)
+* `cache_expire_seconds` (type: _integer_, allowed: seconds, default: `600`) — Time in seconds after which a locally-cached record expires and should be refreshed from Redis (this should be kept low)
+
 **[redis.master]**
 
 * `host` (type: _string_, allowed: hostname, IPv4, IPv6, default: `localhost`) — Target master Redis host
@@ -168,14 +176,6 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `host` (type: _string_, allowed: hostname, IPv4, IPv6, default: `localhost`) — Read-only rescue Redis host
 * `port` (type: _integer_, allowed: TCP port, default: `6379`) — Read-only rescue Redis TCP port
 * `password` (type: _string_, allowed: password values, default: none) — Read-only rescue Redis password (if no password, do not set this key)
-
-* `database` (type: _integer_, allowed: `0` to `255`, default: `0`) — Target Redis database
-* `pool_size` (type: _integer_, allowed: `0` to `(2^32)-1`, default: `8`) — Redis connection pool size
-* `max_lifetime_seconds` (type: _integer_, allowed: seconds, default: `20`) — Maximum lifetime of a connection to Redis (you want it below 5 minutes, as this affects the reconnect delay to Redis if a connection breaks)
-* `idle_timeout_seconds` (type: _integer_, allowed: seconds, default: `600`) — Timeout of idle/dead pool connections to Redis
-* `connection_timeout_seconds` (type: _integer_, allowed: seconds, default: `5`) — Timeout in seconds to consider Redis dead and reject DNS and HTTP API queries
-* `cache_refresh_seconds` (type: _integer_, allowed: seconds, default: `60`) — Time in seconds after which a locally-cached record is refreshed from Redis (this should be kept low)
-* `cache_expire_seconds` (type: _integer_, allowed: seconds, default: `600`) — Time in seconds after which a locally-cached record expires and should be refreshed from Redis (this should be kept low)
 
 ### Initialize GeoIP
 

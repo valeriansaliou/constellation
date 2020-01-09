@@ -184,9 +184,11 @@ As Constellation does not distribute a GeoIP database in its repository, you wil
 
 Execute the provided script:
 
-`./scripts/init_geoip.sh`
+`./scripts/init_geoip.sh --license_key=YOUR_GEOLITE2_LICENSE_KEY`
 
-_Note that once Constellation started from the GeoIP database you have manually initialized, it will keep the database up-to-date by checking and applying updates automatically in the background. The database initialization is a one-time operation._
+_YOUR_GEOLITE2_LICENSE_KEY should be replaced by a valid GeoLite2 license key. Please [follow instructions](https://dev.maxmind.com/geoip/geoip2/geolite2/) provided by MaxMind to obtain a license key._
+
+_Note that once Constellation started from the GeoIP database you have manually initialized, it will keep the database up-to-date by checking and applying updates automatically in the background. The database initialization is a one-time operation. Make sure your license key is also set in the GeoIP update URL in the configuration._
 
 ### Run Constellation
 

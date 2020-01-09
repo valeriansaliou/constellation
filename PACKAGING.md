@@ -37,7 +37,7 @@ We consider here the packaging flow of Constellation version `1.0.0` for Linux, 
 
 ## Command Snippets
 
-**MUSL builder w/ a pinned Rust nightly version:**
+**MUSL builder w/ a pinned Rust nightly version (here: `nightly-2019-04-17`):**
 
 ```bash
 # Compilation

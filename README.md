@@ -145,10 +145,10 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 **[geo]**
 
 * `database_path` (type: _string_, allowed: folder path, default: `./res/geo/`) — Path to the folder containing the GeoIP database
-* `database_file` (type: _string_, allowed: file name, default: `GeoLite2-Country.mmdb`) — File name for the GeoIP2 MMDB database in the database folder (either free GeoLite2 or paid GeoIP2; disable `geo.update_enable` if you want to use a custom database)
-* `update_enable` (type: _boolean_, allowed: `true`, `false`, default: `true`) — Whether to enable GeoIP database updater or not
+* `database_file` (type: _string_, allowed: file name, default: `GeoLite2-Country.mmdb`) — File name for the GeoIP2 MMDB database in the database folder (either free GeoLite2 or paid GeoIP2; enable `geo.update_enable` if you want to automatically update this file from a remote download server)
+* `update_enable` (type: _boolean_, allowed: `true`, `false`, default: `false`) — Whether to enable GeoIP database updater or not
 * `update_interval` (type: _integer_, allowed: seconds, default: `864000`) — Interval for which to refresh GeoIP database in seconds (1 week or more is recommended)
-* `update_url` (type: _string_, allowed: HTTP URL, default: `https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz`) — URL to the compressed GeoIP MMDB file (supported: `tar.gz`), that is downloaded on refresh
+* `update_url` (type: _string_, allowed: HTTP URL, default: empty) — URL to the compressed GeoIP MMDB file (supported: `tar.gz`), that is downloaded on refresh (a value is required if `geo.update_enable` is enabled)
 
 **[http]**
 

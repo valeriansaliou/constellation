@@ -116,15 +116,11 @@ pub fn geo_database_file() -> String {
 }
 
 pub fn geo_update_enable() -> bool {
-    true
+    false
 }
 
 pub fn geo_update_interval() -> u64 {
     864000
-}
-
-pub fn geo_update_url() -> String {
-    "https://geolite.maxmind.com/download/geoip/database/GeoLite2-Country.tar.gz".to_string()
 }
 
 pub fn http_inet() -> SocketAddr {

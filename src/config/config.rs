@@ -142,8 +142,7 @@ pub struct ConfigGeo {
     #[serde(default = "defaults::geo_update_interval")]
     pub update_interval: u64,
 
-    #[serde(default = "defaults::geo_update_url")]
-    pub update_url: String,
+    pub update_url: Option<String>,
 }
 
 #[derive(Deserialize)]

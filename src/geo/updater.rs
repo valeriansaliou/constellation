@@ -30,6 +30,13 @@ impl GeoUpdater {
     pub fn run(&self) {
         let interval_duration = Duration::from_secs(APP_CONF.geo.update_interval);
 
+        // Acquire update URL
+        let update_url = APP_CONF
+            .geo
+            .update_url
+            .to_owned()
+            .expect("the geo updater requires 'geo.update_url' to be set in the configuration");
+
         debug!(
             "scheduled background geo updates every: {:?}",
             interval_duration
@@ -44,7 +51,7 @@ impl GeoUpdater {
             // Hold on 2 seconds
             thread::sleep(Duration::from_secs(2));
 
-            match Self::update_database() {
+            match Self::update_database(&update_url) {
                 Ok(_) => {
                     info!("ran geo update operation");
 
@@ -87,12 +94,12 @@ impl GeoUpdater {
         return false;
     }
 
-    fn update_database() -> Result<(), Option<HTTPError::Error>> {
+    fn update_database(update_url: &str) -> Result<(), Option<HTTPError::Error>> {
         debug!("acquiring updated geo database");
 
         match tempfile() {
             Ok(mut tmp_file) => {
-                match HTTPRequest::get(&APP_CONF.geo.update_url, &mut tmp_file) {
+                match HTTPRequest::get(update_url, &mut tmp_file) {
                     Ok(_) => {
                         debug!(
                             "downloaded updated geo database archive to file: {:?}",

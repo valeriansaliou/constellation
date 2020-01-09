@@ -1,15 +1,27 @@
-FROM rustlang/rust:nightly AS build
+FROM rustlang/rust:nightly-slim AS build
 
-RUN cargo install constellation-server
+RUN apt-get update
+RUN apt-get install -y musl-tools
 
-FROM debian:stretch-slim
+RUN rustup --version
+RUN rustup install nightly-2019-04-17 && \
+    rustup default nightly-2019-04-17 && \
+    rustup target add x86_64-unknown-linux-musl
+
+RUN rustc --version && \
+    rustup --version && \
+    cargo --version
+
+WORKDIR /app
+COPY . /app
+RUN cargo clean && cargo build --release --target x86_64-unknown-linux-musl
+RUN strip ./target/x86_64-unknown-linux-musl/release/constellation
+
+FROM scratch
 
 WORKDIR /usr/src/constellation
 
-COPY --from=build /usr/local/cargo/bin/constellation /usr/local/bin/constellation
-
-RUN apt-get update
-RUN apt-get install -y libssl-dev
+COPY --from=build /app/target/x86_64-unknown-linux-musl/release/constellation /usr/local/bin/constellation
 
 CMD [ "constellation", "-c", "/etc/constellation.cfg" ]
 

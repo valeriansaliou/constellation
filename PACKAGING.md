@@ -5,7 +5,7 @@ This file contains quick reminders and notes on how to package Constellation.
 
 We consider here the packaging flow of Constellation version `1.0.0` for Linux, for target architecture `x86_64` (the steps are alike for `i686`):
 
-# Packaging Steps
+## Packaging Steps
 
 1. **How to setup `rust-musl-builder` on MacOS:**
     1. Follow setup instructions from: [rust-musl-builder](https://github.com/emk/rust-musl-builder)
@@ -35,7 +35,7 @@ We consider here the packaging flow of Constellation version `1.0.0` for Linux, 
     2. `docker tag [DOCKER_IMAGE_ID] valeriansaliou/constellation:v1.0.0` (insert the built image identifier)
     3. `docker push valeriansaliou/constellation:v1.0.0`
 
-# Command Snippets
+## Command Snippets
 
 **MUSL builder w/ a pinned Rust nightly version:**
 

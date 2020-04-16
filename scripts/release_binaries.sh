@@ -38,10 +38,9 @@ function release_for_architecture {
     final_tar="v$CONSTELLATION_VERSION-$1.tar.gz"
 
     rm -rf ./constellation/ && \
-        docker run --rm -it -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:nightly-2019-04-17 cargo build --target=$2 --release && \
-        docker run --rm -it -v "$(pwd)":/home/rust/src ekidd/rust-musl-builder:nightly-2019-04-17 strip ./target/$2/release/constellation && \
+        RUSTFLAGS="-C link-arg=-s" cross build --target "$2" --release && \
         mkdir ./constellation && \
-        mv "target/$2/release/constellation" ./constellation/ && \
+        cp -p "target/$2/release/constellation" ./constellation/ && \
         cp ./config.cfg constellation/ && \
         tar -czvf "$final_tar" ./constellation && \
         rm -r ./constellation/
@@ -63,7 +62,9 @@ rc=0
 pushd "$BASE_DIR" > /dev/null
     echo "Executing release steps for Constellation v$CONSTELLATION_VERSION..."
 
-    release_for_architecture "x86_64" "x86_64-unknown-linux-musl"
+    release_for_architecture "x86_64" "x86_64-unknown-linux-musl" && \
+        release_for_architecture "i686" "i686-unknown-linux-musl" && \
+        release_for_architecture "armv7" "armv7-unknown-linux-musleabihf"
     rc=$?
 
     if [ $rc -eq 0 ]; then

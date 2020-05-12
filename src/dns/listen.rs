@@ -7,10 +7,12 @@
 use std::collections::BTreeMap;
 use std::net::{TcpListener, UdpSocket};
 use std::time::Duration;
-use trust_dns::rr::rdata::SOA;
-use trust_dns::rr::{Name, RData, Record, RecordSet, RecordType, RrKey};
+use trust_dns_proto::rr::rdata::SOA;
+use trust_dns_proto::rr::{Name, RData, Record, RecordSet, RecordType};
 use trust_dns_server::authority::{Authority, ZoneType};
 use trust_dns_server::server::ServerFuture;
+
+use super::handler::Authority2;
 
 use super::handler::DNSHandler;
 use crate::APP_CONF;
@@ -71,7 +73,7 @@ impl DNSListen {
         }
     }
 
-    fn map_authority(zone_name: &str) -> Result<(Name, Authority), ()> {
+    fn map_authority(zone_name: &str) -> Result<(Name, Authority2), ()> {
         if let Ok(name) = Name::parse(zone_name, Some(&Name::new())) {
             let mut records = BTreeMap::new();
 
@@ -91,7 +93,7 @@ impl DNSListen {
                 )),
             ));
 
-            records.insert(RrKey::new(&name, RecordType::SOA), soa_records);
+            records.insert(RecordSet::new(&name, RecordType::SOA, 1337), soa_records);
 
             // Insert base NS records
             let mut ns_records = RecordSet::new(&name, RecordType::NS, SERIAL_DEFAULT);
@@ -111,11 +113,11 @@ impl DNSListen {
                 );
             }
 
-            records.insert(RrKey::new(&name, RecordType::NS), ns_records);
+            records.insert(RecordSet::new(&name, RecordType::NS, 1337), ns_records);
 
             Ok((
                 name.to_owned(),
-                Authority::new(name, records, ZoneType::Master, false, false),
+                Authority2::new(name, records, ZoneType::Master, false, false),
             ))
         } else {
             Err(())

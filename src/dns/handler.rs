@@ -9,11 +9,15 @@ use rand::thread_rng;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::RwLock;
-use trust_dns::op::{Message, MessageType, OpCode, Query, ResponseCode};
-use trust_dns::rr::dnssec::SupportedAlgorithms;
-use trust_dns::rr::{Name, Record, RecordType as TrustRecordType};
+use trust_dns_proto::op::{Message, MessageType, OpCode, Query, ResponseCode};
+use trust_dns_proto::rr::dnssec::SupportedAlgorithms;
+use trust_dns_proto::rr::{Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{AuthLookup, Authority};
+use trust_dns_server::authority::AuthLookupIter::Records;
 use trust_dns_server::server::{Request, RequestHandler};
+use trust_dns_server::authority::LookupError;
+use trust_dns_server::store::in_memory::InMemoryAuthority;
+
 
 use super::code::CodeName;
 use super::health::{DNSHealth, DNSHealthStatus};
@@ -25,18 +29,36 @@ use crate::geo::region::RegionCode;
 use crate::store::store::{StoreError, StoreRecord};
 use crate::APP_CONF;
 use crate::APP_STORE;
+use trust_dns_server::server::ResponseHandler;
+use trust_dns_server::authority::MessageResponseBuilder;
+use std::future::Future;
+use trust_dns_server::authority::MessageResponse;
+
+pub type Authority2 = InMemoryAuthority;
 
 pub struct DNSHandler {
-    authorities: HashMap<Name, RwLock<Authority>>,
+    authorities: HashMap<Name, RwLock<Authority2>>,
+}
+
+
+pub struct DoneNow;
+
+impl Future for DoneNow {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        Poll::Ready(())
+    }
 }
 
 impl RequestHandler for DNSHandler {
-    fn handle_request(&self, request: &Request) -> Message {
+    type ResponseFuture=DoneNow;
+
+    fn handle_request<R: ResponseHandler>(&self, request: Request, response_handle: R) -> Self::ResponseFuture {
         let request_message = &request.message;
 
         trace!("request: {:?}", request_message);
 
-        let response: Message = match request_message.message_type() {
+        let response: MessageResponse = match request_message.message_type() {
             MessageType::Query => match request_message.op_code() {
                 OpCode::Query => {
                     let response = self.lookup(request.src.ip(), &request_message);
@@ -48,7 +70,7 @@ impl RequestHandler for DNSHandler {
                 code @ _ => {
                     error!("unimplemented opcode: {:?}", code);
 
-                    Message::error_msg(
+                    MessageResponseBuilder::error_msg(
                         request_message.id(),
                         request_message.op_code(),
                         ResponseCode::NotImp,
@@ -61,7 +83,7 @@ impl RequestHandler for DNSHandler {
                     request_message.id()
                 );
 
-                Message::error_msg(
+                MessageResponseBuilder::error_msg(
                     request_message.id(),
                     request_message.op_code(),
                     ResponseCode::NotImp,
@@ -69,7 +91,7 @@ impl RequestHandler for DNSHandler {
             }
         };
 
-        response
+        Box::pin(response_handle.send_response(response).into())
     }
 }
 
@@ -80,7 +102,7 @@ impl DNSHandler {
         }
     }
 
-    pub fn upsert(&mut self, name: Name, authority: Authority) {
+    pub fn upsert(&mut self, name: Name, authority: Authority2) {
         self.authorities.insert(name, RwLock::new(authority));
     }
 
@@ -106,7 +128,8 @@ impl DNSHandler {
                 let supported_algorithms = SupportedAlgorithms::new();
 
                 // Attempt to resolve from local store
-                let records_local = authority.search(query, false, supported_algorithms);
+                let mut rt = tokio::runtime::Runtime::new().unwrap();
+                let records_local = rt.block_on(async { authority.search(query, false, supported_algorithms) } );
 
                 if !records_local.is_empty() {
                     debug!("found records for query from local store: {}", query);
@@ -172,7 +195,7 @@ impl DNSHandler {
                                             false,
                                         );
                                     }
-                                    AuthLookup::Records(..) => {
+                                    AuthLookup::Records {.. } => {
                                         panic!("error, should return noerror")
                                     }
                                 };
@@ -203,7 +226,7 @@ impl DNSHandler {
         response
     }
 
-    fn find_auth_recurse(&self, name: &Name) -> Option<&RwLock<Authority>> {
+    fn find_auth_recurse(&self, name: &Name) -> Option<&RwLock<Authority2>> {
         let authority = self.authorities.get(name);
 
         if authority.is_some() {
@@ -220,7 +243,7 @@ impl DNSHandler {
     }
 
     fn records_from_store(
-        authority: &Authority,
+        authority: &Authority2,
         zone_name: &Option<ZoneName>,
         source: IpAddr,
         query: &Query,
@@ -286,7 +309,7 @@ impl DNSHandler {
     }
 
     fn records_from_store_attempt(
-        authority: &Authority,
+        authority: &Authority2,
         source: IpAddr,
         zone_name: &Option<ZoneName>,
         query_name_client: &Name,
@@ -550,7 +573,7 @@ impl DNSHandler {
         response: &mut Message,
         zone_name: &Option<ZoneName>,
         mut records: Vec<Record>,
-        authority: &Authority,
+        authority: &Authority2,
         supported_algorithms: SupportedAlgorithms,
     ) {
         let has_records = !records.is_empty();
@@ -580,7 +603,7 @@ impl DNSHandler {
     fn stamp_response(
         request: &Message,
         response: &mut Message,
-        authority: &Authority,
+        authority: &Authority2,
         supported_algorithms: SupportedAlgorithms,
         code: ResponseCode,
         zone_name: &Option<ZoneName>,
@@ -638,6 +661,6 @@ impl DNSHandler {
         }
 
         // No alternate record found, consider name as non-existing.
-        return Ok(false);
+        Ok(false)
     }
 }

@@ -10,7 +10,7 @@ use rocket::request::FromParam;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{fmt, str};
-use trust_dns::rr::Name as TrustName;
+use trust_dns_proto::rr::Name as TrustName;
 
 use crate::APP_CONF;
 

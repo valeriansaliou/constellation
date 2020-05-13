@@ -13,9 +13,9 @@ use std::cmp;
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::{fmt, str};
-use trust_dns::rr::rdata::mx::MX;
-use trust_dns::rr::rdata::txt::TXT;
-use trust_dns::rr::{Name as TrustName, RData as TrustRData, RecordType as TrustRecordType};
+use trust_dns_proto::rr::rdata::mx::MX;
+use trust_dns_proto::rr::rdata::txt::TXT;
+use trust_dns_proto::rr::{Name as TrustName, RData as TrustRData, RecordType as TrustRecordType};
 
 use crate::geo::country::CountryCode;
 

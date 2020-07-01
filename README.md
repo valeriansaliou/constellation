@@ -1,7 +1,7 @@
 Constellation
 =============
 
-[![Build Status](https://travis-ci.org/valeriansaliou/constellation.svg?branch=master)](https://travis-ci.org/valeriansaliou/constellation) [![Dependency Status](https://deps.rs/repo/github/valeriansaliou/constellation/status.svg)](https://deps.rs/repo/github/valeriansaliou/constellation) [![Buy Me A Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg)](https://www.buymeacoffee.com/valeriansaliou)
+[![Build Status](https://travis-ci.org/valeriansaliou/constellation.svg?branch=master)](https://travis-ci.org/valeriansaliou/constellation) [![Buy Me A Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg)](https://www.buymeacoffee.com/valeriansaliou)
 
 **Pluggable authoritative DNS server. Entries can be added & removed from an HTTP REST API.**
 

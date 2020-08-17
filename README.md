@@ -272,6 +272,14 @@ In case you are using health-check on the domain for zone, you may want to speci
 
 _If you do not set any `rescue` records; in the event all regular records get reported as dead, DNS clients will be served an empty response. Thus, it is judicious that you still serve fallback records._
 
+**CNAME records with CNAME flattening:**
+
+CNAMEs are useful to centralize a record value in a single entry. Though, it is illegal as per the DNS RFC to share it with other records at the same level. As well, CNAMEs require DNS resolvers to perform a second resolving step as to resolve the flat value (eg. `A`, `AAAA`, `TXT`, etc. records).
+
+CNAME flattening can be enabled for a record by setting the `flatten` property in the API to `true`. By default, no CNAME flattening is performed.
+
+_Note that the `flatten` option is only applicable to records with CNAME values. If flattening is enabled on eg. a `A` record type, the `flatten` property will have no effect._
+
 #### API routes
 
 ##### Check if a DNS record exists
@@ -343,6 +351,22 @@ Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
 Content-Type: application/json; charset=utf-8
 
 {"values":["159.89.97.13","46.101.18.133"],"rescue":["139.59.174.13"],"ttl":60}
+```
+
+**Example response:**
+
+```http
+HTTP/1.1 200 OK
+```
+
+**Example request (CNAME-flattened):**
+
+```http
+PUT /zone/relay.crisp.chat/record/@/cname HTTP/1.1
+Authorization: Basic OlJFUExBQ0VfVEhJU19XSVRIX0FfU0VDUkVUX0tFWQ==
+Content-Type: application/json; charset=utf-8
+
+{"values":["alias.crisp.net"],"flatten":true,"ttl":60}
 ```
 
 **Example response:**

@@ -331,8 +331,8 @@ impl DNSHandler {
                         _ => {}
                     }
 
-                    // Look for a CNAME result?
-                    if record_type_inner != &RecordType::CNAME {
+                    // Look for a CNAME result? (if no records were acquired)
+                    if record_type_inner != &RecordType::CNAME && records.is_empty() {
                         match APP_STORE.get(&zone_name, &record_name, &RecordType::CNAME) {
                             Ok(record_cname) => {
                                 debug!(

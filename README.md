@@ -272,11 +272,11 @@ In case you are using health-check on the domain for zone, you may want to speci
 
 _If you do not set any `rescue` records; in the event all regular records get reported as dead, DNS clients will be served an empty response. Thus, it is judicious that you still serve fallback records._
 
-**CNAME records with CNAME flattening:**
+**CNAME flattening:**
 
 CNAMEs are useful to centralize a record value in a single entry. Though, it is illegal as per the DNS RFC to share it with other records at the same level. As well, CNAMEs require DNS resolvers to perform a second resolving step as to resolve the flat value (eg. `A`, `AAAA`, `TXT`, etc. records).
 
-CNAME flattening can be enabled for a record by setting the `flatten` property in the API to `true`. By default, no CNAME flattening is performed.
+CNAME flattening can help if you encounter an edge case of the DNS RFC with a CNAME record type. It lets Constellation resolve the actual flat value, and serve it right away, instead of the CNAME. CNAME flattening can be enabled for a record by setting the `flatten` property in the API to `true`. By default, no CNAME flattening is performed.
 
 _Note that the `flatten` option is only applicable to records with CNAME values. If flattening is enabled on eg. a `A` record type, the `flatten` property will have no effect._
 

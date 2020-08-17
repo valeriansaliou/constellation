@@ -18,6 +18,7 @@ use crate::APP_STORE;
 #[derive(Deserialize)]
 pub struct RecordData {
     ttl: Option<u32>,
+    flatten: Option<bool>,
     blackhole: Option<RecordBlackhole>,
     regions: Option<RecordRegions>,
     rescue: Option<RecordValues>,
@@ -31,6 +32,7 @@ pub struct RecordGetResponse {
 
     name: RecordName,
     ttl: Option<u32>,
+    flatten: Option<bool>,
     blackhole: Option<RecordBlackhole>,
     regions: Option<RecordRegions>,
     rescue: Option<RecordValues>,
@@ -65,6 +67,7 @@ pub fn get_zone_record(
                 _type: record.kind,
                 name: record.name,
                 ttl: record.ttl,
+                flatten: record.flatten,
                 blackhole: record.blackhole,
                 regions: record.regions,
                 rescue: record.rescue,
@@ -93,6 +96,7 @@ pub fn put_zone_record(
                 kind: record_type,
                 name: record_name,
                 ttl: data.ttl,
+                flatten: data.flatten,
                 blackhole: data.blackhole.to_owned(),
                 regions: data.regions.to_owned(),
                 rescue: data.rescue.to_owned(),

@@ -23,6 +23,7 @@ use crate::APP_CONF;
 static KEY_TYPE: &'static str = "t";
 static KEY_NAME: &'static str = "n";
 static KEY_TTL: &'static str = "e";
+static KEY_FLATTEN: &'static str = "m"; // Alias for 'minify'
 static KEY_BLACKHOLE: &'static str = "b";
 static KEY_REGION: &'static str = "r";
 static KEY_RESCUE: &'static str = "f"; // Alias for 'failover'
@@ -32,6 +33,7 @@ type StoreGetType = (
     String,
     String,
     u32,
+    Option<String>,
     Option<String>,
     Option<String>,
     Option<String>,
@@ -51,6 +53,7 @@ pub struct StoreRecord {
     pub kind: RecordType,
     pub name: RecordName,
     pub ttl: Option<u32>,
+    pub flatten: Option<bool>,
     pub blackhole: Option<RecordBlackhole>,
     pub regions: Option<RecordRegions>,
     pub rescue: Option<RecordValues>,
@@ -199,6 +202,12 @@ impl Store {
 
     pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
         get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
+            let flatten_encoder = match record.flatten {
+                Some(true) => {
+                    Ok("1".to_owned())
+                },
+                _ => Ok("".to_owned())
+            };
             let blackhole_encoder = match record.blackhole {
                 Some(ref blackhole) => {
                     if blackhole.has_items() == true {
@@ -226,11 +235,12 @@ impl Store {
 
             match (
                 serde_json::to_string(&record.values),
+                flatten_encoder,
                 blackhole_encoder,
                 region_encoder,
                 rescue_encoder
             ) {
-                (Ok(values), Ok(blackhole), Ok(regions), Ok(rescue)) => {
+                (Ok(values), Ok(flatten), Ok(blackhole), Ok(regions), Ok(rescue)) => {
                     let store_key = StoreKey::to_key(zone_name, &record.name, &record.kind);
 
                     // Clean from local cache
@@ -242,6 +252,7 @@ impl Store {
                             (KEY_TYPE, record.kind.to_str()),
                             (KEY_NAME, record.name.to_str()),
                             (KEY_TTL, &record.ttl.unwrap_or(0).to_string()),
+                            (KEY_FLATTEN, &flatten),
                             (KEY_BLACKHOLE, &blackhole),
                             (KEY_REGION, &regions),
                             (KEY_RESCUE, &rescue),
@@ -251,10 +262,11 @@ impl Store {
                         StoreError::Connector(err)
                     })
                 },
-                (Err(err), _, _, _) |
-                (_, Err(err), _, _) |
-                (_, _, Err(err), _) |
-                (_, _, _, Err(err)) => {
+                (Err(err), _, _, _, _) |
+                (_, Err(err), _, _, _) |
+                (_, _, Err(err), _, _) |
+                (_, _, _, Err(err), _) |
+                (_, _, _, _, Err(err)) => {
                     Err(StoreError::Encoding(err))
                 }
             }
@@ -288,13 +300,23 @@ impl Store {
         get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
             match client.hget::<_, _, StoreGetType>(
                 store_key,
-                (KEY_TYPE, KEY_NAME, KEY_TTL, KEY_BLACKHOLE, KEY_REGION, KEY_RESCUE, KEY_VALUE),
+
+                (
+                    KEY_TYPE,
+                    KEY_NAME,
+                    KEY_TTL,
+                    KEY_FLATTEN,
+                    KEY_BLACKHOLE,
+                    KEY_REGION,
+                    KEY_RESCUE,
+                    KEY_VALUE
+                ),
             ) {
                 Ok(values) => {
                     if let (Some(kind_value), Some(name_value), Ok(value_value)) = (
                         RecordType::from_str(&values.0),
                         RecordName::from_str(&values.1),
-                        serde_json::from_str(&values.6)
+                        serde_json::from_str(&values.7)
                     ) {
                         let ttl = if values.2 > 0 {
                             Some(values.2)
@@ -302,13 +324,20 @@ impl Store {
                             None
                         };
 
-                        let blackhole = values.3.and_then(|blackhole_raw| {
+                        let flatten = values.3.and_then(|flatten_raw| {
+                            if flatten_raw == "1" {
+                                Some(true)
+                            } else {
+                                None
+                            }
+                        });
+                        let blackhole = values.4.and_then(|blackhole_raw| {
                             serde_json::from_str::<RecordBlackhole>(&blackhole_raw).ok()
                         });
-                        let regions = values.4.and_then(|region_raw| {
+                        let regions = values.5.and_then(|region_raw| {
                             serde_json::from_str::<RecordRegions>(&region_raw).ok()
                         });
-                        let rescue = values.5.and_then(|rescue_raw| {
+                        let rescue = values.6.and_then(|rescue_raw| {
                             serde_json::from_str::<RecordValues>(&rescue_raw).ok()
                         });
 
@@ -319,6 +348,14 @@ impl Store {
                             value_value
                         );
 
+                        if flatten.is_some() == true {
+                            debug!(
+                                "store record with kind: {:?}, name: {:?} has flatten: {:?}",
+                                kind_value,
+                                name_value,
+                                flatten
+                            );
+                        }
                         if blackhole.is_some() == true {
                             debug!(
                                 "store record with kind: {:?}, name: {:?} has blackhole: {:?}",
@@ -348,6 +385,7 @@ impl Store {
                             kind: kind_value,
                             name: name_value,
                             ttl: ttl,
+                            flatten: flatten,
                             blackhole: blackhole,
                             regions: regions,
                             rescue: rescue,
@@ -363,6 +401,8 @@ impl Store {
                     }
                 },
                 Err(err) => {
+                    debug!("could not read store record at key: {}, because: {}", store_key, err);
+
                     // Store in local cache? (no value)
                     // Notice: do not store an empty cache if error is not a type error (meaning: \
                     //   no such value exist; this avoids storing a blank cache entry for I/O \

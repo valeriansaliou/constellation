@@ -140,8 +140,8 @@ impl DNSFlatten {
         bootstrap_write.insert(registry_key.to_owned(), ttl);
 
         // Send back an error, as we do not have the flat value at this point in time
-        // Notice: this will propagate a 'SERVFAIL', which ensures resolvers do not cache the \
-        //   empty response.
+        // Notice: this will propagate the non-flattened CNAME value instead, as the flattened \
+        //   values are not yet available at this point.
         Err(())
     }
 

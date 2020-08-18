@@ -20,6 +20,7 @@ use super::health::{DNSHealth, DNSHealthStatus};
 use super::metrics::{MetricsValue, METRICS_STORE};
 use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
+use super::flatten::DNS_FLATTEN;
 use crate::geo::locate::Locator;
 use crate::geo::region::RegionCode;
 use crate::store::store::{StoreError, StoreRecord};
@@ -316,6 +317,7 @@ impl DNSHandler {
                             // Append record direct results
                             Self::parse_from_records(
                                 query_name_client,
+                                query_type,
                                 record_type_inner,
                                 source,
                                 &zone_name,
@@ -343,6 +345,7 @@ impl DNSHandler {
                                 // Append CNAME hint results
                                 Self::parse_from_records(
                                     query_name_client,
+                                    query_type,
                                     record_type_inner,
                                     source,
                                     &zone_name,
@@ -380,6 +383,7 @@ impl DNSHandler {
 
     fn parse_from_records(
         query_name_client: &Name,
+        query_type: &TrustRecordType,
         record_type: &RecordType,
         source: IpAddr,
         zone_name: &ZoneName,
@@ -496,6 +500,9 @@ impl DNSHandler {
 
             // Not blackholed? (push values)
             if is_blackholed == false {
+                // Acquire record TTL
+                let record_ttl = record.ttl.unwrap_or(APP_CONF.dns.record_ttl);
+
                 // Aggregate values (healthy ones only for DNS health check)
                 let mut prepared_values = values
                     .iter()
@@ -517,19 +524,69 @@ impl DNSHandler {
                     }
                 }
 
-                // Push record values
-                for value in prepared_values {
-                    if let Ok(value_data) = value.to_trust(&record.kind) {
+                // Replace CNAME values with their flattened value?
+                let (mut flat_values, mut is_flattened) = (Vec::new(), false);
+
+                if record.kind == RecordType::CNAME && record.flatten == Some(true) {
+                    if record_type == &RecordType::CNAME {
+                        debug!("cname requested and found, but record is flattened, so clearing it");
+
+                        // If DNS query looks up CNAME value, it will give back an empty answer \
+                        //   (as it should have been flattened for other query types)
+                        is_flattened = true;
+                    } else {
+                        debug!("record is flattened, acquiring cname values");
+
+                        // Flatten each CNAME value (if there are multiple ones)
+                        for prepared_value in prepared_values.iter() {
+                            // Notice: this will ignore any errored flattening pass, which may \
+                            //   thus return an empty final DNS result if there is no flattened \
+                            //   value.
+                            if let Ok(flat_pass) = DNS_FLATTEN.pass(record_type.to_owned(), (*prepared_value).to_owned(), record_ttl) {
+                                is_flattened = true;
+
+                                for flat_value in flat_pass.iter() {
+                                    // De-duplicate returned values, as multiple CNAMEs could \
+                                    //   return the same flat value twice or more.
+                                    if flat_values.contains(flat_value) == false {
+                                        flat_values.push(flat_value.to_owned())
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Build final values
+                let (final_kind, final_type, mut final_values);
+
+                if is_flattened == true {
+                    final_kind = record_type;
+                    final_type = *query_type;
+                    final_values = Vec::new();
+
+                    for flat_value in flat_values.iter() {
+                        final_values.push(flat_value);
+                    }
+                } else {
+                    final_kind = &record.kind;
+                    final_type = type_data;
+                    final_values = prepared_values;
+                }
+
+                // Append final prepared values to response
+                for value in final_values {
+                    if let Ok(value_data) = value.to_trust(final_kind) {
                         records.push(Record::from_rdata(
                             query_name_client.to_owned(),
-                            record.ttl.unwrap_or(APP_CONF.dns.record_ttl),
-                            type_data,
+                            record_ttl,
+                            final_type,
                             value_data,
                         ));
                     } else {
                         warn!(
                             "could not convert to dns record type: {} with value: {:?}",
-                            record.kind.to_str(),
+                            final_kind.to_str(),
                             value
                         );
                     }

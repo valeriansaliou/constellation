@@ -257,6 +257,22 @@ impl RecordBlackhole {
     }
 }
 
+impl RecordValues {
+    pub fn new() -> RecordValues {
+        RecordValues(Vec::new())
+    }
+
+    pub fn from_list(values: Vec<RecordValue>) -> RecordValues {
+        RecordValues(values)
+    }
+}
+
+impl RecordValue {
+    pub fn from_string(value: String) -> RecordValue {
+        RecordValue(value)
+    }
+}
+
 impl Deref for RecordValues {
     type Target = Vec<RecordValue>;
 

@@ -34,6 +34,7 @@ extern crate tempfile;
 extern crate toml;
 extern crate trust_dns;
 extern crate trust_dns_server;
+extern crate trust_dns_resolver;
 extern crate url_serde;
 
 mod config;
@@ -54,6 +55,7 @@ use config::config::Config;
 use config::logger::ConfigLogger;
 use config::reader::ConfigReader;
 use dns::health::DNSHealthBuilder;
+use dns::flatten::{DNSFlattenBootstrapBuilder, DNSFlattenMaintainBuilder};
 use dns::listen::DNSListenBuilder;
 use dns::metrics::DNSMetricsTickBuilder;
 use geo::locate::DB_READER;
@@ -71,6 +73,8 @@ pub static THREAD_NAME_HTTP: &'static str = "constellation-http";
 pub static THREAD_NAME_STORE_FLUSH: &'static str = "constellation-store-flush";
 pub static THREAD_NAME_DNS_METRICS: &'static str = "constellation-dns-metrics";
 pub static THREAD_NAME_DNS_HEALTH: &'static str = "constellation-dns-health";
+pub static THREAD_NAME_DNS_FLATTEN_BOOTSTRAP: &'static str = "constellation-dns-flatten-bootstrap";
+pub static THREAD_NAME_DNS_FLATTEN_MAINTAIN: &'static str = "constellation-dns-flatten-maintain";
 pub static THREAD_NAME_GEO_UPDATER: &'static str = "constellation-geo-updater";
 
 macro_rules! gen_spawn_managed {
@@ -139,6 +143,18 @@ gen_spawn_managed!(
     DNSHealthBuilder::new().run()
 );
 gen_spawn_managed!(
+    "dns_flatten_maintain",
+    spawn_dns_flatten_maintain,
+    THREAD_NAME_DNS_FLATTEN_MAINTAIN,
+    DNSFlattenBootstrapBuilder::new().run()
+);
+gen_spawn_managed!(
+    "dns_flatten_bootstrap",
+    spawn_dns_flatten_bootstrap,
+    THREAD_NAME_DNS_FLATTEN_BOOTSTRAP,
+    DNSFlattenMaintainBuilder::new().run()
+);
+gen_spawn_managed!(
     "geo_updater",
     spawn_geo_updater,
     THREAD_NAME_GEO_UPDATER,
@@ -191,6 +207,10 @@ fn main() {
 
     // Spawn DNS metrics
     thread::spawn(spawn_dns_metrics);
+
+    // Spawn DNS flattener
+    thread::spawn(spawn_dns_flatten_bootstrap);
+    thread::spawn(spawn_dns_flatten_maintain);
 
     // Spawn DNS health checker? (background thread)
     if APP_CONF.dns.health.check_enable == true {

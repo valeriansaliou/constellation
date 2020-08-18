@@ -278,6 +278,8 @@ CNAMEs are useful to centralize a record value in a single entry. Though, it is 
 
 CNAME flattening can help if you encounter an edge case of the DNS RFC with a CNAME record type. It lets Constellation resolve the actual flat value, and serve it right away, instead of the CNAME. CNAME flattening can be enabled for a record by setting the `flatten` property in the API to `true`. By default, no CNAME flattening is performed.
 
+A dedicated Constellation thread manages previously-flattened CNAME values, and updates them as they change on their remote DNS server. As well, if a cached flattened CNAME has not been requested for a long time, it is expunged from cache. Note that, due to the fact that Constellation is mono-threaded, if a CNAME value with flattening enabled is not yet in cache, then Constellation will answer with the CNAME back, and delegate a deferred flatten order to the flattening manager thread. Once the flattening manager thread has done its work, further DNS queries will then be answered with the flattened value (eg. `A` record type).
+
 _Note that the `flatten` option is only applicable to records with CNAME values. If flattening is enabled on eg. a `A` record type, the `flatten` property will have no effect._
 
 #### API routes

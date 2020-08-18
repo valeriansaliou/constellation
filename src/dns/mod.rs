@@ -10,9 +10,9 @@ mod macros;
 mod code;
 mod handler;
 
+pub mod flatten;
 pub mod health;
 pub mod listen;
 pub mod metrics;
-pub mod flatten;
 pub mod record;
 pub mod zone;

@@ -4,19 +4,20 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use std::ops::Deref;
 use std::collections::HashMap;
-use std::thread;
+use std::ops::Deref;
 use std::sync::RwLock;
-use std::time::{SystemTime, Duration, Instant};
-use trust_dns_resolver::Resolver;
+use std::thread;
+use std::time::{Duration, Instant, SystemTime};
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
 use trust_dns_resolver::error::ResolveError;
+use trust_dns_resolver::Resolver;
 
-use super::record::{RecordValues, RecordValue, RecordType};
+use super::record::{RecordType, RecordValue, RecordValues};
 
 lazy_static! {
-    pub static ref DNS_BOOTSTRAP: RwLock<HashMap<DNSFlattenRegistryKey, u32>> = RwLock::new(HashMap::new());
+    pub static ref DNS_BOOTSTRAP: RwLock<HashMap<DNSFlattenRegistryKey, u32>> =
+        RwLock::new(HashMap::new());
     pub static ref DNS_FLATTEN: DNSFlatten = DNSFlattenBuilder::new();
 }
 
@@ -82,8 +83,16 @@ impl DNSFlattenMaintainBuilder {
 }
 
 impl DNSFlatten {
-    pub fn pass(&self, record_type: RecordType, record_value: RecordValue, record_ttl: u32) -> Result<RecordValues, ()> {
-        debug!("flatten registry pass on value: {:?} and type: {:?}", record_value, record_type);
+    pub fn pass(
+        &self,
+        record_type: RecordType,
+        record_value: RecordValue,
+        record_ttl: u32,
+    ) -> Result<RecordValues, ()> {
+        debug!(
+            "flatten registry pass on value: {:?} and type: {:?}",
+            record_value, record_type
+        );
 
         // Acquire registry key
         let registry_key = (record_value, record_type);
@@ -96,7 +105,10 @@ impl DNSFlatten {
             let mut registry_write = self.registry.write().unwrap();
 
             if let Some(ref mut registry_record) = registry_write.get_mut(&registry_key) {
-                debug!("flattening from local registry on value: {:?} and type: {:?}", registry_key.0, registry_key.1);
+                debug!(
+                    "flattening from local registry on value: {:?} and type: {:?}",
+                    registry_key.0, registry_key.1
+                );
 
                 // Bump last access time
                 registry_record.accessed_at = SystemTime::now();
@@ -111,7 +123,10 @@ impl DNSFlatten {
         if let Some(value) = cached_value {
             Ok(value)
         } else {
-            info!("flattening from network on value: {:?} and type: {:?}", registry_key.0, registry_key.1);
+            info!(
+                "flattening from network on value: {:?} and type: {:?}",
+                registry_key.0, registry_key.1
+            );
 
             self.queue(&registry_key, record_ttl)
         }
@@ -130,41 +145,51 @@ impl DNSFlatten {
         Err(())
     }
 
-    fn flatten(&self, registry_key: &DNSFlattenRegistryKey, ttl: u32, accessed_at: Option<SystemTime>) {
+    fn flatten(
+        &self,
+        registry_key: &DNSFlattenRegistryKey,
+        ttl: u32,
+        accessed_at: Option<SystemTime>,
+    ) {
         // Convert each value type into its string representation
         let values: Result<Vec<String>, ResolveError> = match registry_key.1 {
-            RecordType::A => {
-                self.resolver.ipv4_lookup(&registry_key.0).map(|values| {
-                    values.iter().map(|value| value.to_string()).collect()
-                })
-            },
-            RecordType::AAAA => {
-                self.resolver.ipv6_lookup(&registry_key.0).map(|values| {
-                    values.iter().map(|value| value.to_string()).collect()
-                })
-            },
+            RecordType::A => self
+                .resolver
+                .ipv4_lookup(&registry_key.0)
+                .map(|values| values.iter().map(|value| value.to_string()).collect()),
+            RecordType::AAAA => self
+                .resolver
+                .ipv6_lookup(&registry_key.0)
+                .map(|values| values.iter().map(|value| value.to_string()).collect()),
             RecordType::MX => {
                 // Format as `{priority} {exchange}`, eg. `10 inbound.crisp.email`
                 self.resolver.mx_lookup(&registry_key.0).map(|values| {
-                    values.iter().map(|value| {
-                        format!("{} {}", value.preference(), value.exchange())
-                    }).collect()
+                    values
+                        .iter()
+                        .map(|value| format!("{} {}", value.preference(), value.exchange()))
+                        .collect()
                 })
-            },
+            }
             RecordType::TXT => {
                 // Assemble all TXT data segments
                 self.resolver.txt_lookup(&registry_key.0).map(|values| {
-                    values.iter().map(|value| value.txt_data().join("")).collect()
+                    values
+                        .iter()
+                        .map(|value| value.txt_data().join(""))
+                        .collect()
                 })
-            },
+            }
             RecordType::PTR | RecordType::CNAME => Ok(Vec::new()),
         };
 
         // Return final flattened record values
         let results = if let Ok(values) = values {
-            Ok(RecordValues::from_list(values.into_iter().map(|value| {
-                RecordValue::from_string(value)
-            }).collect()))
+            Ok(RecordValues::from_list(
+                values
+                    .into_iter()
+                    .map(|value| RecordValue::from_string(value))
+                    .collect(),
+            ))
         } else {
             Err(())
         };
@@ -176,15 +201,15 @@ impl DNSFlatten {
         // Notice: this prevents in-error refreshes to empty the registry where it previously \
         //   had records, effectively corrupting the DNS system.
         if results.is_err() && registry_write.contains_key(registry_key) {
-            warn!("dns flattening in error on value: {:?} and type: {:?}, keeping old cache", registry_key.0, registry_key.1);
+            warn!(
+                "dns flattening in error on value: {:?} and type: {:?}, keeping old cache",
+                registry_key.0, registry_key.1
+            );
         } else {
             // Store flattened values to registry
             registry_write.insert(
                 registry_key.to_owned(),
-
-                DNSFlattenEntry::new(
-                    results.unwrap_or(RecordValues::new()), ttl, accessed_at
-                )
+                DNSFlattenEntry::new(results.unwrap_or(RecordValues::new()), ttl, accessed_at),
             );
         }
     }
@@ -311,7 +336,11 @@ impl DNSFlattenMaintain {
                     .as_secs();
 
                 if registry_elapsed >= registry_entry.ttl as u64 {
-                    refresh_register.push((registry_key.to_owned(), registry_entry.ttl, registry_entry.accessed_at));
+                    refresh_register.push((
+                        registry_key.to_owned(),
+                        registry_entry.ttl,
+                        registry_entry.accessed_at,
+                    ));
                 }
             }
         }

@@ -16,11 +16,11 @@ use trust_dns_server::authority::{AuthLookup, Authority};
 use trust_dns_server::server::{Request, RequestHandler};
 
 use super::code::CodeName;
+use super::flatten::DNS_FLATTEN;
 use super::health::{DNSHealth, DNSHealthStatus};
 use super::metrics::{MetricsValue, METRICS_STORE};
 use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
-use super::flatten::DNS_FLATTEN;
 use crate::geo::locate::Locator;
 use crate::geo::region::RegionCode;
 use crate::store::store::{StoreError, StoreRecord};
@@ -529,7 +529,9 @@ impl DNSHandler {
 
                 if record.kind == RecordType::CNAME && record.flatten == Some(true) {
                     if record_type == &RecordType::CNAME {
-                        debug!("cname requested and found, but record is flattened, so clearing it");
+                        debug!(
+                            "cname requested and found, but record is flattened, so clearing it"
+                        );
 
                         // If DNS query looks up CNAME value, it will give back an empty answer \
                         //   (as it should have been flattened for other query types)
@@ -542,7 +544,11 @@ impl DNSHandler {
                             // Notice: this will ignore any errored flattening pass, which may \
                             //   thus return an empty final DNS result if there is no flattened \
                             //   value.
-                            if let Ok(flat_pass) = DNS_FLATTEN.pass(record_type.to_owned(), (*prepared_value).to_owned(), record_ttl) {
+                            if let Ok(flat_pass) = DNS_FLATTEN.pass(
+                                record_type.to_owned(),
+                                (*prepared_value).to_owned(),
+                                record_ttl,
+                            ) {
                                 is_flattened = true;
 
                                 for flat_value in flat_pass.iter() {

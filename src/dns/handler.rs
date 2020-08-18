@@ -525,7 +525,7 @@ impl DNSHandler {
                 }
 
                 // Replace CNAME values with their flattened value?
-                let (mut flat_values, mut is_flattened) = (Vec::new(), false);
+                let mut flat_values = None;
 
                 if record.kind == RecordType::CNAME && record.flatten == Some(true) {
                     if record_type == &RecordType::CNAME {
@@ -535,7 +535,7 @@ impl DNSHandler {
 
                         // If DNS query looks up CNAME value, it will give back an empty answer \
                         //   (as it should have been flattened for other query types)
-                        is_flattened = true;
+                        flat_values = Some(Vec::new());
                     } else {
                         debug!("record is flattened, acquiring cname values");
 
@@ -549,15 +549,17 @@ impl DNSHandler {
                                 (*prepared_value).to_owned(),
                                 record_ttl,
                             ) {
-                                is_flattened = true;
+                                let mut flat_values_list = Vec::new();
 
                                 for flat_value in flat_pass.iter() {
                                     // De-duplicate returned values, as multiple CNAMEs could \
                                     //   return the same flat value twice or more.
-                                    if flat_values.contains(flat_value) == false {
-                                        flat_values.push(flat_value.to_owned())
+                                    if flat_values_list.contains(flat_value) == false {
+                                        flat_values_list.push(flat_value.to_owned())
                                     }
                                 }
+
+                                flat_values = Some(flat_values_list);
                             }
                         }
                     }
@@ -566,12 +568,12 @@ impl DNSHandler {
                 // Build final values
                 let (final_kind, final_type, mut final_values);
 
-                if is_flattened == true {
+                if let Some(ref flat_values_list) = flat_values {
                     final_kind = record_type;
                     final_type = *query_type;
                     final_values = Vec::new();
 
-                    for flat_value in flat_values.iter() {
+                    for flat_value in flat_values_list.iter() {
                         final_values.push(flat_value);
                     }
                 } else {

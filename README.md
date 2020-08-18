@@ -72,13 +72,13 @@ You might find it convenient to run Constellation via Docker. You can find the p
 First, pull the `valeriansaliou/constellation` image:
 
 ```bash
-docker pull valeriansaliou/constellation:v1.11.0
+docker pull valeriansaliou/constellation:v1.12.0
 ```
 
 Then, seed it a configuration file and run it (replace `/path/to/your/constellation/config.cfg` with the path to your configuration file):
 
 ```bash
-docker run -p 53:53/udp -p 8080:8080 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg -v /path/to/your/constellation/res/:/var/lib/constellation/ valeriansaliou/constellation:v1.11.0
+docker run -p 53:53/udp -p 8080:8080 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg -v /path/to/your/constellation/res/:/var/lib/constellation/ valeriansaliou/constellation:v1.12.0
 ```
 
 In the configuration file, ensure that:

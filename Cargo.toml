@@ -1,6 +1,6 @@
 [package]
 name = "constellation-server"
-version = "1.12.0"
+version = "1.12.1"
 description = "Pluggable authoritative DNS server. Entries can be added & removed from an HTTP REST API."
 readme = "README.md"
 license = "MPL-2.0"

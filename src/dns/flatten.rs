@@ -213,7 +213,13 @@ impl DNSFlatten {
                 self.resolver.txt_lookup(&registry_key.0).map(|values| {
                     values
                         .iter()
-                        .map(|value| value.txt_data().join(""))
+                        .map(|value_chunks| {
+                            value_chunks
+                                .txt_data()
+                                .iter()
+                                .map(|value_chunk| std::str::from_utf8(value_chunk).unwrap_or(""))
+                                .collect()
+                        })
                         .collect()
                 })
             }

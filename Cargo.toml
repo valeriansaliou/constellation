@@ -38,7 +38,7 @@ rocket = { version = "0.4", default-features = false }
 rocket_contrib = { version = "0.4", features = ["json"], default-features = false }
 trust-dns = { version = "0.13", default-features = false }
 trust-dns-server = { version = "0.13", default-features = false }
-trust-dns-resolver = { version = "0.7", default-features = false }
+trust-dns-resolver = { version = "0.8", default-features = false }
 rand = "0.7"
 farmhash = "1.1"
 http_req = { version = "0.5", features = ["rust-tls"], default-features = false }

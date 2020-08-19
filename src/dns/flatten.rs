@@ -7,6 +7,7 @@
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::RwLock;
+use std::net::ToSocketAddrs;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts, NameServerConfig, Protocol};
@@ -63,24 +64,31 @@ impl DNSFlattenBuilder {
         let mut resolver_config = ResolverConfig::new();
 
         for resolver in &APP_CONF.dns.flatten.resolvers {
-            // Acquire socket address (IPv4 vs IPv6)
-            let socket_address;
+            let socket_address_string;
 
-            if resolver.contains(":") {
+            if resolver.contains(":") == true {
                 // IPv6 socket target
-                socket_address = format!("[{}]:53", resolver);
+                socket_address_string = format!("[{}]:53", resolver);
             } else {
-                // IPv4 socket target
-                socket_address = format!("{}:53", resolver);
+                // IPv4 or hostname socket target
+                socket_address_string = format!("{}:53", resolver);
             }
 
-            // Append name server to list of resolvers
-            resolver_config.add_name_server(
-                NameServerConfig {
-                    socket_addr: socket_address.parse().expect("invalid dns resolver address"),
-                    protocol: Protocol::Udp,
-                },
-            );
+            // Convert socket targets to actual IP addresses (eg. if a domain is passed, this will \
+            //   resolve all the IPs this domain points to, allowing to configure resolvers by \
+            //   domain name; thus avoiding hardcoding resolver server IP addresses in the \
+            //   configuration)
+            let socket_addresses = socket_address_string.to_socket_addrs().expect("invalid dns resolver address");
+
+            // Append listed name servers to list of resolvers
+            for socket_address in socket_addresses {
+                resolver_config.add_name_server(
+                    NameServerConfig {
+                        socket_addr: socket_address,
+                        protocol: Protocol::Udp,
+                    },
+                );
+            }
         }
 
         // Make resolver options

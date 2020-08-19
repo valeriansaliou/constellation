@@ -190,6 +190,14 @@ fn ensure_states() {
         APP_STORE.deref(),
         DB_READER.deref(),
     );
+
+    // Ensure that there is at least a DNS flatten resolver configured
+    assert_eq!(
+        APP_CONF.dns.flatten.resolvers.is_empty(),
+        false,
+        "dns flatten resolver list is empty, please provide at least a resolver in [{}]",
+        "dns.flatten.resolvers"
+    );
 }
 
 fn main() {

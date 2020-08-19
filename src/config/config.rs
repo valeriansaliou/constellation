@@ -61,12 +61,19 @@ pub struct ConfigDNS {
     #[serde(default = "defaults::dns_zone")]
     pub zone: BTreeMap<String, ConfigDNSZone>,
 
+    pub flatten: ConfigDNSFlatten,
+
     #[serde(default = "defaults::dns_health")]
     pub health: ConfigDNSHealth,
 }
 
 #[derive(Deserialize)]
 pub struct ConfigDNSZone {}
+
+#[derive(Default, Deserialize)]
+pub struct ConfigDNSFlatten {
+    pub resolvers: Vec<String>,
+}
 
 #[derive(Default, Deserialize)]
 pub struct ConfigDNSHealth {

@@ -119,6 +119,10 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 
 > Specify your zone name eg. as: `[[dns.zone.'relay.crisp.chat']]` for zone base: `relay.crisp.chat`.
 
+**[dns.flatten]**
+
+* `resolvers` (type: _array[string]_, allowed: hostname, IPv4, IPv6, default: no default) — DNS resolvers that should be used when flattening a CNAME record
+
 **[dns.health]**
 
 * `check_enable` (type: _boolean_, allowed: `true`, `false`, default: `false`) — Whether to perform periodic health checks or not

@@ -9,11 +9,12 @@ use std::ops::Deref;
 use std::sync::RwLock;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
-use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
+use trust_dns_resolver::config::{ResolverConfig, ResolverOpts, NameServerConfig, Protocol};
 use trust_dns_resolver::error::ResolveError;
 use trust_dns_resolver::Resolver;
 
 use super::record::{RecordType, RecordValue, RecordValues};
+use crate::APP_CONF;
 
 lazy_static! {
     pub static ref DNS_BOOTSTRAP: RwLock<HashMap<DNSFlattenRegistryKey, u32>> =
@@ -36,9 +37,11 @@ pub struct DNSFlattenMaintain;
 
 type DNSFlattenRegistryKey = (RecordValue, RecordType);
 
-const MAINTAIN_EXPIRE_TTL_RATIO: u32 = 10;
-const MAINTAIN_PERFORM_INTERVAL: Duration = Duration::from_secs(60);
+const RESOLVER_TIMEOUT: Duration = Duration::from_secs(3);
+const RESOLVER_ATTEMPTS: usize = 3;
 const BOOTSTRAP_TICK_INTERVAL: Duration = Duration::from_millis(100);
+const MAINTAIN_PERFORM_INTERVAL: Duration = Duration::from_secs(60);
+const MAINTAIN_EXPIRE_TTL_RATIO: u32 = 10;
 
 struct DNSFlattenEntry {
     values: RecordValues,
@@ -49,21 +52,49 @@ struct DNSFlattenEntry {
 
 impl DNSFlattenBuilder {
     fn new() -> DNSFlatten {
-        // Acquire a resolver (prefer using system resolver)
-        let resolver = if let Ok(resolver) = Resolver::from_system_conf() {
-            info!("dns flatten resolver acquired from system");
-
-            resolver
-        } else {
-            warn!("dns flatten resolver could not be acquired from system, using default resolver");
-
-            Resolver::new(ResolverConfig::default(), ResolverOpts::default()).unwrap()
-        };
-
         DNSFlatten {
             registry: RwLock::new(HashMap::new()),
-            resolver: resolver,
+            resolver: Self::build_resolver(),
         }
+    }
+
+    fn build_resolver() -> Resolver {
+        // Make resolver configuration
+        let mut resolver_config = ResolverConfig::new();
+
+        for resolver in &APP_CONF.dns.flatten.resolvers {
+            // Acquire socket address (IPv4 vs IPv6)
+            let socket_address;
+
+            if resolver.contains(":") {
+                // IPv6 socket target
+                socket_address = format!("[{}]:53", resolver);
+            } else {
+                // IPv4 socket target
+                socket_address = format!("{}:53", resolver);
+            }
+
+            // Append name server to list of resolvers
+            resolver_config.add_name_server(
+                NameServerConfig {
+                    socket_addr: socket_address.parse().expect("invalid dns resolver address"),
+                    protocol: Protocol::Udp,
+                },
+            );
+        }
+
+        // Make resolver options
+        let mut resolver_options = ResolverOpts::default();
+
+        resolver_options.timeout = RESOLVER_TIMEOUT;
+        resolver_options.attempts = RESOLVER_ATTEMPTS;
+        resolver_options.cache_size = 0;
+        resolver_options.use_hosts_file = false;
+
+        // Build resolver instance
+        Resolver::new(resolver_config, resolver_options).expect(
+            "cannot acquire dns flatten resolver"
+        )
     }
 }
 

@@ -5,12 +5,12 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use std::collections::HashMap;
+use std::net::ToSocketAddrs;
 use std::ops::Deref;
 use std::sync::RwLock;
-use std::net::ToSocketAddrs;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
-use trust_dns_resolver::config::{ResolverConfig, ResolverOpts, NameServerConfig, Protocol};
+use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use trust_dns_resolver::error::ResolveError;
 use trust_dns_resolver::Resolver;
 
@@ -78,16 +78,16 @@ impl DNSFlattenBuilder {
             //   resolve all the IPs this domain points to, allowing to configure resolvers by \
             //   domain name; thus avoiding hardcoding resolver server IP addresses in the \
             //   configuration)
-            let socket_addresses = socket_address_string.to_socket_addrs().expect("invalid dns resolver address");
+            let socket_addresses = socket_address_string
+                .to_socket_addrs()
+                .expect("invalid dns resolver address");
 
             // Append listed name servers to list of resolvers
             for socket_address in socket_addresses {
-                resolver_config.add_name_server(
-                    NameServerConfig {
-                        socket_addr: socket_address,
-                        protocol: Protocol::Udp,
-                    },
-                );
+                resolver_config.add_name_server(NameServerConfig {
+                    socket_addr: socket_address,
+                    protocol: Protocol::Udp,
+                });
             }
         }
 
@@ -100,9 +100,8 @@ impl DNSFlattenBuilder {
         resolver_options.use_hosts_file = false;
 
         // Build resolver instance
-        Resolver::new(resolver_config, resolver_options).expect(
-            "cannot acquire dns flatten resolver"
-        )
+        Resolver::new(resolver_config, resolver_options)
+            .expect("cannot acquire dns flatten resolver")
     }
 }
 

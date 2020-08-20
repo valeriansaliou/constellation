@@ -87,6 +87,7 @@ impl DNSFlattenBuilder {
                 resolver_config.add_name_server(NameServerConfig {
                     socket_addr: socket_address,
                     protocol: Protocol::Udp,
+                    tls_dns_name: None,
                 });
             }
         }

@@ -540,6 +540,8 @@ impl DNSHandler {
                         debug!("record is flattened, acquiring cname values");
 
                         // Flatten each CNAME value (if there are multiple ones)
+                        let (mut flat_values_list, mut has_flattened) = (Vec::new(), false);
+
                         for prepared_value in prepared_values.iter() {
                             // Notice: this will ignore any errored flattening pass, which may \
                             //   thus return an empty final DNS result if there is no flattened \
@@ -549,7 +551,7 @@ impl DNSHandler {
                                 (*prepared_value).to_owned(),
                                 record_ttl,
                             ) {
-                                let mut flat_values_list = Vec::new();
+                                has_flattened = true;
 
                                 for flat_value in flat_pass.iter() {
                                     // De-duplicate returned values, as multiple CNAMEs could \
@@ -558,9 +560,12 @@ impl DNSHandler {
                                         flat_values_list.push(flat_value.to_owned())
                                     }
                                 }
-
-                                flat_values = Some(flat_values_list);
                             }
+                        }
+
+                        // Delegate flattened & merged values to outer context?
+                        if has_flattened == true {
+                            flat_values = Some(flat_values_list);
                         }
                     }
                 }

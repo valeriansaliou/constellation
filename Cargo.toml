@@ -11,10 +11,6 @@ keywords = ["dns", "api"]
 categories = ["web-programming"]
 authors = ["Valerian Saliou <valerian@valeriansaliou.name>"]
 
-[badges]
-travis-ci = { repository = "valeriansaliou/constellation", branch = "master" }
-coveralls = { repository = "valeriansaliou/constellation", branch = "master", service = "github" }
-
 [[bin]]
 name = "constellation"
 path = "src/main.rs"

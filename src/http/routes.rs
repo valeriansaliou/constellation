@@ -49,7 +49,13 @@ pub fn head_zone_record(
     record_type: RecordType,
 ) -> Result<(), Status> {
     APP_STORE
-        .check(&zone_name, &record_name, &record_type)
+        .get(
+            &zone_name,
+            &record_name,
+            &record_type,
+            StoreAccessOrigin::Internal,
+        )
+        .map(|_| ())
         .or(Err(Status::NotFound))
 }
 

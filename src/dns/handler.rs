@@ -380,7 +380,9 @@ impl DNSHandler {
 
                 // No record found, exhaust all record types to check if name exists
                 // Notice: a DNS server must return NOERROR if name exists, else NXDOMAIN
-                if Self::check_name_exists(&zone_name, &record_name)? == true {
+                if Self::check_name_exists(&zone_name, &record_name, StoreAccessOrigin::External)?
+                    == true
+                {
                     // Name exists, return empty records (ie. NOERROR)
                     return Ok(Some(vec![]));
                 }
@@ -699,11 +701,15 @@ impl DNSHandler {
     fn check_name_exists(
         zone_name: &ZoneName,
         record_name: &RecordName,
+        origin: StoreAccessOrigin,
     ) -> Result<bool, ResponseCode> {
         // Exhaust all record types
         for record_type in RecordType::list_choices() {
             // A record exists for name and type?
-            match APP_STORE.check(zone_name, record_name, &record_type) {
+            // Notice: instead of performing a simple exist check, we acquire full record data, \
+            //   as this lets us use the local store and therefore prevent non-existing domain \
+            //   attacks on the remote store.
+            match APP_STORE.get(zone_name, record_name, &record_type, origin) {
                 Ok(_) => {
                     // Record exists for name and type; abort there.
                     return Ok(true);

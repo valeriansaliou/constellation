@@ -82,7 +82,7 @@ pub enum StoreError {
     Disconnected,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum StoreAccessOrigin {
     External,
     Internal,
@@ -175,39 +175,6 @@ impl StoreBuilder {
 }
 
 impl Store {
-    pub fn check(
-        &self,
-        zone_name: &ZoneName,
-        record_name: &RecordName,
-        record_type: &RecordType,
-    ) -> Result<(), StoreError> {
-        let store_key = StoreKey::to_key(zone_name, record_name, record_type);
-
-        // Check from local cache?
-        if STORE_CACHE.has(&store_key) == true {
-            return Ok(());
-        }
-
-        // Check from store
-        get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
-            client.exists::<&str, bool>(&store_key)
-            .map_err(|err| {
-                StoreError::Connector(err)
-            })
-            .and_then(|exists| {
-                if exists == true {
-                    Ok(())
-                } else {
-                    // Store in local cache (no value)
-                    STORE_CACHE.push(&store_key, None, None);
-
-                    // Consider as not found
-                    Err(StoreError::NotFound)
-                }
-            })
-        })
-    }
-
     pub fn get(
         &self,
         zone_name: &ZoneName,

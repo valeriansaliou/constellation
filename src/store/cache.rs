@@ -39,21 +39,6 @@ impl StoreCacheBuilder {
 }
 
 impl StoreCache {
-    pub fn has(&self, store_key: &str) -> bool {
-        let mut cache_write = self.cache.write().unwrap();
-
-        debug!("store cache has on key: {}", store_key);
-
-        if let Some(ref mut store_record) = cache_write.get_mut(store_key) {
-            // Bump last cache access time
-            store_record.accessed_at = SystemTime::now();
-
-            store_record.record.is_some()
-        } else {
-            false
-        }
-    }
-
     pub fn get(&self, store_key: &str) -> Result<Option<StoreRecord>, ()> {
         let mut cache_write = self.cache.write().unwrap();
 

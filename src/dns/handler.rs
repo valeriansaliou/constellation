@@ -23,7 +23,7 @@ use super::record::{RecordName, RecordType};
 use super::zone::ZoneName;
 use crate::geo::locate::Locator;
 use crate::geo::region::RegionCode;
-use crate::store::store::{StoreError, StoreRecord};
+use crate::store::store::{StoreAccessOrigin, StoreError, StoreRecord};
 use crate::APP_CONF;
 use crate::APP_STORE;
 
@@ -307,7 +307,12 @@ impl DNSHandler {
                 let mut records = Vec::new();
 
                 if let &Some(ref record_type_inner) = record_type {
-                    match APP_STORE.get(&zone_name, &record_name, record_type_inner) {
+                    match APP_STORE.get(
+                        &zone_name,
+                        &record_name,
+                        record_type_inner,
+                        StoreAccessOrigin::External,
+                    ) {
                         Ok(record) => {
                             debug!(
                                 "found record in store for query: {} {}; got: {:?}",
@@ -335,7 +340,12 @@ impl DNSHandler {
 
                     // Look for a CNAME result? (if no records were acquired)
                     if record_type_inner != &RecordType::CNAME && records.is_empty() {
-                        match APP_STORE.get(&zone_name, &record_name, &RecordType::CNAME) {
+                        match APP_STORE.get(
+                            &zone_name,
+                            &record_name,
+                            &RecordType::CNAME,
+                            StoreAccessOrigin::External,
+                        ) {
                             Ok(record_cname) => {
                                 debug!(
                                     "found cname hint record in store for query: {} {}; got: {:?}",

@@ -21,6 +21,7 @@ use std::time::Duration;
 use crate::config::config::{ConfigDNSHealthHTTP, ConfigDNSHealthHTTPMethod};
 use crate::dns::record::{RecordName, RecordType, RecordValue};
 use crate::dns::zone::ZoneName;
+use crate::store::store::StoreAccessOrigin;
 use crate::APP_CONF;
 use crate::APP_STORE;
 
@@ -174,7 +175,12 @@ impl DNSHealthHTTP {
                 record_type
             );
 
-            if let Ok(record) = APP_STORE.get(&domain.zone, &domain.name, record_type) {
+            if let Ok(record) = APP_STORE.get(
+                &domain.zone,
+                &domain.name,
+                record_type,
+                StoreAccessOrigin::Internal,
+            ) {
                 let unique_values = record.list_record_values();
 
                 for record_value in unique_values {

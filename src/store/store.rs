@@ -9,7 +9,8 @@ use r2d2_redis::RedisConnectionManager;
 use redis::{Commands, ErrorKind, RedisError};
 use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
-use std::time::{Duration, SystemTime};
+use std::sync::RwLock;
+use std::time::{Duration, Instant, SystemTime};
 
 use super::cache::STORE_CACHE;
 use super::key::StoreKey;
@@ -29,6 +30,9 @@ static KEY_REGION: &'static str = "r";
 static KEY_RESCUE: &'static str = "f"; // Alias for 'failover'
 static KEY_VALUE: &'static str = "v";
 
+const LIMITS_GET_REMOTE_TIMESPAN_TOTAL: Duration = Duration::from_secs(3);
+const LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD: Duration = Duration::from_secs(2);
+
 type StoreGetType = (
     String,
     String,
@@ -46,6 +50,16 @@ pub struct StoreBuilder;
 
 pub struct Store {
     pools: Vec<StorePoolType>,
+    limits: StoreLimits,
+}
+
+pub struct StoreLimits {
+    rate: RwLock<StoreLimitsRate>,
+}
+
+pub struct StoreLimitsRate {
+    time_last: Instant,
+    time_spent: Duration,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +82,12 @@ pub enum StoreError {
     Disconnected,
 }
 
+#[derive(PartialEq)]
+pub enum StoreAccessOrigin {
+    External,
+    Internal,
+}
+
 impl StoreBuilder {
     pub fn new() -> Store {
         let mut pools = Vec::new();
@@ -87,7 +107,15 @@ impl StoreBuilder {
             }
         }
 
-        Store { pools: pools }
+        // Initialize limits
+        let limits = StoreLimits {
+            rate: RwLock::new(StoreLimitsRate::default()),
+        };
+
+        Store {
+            pools: pools,
+            limits: limits,
+        }
     }
 
     fn pool_bind(pools: &mut Vec<StorePoolType>, host: &str, port: u16, password: &Option<String>) {
@@ -185,19 +213,101 @@ impl Store {
         zone_name: &ZoneName,
         record_name: &RecordName,
         record_type: &RecordType,
+        origin: StoreAccessOrigin,
     ) -> Result<StoreRecord, StoreError> {
         let store_key = StoreKey::to_key(zone_name, record_name, record_type);
 
-        // Get from local cache?
+        // #1. Get from local cache?
         if let Ok(cached_records) = STORE_CACHE.get(&store_key) {
+            debug!(
+                "get from local store from any on type: {:?}, zone: {:?}, record: {:?}",
+                record_type, zone_name, record_name
+            );
+
             return match cached_records {
                 Some(cached_records) => Ok(cached_records),
                 None => Err(StoreError::NotFound),
             };
         }
 
-        // Get from store
-        self.raw_get_remote(&store_key, None)
+        // #2. Get from store (internal origin? ie. DOS-safe)
+        // Notice: if origin is 'internal' pass-through, otherwise do check limiting policy
+        if origin == StoreAccessOrigin::Internal {
+            debug!(
+                "get from remote store from internal on type: {:?}, zone: {:?}, record: {:?}",
+                record_type, zone_name, record_name
+            );
+
+            // Read result from remote store
+            return self.raw_get_remote(&store_key, None);
+        }
+
+        // #3. Get from store (external origin, ie. DOS-unsafe, thus we need to apply limits)
+        // Notice: this prevents against DOS attacks that exploit the mono-threaded nature of \
+        //   Constellation, as the main thread blocks whenever a Redis query is pending. Some \
+        //   attackers exploit this 'vulnerability' by issuing a large number of DNS queries on \
+        //   non-cached records (random non-existing records). To avoid blocking all the server \
+        //   for the duration of the attack, we limit the total time spent querying Redis to 2/3 \
+        //   of each limiting timespans (of 3 seconds). Given typical DNS resolvers timeouts, this \
+        //   allows cached entries to be still served, while blocking non-cached entries for the \
+        //   duration of the attack. This way, DOS attacks only put down a (smaller) portion of \
+        //   the server. Note that this applies to DNS queries coming from external requesters \
+        //   only, meaning that cache refresh queries will not be subject to this policy, nor \
+        //   health check queries.
+        debug!(
+            "get from remote store from external on type: {:?}, zone: {:?}, record: {:?}",
+            record_type, zone_name, record_name
+        );
+
+        // First, check if limit counters need to be reset and acquire time spent
+        let (time_spent_current_timespan, start_instant) = {
+            let mut limits_rate_write = self.limits.rate.write().unwrap();
+            let now_instant = Instant::now();
+
+            // Counters need to be reset?
+            if now_instant.duration_since(limits_rate_write.time_last)
+                >= LIMITS_GET_REMOTE_TIMESPAN_TOTAL
+            {
+                limits_rate_write.time_last = now_instant;
+                limits_rate_write.time_spent = Duration::new(0, 0);
+
+                debug!(
+                    "started a new time spent chunk in remote store from external ({:?} chunks)",
+                    LIMITS_GET_REMOTE_TIMESPAN_TOTAL
+                );
+            }
+
+            (limits_rate_write.time_spent, now_instant)
+        };
+
+        // Time spent in current timespan is already too great? Reject DNS query.
+        if time_spent_current_timespan >= LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD {
+            error!(
+                "limited remote store get from external on type: {:?}, zone: {:?}, record: {:?}",
+                record_type, zone_name, record_name
+            );
+
+            // Consider the remote store server to be disconnected, as its network channel is \
+            //   overwhelmed with requests.
+            return Err(StoreError::Disconnected);
+        }
+
+        // Read result from remote store
+        let result_remote = self.raw_get_remote(&store_key, None);
+
+        // Update time spent in current timespan
+        {
+            let mut limits_rate_write = self.limits.rate.write().unwrap();
+
+            limits_rate_write.time_spent += start_instant.elapsed();
+
+            debug!(
+                "updated time spent in remote store from external to: {:?} in current chunk",
+                limits_rate_write.time_spent
+            );
+        }
+
+        result_remote
     }
 
     pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
@@ -416,6 +526,15 @@ impl Store {
                 },
             }
         })
+    }
+}
+
+impl Default for StoreLimitsRate {
+    fn default() -> Self {
+        Self {
+            time_last: Instant::now(),
+            time_spent: Duration::new(0, 0),
+        }
     }
 }
 

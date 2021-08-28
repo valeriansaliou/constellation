@@ -12,7 +12,7 @@ use super::record_guard::RecordGuard;
 use crate::dns::metrics::{MetricsStoreCountType, MetricsTimespan, MetricsType, METRICS_STORE};
 use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
 use crate::dns::zone::ZoneName;
-use crate::store::store::StoreRecord;
+use crate::store::store::{StoreAccessOrigin, StoreRecord};
 use crate::APP_STORE;
 
 #[derive(Deserialize)]
@@ -61,7 +61,12 @@ pub fn get_zone_record(
     record_type: RecordType,
 ) -> Result<Json<RecordGetResponse>, Status> {
     APP_STORE
-        .get(&zone_name, &record_name, &record_type)
+        .get(
+            &zone_name,
+            &record_name,
+            &record_type,
+            StoreAccessOrigin::Internal,
+        )
         .map(|record| {
             Json(RecordGetResponse {
                 _type: record.kind,

@@ -38,7 +38,7 @@ trust-dns-resolver = { version = "0.9", default-features = false }
 rand = "0.8"
 farmhash = "1.1"
 http_req = { version = "0.5", features = ["rust-tls"], default-features = false }
-maxminddb = "0.13"
+maxminddb = "0.17"
 tempfile = "3.1"
 flate2 = "1.0"
 tar = "0.4"

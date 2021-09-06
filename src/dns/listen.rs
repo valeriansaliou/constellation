@@ -5,10 +5,11 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use std::collections::BTreeMap;
-use std::net::{TcpListener, UdpSocket};
 use std::time::Duration;
+use tokio_tcp::TcpListener;
+use tokio_udp::UdpSocket;
 use trust_dns::rr::rdata::SOA;
-use trust_dns::rr::{Name, RData, Record, RecordSet, RecordType, RrKey};
+use trust_dns::rr::{LowerName, Name, RData, Record, RecordSet, RecordType, RrKey};
 use trust_dns_server::authority::{Authority, ZoneType};
 use trust_dns_server::server::ServerFuture;
 
@@ -41,12 +42,12 @@ impl DNSListen {
 
         for (zone_name, _) in &APP_CONF.dns.zone {
             match Self::map_authority(&zone_name) {
-                Ok((name, authority)) => handler.upsert(name, authority),
+                Ok((name, authority)) => handler.upsert(LowerName::new(&name), authority),
                 Err(_) => error!("could not load zone {}", zone_name),
             }
         }
 
-        let mut server = ServerFuture::new(handler).expect("error creating dns server");
+        let server = ServerFuture::new(handler);
 
         // Register sockets & listeners
         for inet in &APP_CONF.dns.inets {
@@ -66,9 +67,11 @@ impl DNSListen {
         // Listen for connections
         info!("listening for dns connections");
 
-        if let Err(err) = server.listen() {
-            error!("failed to listen on dns: {}", err);
-        }
+        // TODO: replace w/ a tokio reactor, registered tasks should have been dispatched through \
+        //   their executor
+        // if let Err(err) = server.listen() {
+        //     error!("failed to listen on dns: {}", err);
+        // }
     }
 
     fn map_authority(zone_name: &str) -> Result<(Name, Authority), ()> {
@@ -91,7 +94,10 @@ impl DNSListen {
                 )),
             ));
 
-            records.insert(RrKey::new(&name, RecordType::SOA), soa_records);
+            records.insert(
+                RrKey::new(LowerName::new(&name), RecordType::SOA),
+                soa_records,
+            );
 
             // Insert base NS records
             let mut ns_records = RecordSet::new(&name, RecordType::NS, SERIAL_DEFAULT);
@@ -111,7 +117,10 @@ impl DNSListen {
                 );
             }
 
-            records.insert(RrKey::new(&name, RecordType::NS), ns_records);
+            records.insert(
+                RrKey::new(LowerName::new(&name), RecordType::NS),
+                ns_records,
+            );
 
             Ok((
                 name.to_owned(),

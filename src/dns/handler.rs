@@ -7,7 +7,7 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 use std::net::IpAddr;
 use trust_dns::op::{LowerQuery, MessageType, OpCode, ResponseCode};
 use trust_dns::rr::dnssec::SupportedAlgorithms;
@@ -46,16 +46,15 @@ impl RequestHandler for DNSHandler {
 
         match request_message.message_type() {
             MessageType::Query => match request_message.op_code() {
-                OpCode::Query => self.lookup(request.src.ip(), request_message, response_handle),
+                OpCode::Query => {
+                    info!("lookup request with id: {}", request_message.id());
+
+                    self.lookup(request.src.ip(), request_message, response_handle)
+                }
                 code @ _ => {
                     error!("unimplemented opcode: {:?}", code);
 
-                    // TODO: set in its own fn
-                    response_handle.send(MessageResponse::new(None).error_msg(
-                        request_message.id(),
-                        request_message.op_code(),
-                        ResponseCode::NotImp,
-                    ))
+                    self.not_impl(request_message, response_handle)
                 }
             },
             MessageType::Response => {
@@ -64,12 +63,7 @@ impl RequestHandler for DNSHandler {
                     request_message.id()
                 );
 
-                // TODO: set in its own fn
-                response_handle.send(MessageResponse::new(None).error_msg(
-                    request_message.id(),
-                    request_message.op_code(),
-                    ResponseCode::NotImp,
-                ))
+                self.not_impl(request_message, response_handle)
             }
         }
     }
@@ -86,24 +80,27 @@ impl DNSHandler {
         self.authorities.insert(name, authority);
     }
 
-    pub fn lookup<'a, R: ResponseHandler>(
+    fn lookup<'a, R: ResponseHandler>(
         &'a self,
         source: IpAddr,
         request: &'a MessageRequest<'a>,
         response_handle: R,
     ) -> Result<(), Error> {
-        let mut response: MessageResponseBuilder =
-            MessageResponse::new(Some(request.raw_queries()));
+        // Handle the first query only
+        // Notice: multiple queries are typically not supported by DNS servers anyway, therefore \
+        //   we would only respond to the first query there.
+        if let Some(query) = request.queries().first() {
+            // Initialize response builder
+            let mut response: MessageResponseBuilder =
+                MessageResponse::new(Some(request.raw_queries()));
 
-        // Generate response header
-        let mut header: Header = Header::new();
+            // Generate response header
+            let mut header: Header = Header::new();
 
-        header.set_id(request.id());
-        header.set_op_code(OpCode::Query);
-        header.set_message_type(MessageType::Response);
+            header.set_id(request.id());
+            header.set_op_code(OpCode::Query);
+            header.set_message_type(MessageType::Response);
 
-        // Handle each answer query
-        for query in request.queries() {
             if let Some(authority) = self.find_auth_recurse(query.name()) {
                 let zone_name = ZoneName::from_trust(&authority.origin());
 
@@ -121,90 +118,99 @@ impl DNSHandler {
                 if !records_local.is_empty() {
                     debug!("found records for query from local store: {:?}", query);
 
-                // TODO
-                // let records_local_vec = records_local.iter().collect();
-                //
-                // Self::serve_response_records(
-                //     request,
-                //     &mut response,
-                //     &mut header,
-                //     &zone_name,
-                //     records_local_vec,
-                //     &authority,
-                //     supported_algorithms,
-                // );
-                } else {
-                    match Self::records_from_store(authority, &zone_name, source, query) {
-                        Ok(records_remote) => {
-                            if let Some(records_remote_inner) = records_remote {
-                                debug!(
-                                    "found {} records for query from remote store: {:?}",
-                                    records_remote_inner.len(),
-                                    query
-                                );
+                    let records_local_vec = records_local.iter().collect();
 
-                            // TODO: re-enable
-                            // Self::serve_response_records(
-                            //     request,
-                            //     &mut response,
-                            //     &mut header,
-                            //     &zone_name,
-                            //     records_remote_inner,
-                            //     &authority,
-                            //     supported_algorithms,
-                            // );
-                            } else {
-                                debug!("did not find records for query: {:?}", query);
+                    Self::serve_response_records(
+                        request,
+                        &mut response,
+                        &mut header,
+                        &zone_name,
+                        records_local_vec,
+                        &authority,
+                        supported_algorithms,
+                    );
 
-                                match records_local {
-                                    AuthLookup::NoName => {
-                                        debug!("domain not found for query: {:?}", query);
+                    // Dispatch request from this block, as we cannot escape generated record \
+                    //   values lifetimes out of this context.
+                    return Self::dispatch(response, header, response_handle);
+                }
 
-                                        Self::stamp_response(
-                                            request,
-                                            &mut response,
-                                            &mut header,
-                                            authority,
-                                            supported_algorithms,
-                                            ResponseCode::NXDomain,
-                                            &zone_name,
-                                            false,
-                                        );
-                                    }
-                                    AuthLookup::NameExists => {
-                                        debug!("domain found for query: {:?}", query);
+                // Attempt to resolve from remote store
+                match Self::records_from_store(authority, &zone_name, source, query) {
+                    Ok(records_remote) => {
+                        // Serve response data?
+                        if let Some(records_remote_inner) = records_remote {
+                            debug!(
+                                "found {} records for query from remote store: {:?}",
+                                records_remote_inner.len(),
+                                query
+                            );
 
-                                        Self::stamp_response(
-                                            request,
-                                            &mut response,
-                                            &mut header,
-                                            authority,
-                                            supported_algorithms,
-                                            ResponseCode::NoError,
-                                            &zone_name,
-                                            false,
-                                        );
-                                    }
-                                    AuthLookup::Records(..) => {
-                                        panic!("error, should return noerror")
-                                    }
-                                };
-                            }
-                        }
-                        Err(err) => {
-                            debug!("query refused for: {:?} because: {}", query, err);
+                            let records_remote_vec = records_remote_inner.iter().collect();
 
-                            Self::stamp_response(
+                            Self::serve_response_records(
                                 request,
                                 &mut response,
                                 &mut header,
-                                authority,
-                                supported_algorithms,
-                                err,
                                 &zone_name,
-                                false,
+                                records_remote_vec,
+                                &authority,
+                                supported_algorithms,
                             );
+
+                            // Dispatch request from this block, as we cannot escape generated \
+                            //   record values lifetimes out of this context.
+                            return Self::dispatch(response, header, response_handle);
                         }
+
+                        // Serve error code
+                        debug!("did not find records for query: {:?}", query);
+
+                        match records_local {
+                            AuthLookup::NoName => {
+                                debug!("domain not found for query: {:?}", query);
+
+                                Self::stamp_response(
+                                    request,
+                                    &mut response,
+                                    &mut header,
+                                    authority,
+                                    supported_algorithms,
+                                    ResponseCode::NXDomain,
+                                    &zone_name,
+                                    false,
+                                );
+                            }
+                            AuthLookup::NameExists => {
+                                debug!("domain found for query: {:?}", query);
+
+                                Self::stamp_response(
+                                    request,
+                                    &mut response,
+                                    &mut header,
+                                    authority,
+                                    supported_algorithms,
+                                    ResponseCode::NoError,
+                                    &zone_name,
+                                    false,
+                                );
+                            }
+                            AuthLookup::Records(..) => panic!("error, should return noerror"),
+                        };
+                    }
+                    Err(err) => {
+                        debug!("query refused for: {:?} because: {}", query, err);
+
+                        Self::stamp_response(
+                            request,
+                            &mut response,
+                            &mut header,
+                            authority,
+                            supported_algorithms,
+                            err,
+                            &zone_name,
+                            false,
+                        );
                     }
                 }
             } else {
@@ -212,9 +218,34 @@ impl DNSHandler {
 
                 header.set_response_code(ResponseCode::Refused);
             }
+
+            // Default response dispatch (catch-all)
+            return Self::dispatch(response, header, response_handle);
         }
 
-        // Build final response message
+        warn!("request: {} has no query available", request.id());
+
+        Err(Error::new(ErrorKind::InvalidInput, "no query in request"))
+    }
+
+    fn not_impl<R: ResponseHandler>(
+        &self,
+        request: &MessageRequest,
+        response_handle: R,
+    ) -> Result<(), Error> {
+        response_handle.send(MessageResponse::new(None).error_msg(
+            request.id(),
+            request.op_code(),
+            ResponseCode::NotImp,
+        ))
+    }
+
+    fn dispatch<R: ResponseHandler>(
+        response: MessageResponseBuilder,
+        header: Header,
+        response_handle: R,
+    ) -> Result<(), Error> {
+        // Dispatch final response message
         let response_message = response.build(header);
 
         trace!("query response: {:?}", response_message);

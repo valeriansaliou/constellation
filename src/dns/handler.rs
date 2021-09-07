@@ -195,7 +195,7 @@ impl DNSHandler {
                                     false,
                                 );
 
-                                // Dispatch error response
+                                // Dispatch empty records response
                                 Self::dispatch(response, header, response_handle)
                             }
                         }

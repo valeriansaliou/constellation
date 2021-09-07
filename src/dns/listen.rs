@@ -4,8 +4,11 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use futures::{future, Future};
 use std::collections::BTreeMap;
+use std::io::{Error, ErrorKind};
 use std::time::Duration;
+use tokio::runtime::current_thread::Runtime;
 use tokio_tcp::TcpListener;
 use tokio_udp::UdpSocket;
 use trust_dns::rr::rdata::SOA;
@@ -47,31 +50,44 @@ impl DNSListen {
             }
         }
 
+        let mut runtime = Runtime::new().expect("error when creating dns listen runtime");
         let server = ServerFuture::new(handler);
 
-        // Register sockets & listeners
-        for inet in &APP_CONF.dns.inets {
-            let udp_socket = UdpSocket::bind(inet).expect(&format!("udp bind failed: {}", inet));
-            let tcp_listener =
-                TcpListener::bind(inet).expect(&format!("tcp bind failed: {}", inet));
+        let server_future: Box<Future<Item = (), Error = ()> + Send> =
+            Box::new(future::lazy(move || {
+                // Register sockets & listeners
+                for inet in &APP_CONF.dns.inets {
+                    let udp_socket =
+                        UdpSocket::bind(inet).expect(&format!("udp bind failed: {}", inet));
+                    let tcp_listener =
+                        TcpListener::bind(inet).expect(&format!("tcp bind failed: {}", inet));
 
-            info!("listening for udp on {:?}", udp_socket);
-            server.register_socket(udp_socket);
+                    info!("will listen for udp on {:?}", udp_socket);
+                    server.register_socket(udp_socket);
 
-            info!("listening for tcp on {:?}", tcp_listener);
-            server
-                .register_listener(tcp_listener, Duration::from_secs(APP_CONF.dns.tcp_timeout))
-                .expect("could not register tcp listener");
-        }
+                    info!("will listen for tcp on {:?}", tcp_listener);
+                    server
+                        .register_listener(
+                            tcp_listener,
+                            Duration::from_secs(APP_CONF.dns.tcp_timeout),
+                        )
+                        .expect("could not register tcp listener");
+                }
+
+                future::empty()
+            }));
 
         // Listen for connections
         info!("listening for dns connections");
 
-        // TODO: replace w/ a tokio reactor, registered tasks should have been dispatched through \
-        //   their executor
-        // if let Err(err) = server.listen() {
-        //     error!("failed to listen on dns: {}", err);
-        // }
+        if let Err(err) = runtime.block_on(server_future.map_err(|_| {
+            Error::new(
+                ErrorKind::Interrupted,
+                "server stopping due to interruption",
+            )
+        })) {
+            error!("failed to listen on dns: {}", err);
+        }
     }
 
     fn map_authority(zone_name: &str) -> Result<(Name, Authority), ()> {

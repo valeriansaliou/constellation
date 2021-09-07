@@ -36,8 +36,10 @@ trust-dns = { version = "0.14", default-features = false }
 trust-dns-server = { version = "0.14", default-features = false }
 trust-dns-proto = { version = "0.4", default-features = false }
 trust-dns-resolver = { version = "0.9", default-features = false }
-tokio-tcp = "0.1.4"
-tokio-udp = "0.1.6"
+futures = "0.1"
+tokio = "0.1"
+tokio-tcp = "0.1"
+tokio-udp = "0.1"
 rand = "0.8"
 farmhash = "1.1"
 http_req = { version = "0.5", features = ["rust-tls"], default-features = false }

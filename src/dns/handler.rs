@@ -110,7 +110,11 @@ impl DNSHandler {
                     authority.origin()
                 );
 
+                // Acquire SOA records
                 let supported_algorithms = SupportedAlgorithms::new();
+
+                let soa_records = authority.soa_secure(false, supported_algorithms);
+                let soa_records_vec = soa_records.iter().collect();
 
                 // Attempt to resolve from local store
                 let records_local = authority.search(query, false, supported_algorithms);
@@ -127,7 +131,7 @@ impl DNSHandler {
                         &zone_name,
                         records_local_vec,
                         &authority,
-                        supported_algorithms,
+                        soa_records_vec,
                     );
 
                     // Dispatch request from this block, as we cannot escape generated record \
@@ -155,7 +159,7 @@ impl DNSHandler {
                                 &zone_name,
                                 records_remote_vec,
                                 &authority,
-                                supported_algorithms,
+                                soa_records_vec,
                             );
 
                             // Dispatch request from this block, as we cannot escape generated \
@@ -175,7 +179,7 @@ impl DNSHandler {
                                     &mut response,
                                     &mut header,
                                     authority,
-                                    supported_algorithms,
+                                    soa_records_vec,
                                     ResponseCode::NXDomain,
                                     &zone_name,
                                     false,
@@ -189,7 +193,7 @@ impl DNSHandler {
                                     &mut response,
                                     &mut header,
                                     authority,
-                                    supported_algorithms,
+                                    soa_records_vec,
                                     ResponseCode::NoError,
                                     &zone_name,
                                     false,
@@ -206,20 +210,23 @@ impl DNSHandler {
                             &mut response,
                             &mut header,
                             authority,
-                            supported_algorithms,
+                            soa_records_vec,
                             err,
                             &zone_name,
                             false,
                         );
                     }
                 }
-            } else {
-                debug!("domain authority not found for query: {:?}", query);
 
-                header.set_response_code(ResponseCode::Refused);
+                // Default response dispatch (catch-all)
+                return Self::dispatch(response, header, response_handle);
             }
 
-            // Default response dispatch (catch-all)
+            debug!("domain authority not found for query: {:?}", query);
+
+            header.set_response_code(ResponseCode::Refused);
+
+            // Authority not found response dispatch
             return Self::dispatch(response, header, response_handle);
         }
 
@@ -685,7 +692,7 @@ impl DNSHandler {
         zone_name: &Option<ZoneName>,
         mut records: Vec<&'a Record>,
         authority: &'a Authority,
-        supported_algorithms: SupportedAlgorithms,
+        soa_records: Vec<&'a Record>,
     ) {
         let has_records = !records.is_empty();
 
@@ -695,7 +702,7 @@ impl DNSHandler {
             response,
             header,
             authority,
-            supported_algorithms,
+            soa_records,
             ResponseCode::NoError,
             zone_name,
             has_records,
@@ -717,7 +724,7 @@ impl DNSHandler {
         response: &'b mut MessageResponseBuilder<'_, 'a>,
         header: &mut Header,
         authority: &'a Authority,
-        supported_algorithms: SupportedAlgorithms,
+        soa_records: Vec<&'a Record>,
         code: ResponseCode,
         zone_name: &Option<ZoneName>,
         has_records: bool,
@@ -742,13 +749,10 @@ impl DNSHandler {
 
         // Add SOA records? (if response is empty)
         if has_records == false {
-            let soa_records = authority.soa_secure(false, supported_algorithms);
-
             if soa_records.is_empty() {
-                warn!("no soa record for: {:?}", authority.origin());
+                warn!("no soa record for authority: {:?}", authority.origin());
             } else {
-                // TODO: restore (lifetime issue)
-                // response.name_servers(soa_records.iter().collect());
+                response.name_servers(soa_records);
             }
         }
     }

@@ -35,7 +35,7 @@ rocket_contrib = { version = "0.4", features = ["json"], default-features = fals
 trust-dns = { version = "0.14", default-features = false }
 trust-dns-server = { version = "0.14", default-features = false }
 trust-dns-proto = { version = "0.4", default-features = false }
-trust-dns-resolver = { version = "0.9", default-features = false }
+trust-dns-resolver = { version = "0.10", default-features = false }
 futures = "0.1"
 tokio = "0.1"
 tokio-tcp = "0.1"
@@ -47,10 +47,6 @@ maxminddb = "0.17"
 tempfile = "3.1"
 flate2 = "1.0"
 tar = "0.4"
-
-# Override 'socket2', dependended by 'trust-dns-resolver' due to \
-#   incompatibility on versions >= 0.3.12
-socket2 = "=0.3.11"
 
 [profile.dev]
 opt-level = 0

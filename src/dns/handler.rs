@@ -103,15 +103,7 @@ impl DNSHandler {
         let query_first = queries.first();
 
         if query_first.is_none() == true || queries.len() > 1 {
-            warn!(
-                "request has no query, or too many queries for: {}",
-                request.id()
-            );
-
-            header.set_response_code(ResponseCode::FormErr);
-
-            // Format error response dispatch
-            return Self::dispatch(response, header, response_handle);
+            return self.lookup_invalid_query(request, response, header, response_handle);
         }
 
         // #2. Acquire base authority (ie. zone) for request
@@ -121,12 +113,7 @@ impl DNSHandler {
         let authority_lookup = self.find_auth_recurse(query.name());
 
         if authority_lookup.is_none() == true {
-            debug!("domain authority not found for query: {:?}", query);
-
-            header.set_response_code(ResponseCode::Refused);
-
-            // Authority not found response dispatch
-            return Self::dispatch(response, header, response_handle);
+            return self.lookup_no_authority(request, response, header, query, response_handle);
         }
 
         // #3. Handle the first query only
@@ -149,89 +136,68 @@ impl DNSHandler {
         let soa_records = authority.soa_secure(false, supported_algorithms);
         let soa_records_vec = soa_records.iter().collect();
 
-        // Attempt to resolve from local store
+        // #4. Attempt to resolve from local store
         let records_local = authority.search(query, false, supported_algorithms);
 
-        let dispatch_result = if !records_local.is_empty() {
-            debug!("found records for query from local store: {:?}", query);
-
+        if !records_local.is_empty() {
             let records_local_vec = records_local.iter().collect();
 
-            Self::serve_response_records(
+            return self.lookup_local(
                 request,
-                &mut response,
-                &mut header,
-                &zone_name,
-                records_local_vec,
-                &authority,
+                response,
+                header,
+                query,
+                authority,
+                zone_name,
                 soa_records_vec,
+                records_local_vec,
+                response_handle,
             );
+        }
 
-            // Dispatch request from this block, as we cannot escape generated record \
-            //   values lifetimes out of this context.
-            Self::dispatch(response, header, response_handle)
-        } else {
-            // Attempt to resolve from remote store
-            match Self::records_from_store(authority, &zone_name, source, query) {
-                Ok(records_remote) => {
-                    // Serve response data?
-                    if let Some(records_remote_inner) = records_remote {
-                        debug!(
-                            "found {} records for query from remote store: {:?}",
-                            records_remote_inner.len(),
-                            query
-                        );
+        // #5. Fallback on resolving from remote store
+        return match Self::records_from_store(authority, &zone_name, source, query) {
+            Ok(records_remote) => {
+                // Serve response data?
+                if let Some(records_remote_inner) = records_remote {
+                    debug!(
+                        "found {} records for query from remote store: {:?}",
+                        records_remote_inner.len(),
+                        query
+                    );
 
-                        let records_remote_vec = records_remote_inner.iter().collect();
+                    let records_remote_vec = records_remote_inner.iter().collect();
 
-                        Self::serve_response_records(
-                            request,
-                            &mut response,
-                            &mut header,
-                            &zone_name,
-                            records_remote_vec,
-                            &authority,
-                            soa_records_vec,
-                        );
+                    Self::serve_response_records(
+                        request,
+                        &mut response,
+                        &mut header,
+                        &zone_name,
+                        records_remote_vec,
+                        &authority,
+                        soa_records_vec,
+                    );
 
-                        // Dispatch request from this block, as we cannot escape generated \
-                        //   record values lifetimes out of this context.
-                        Self::dispatch(response, header, response_handle)
-                    } else {
-                        // Serve error code
-                        debug!("did not find records for query: {:?}", query);
+                    // Dispatch request from this block, as we cannot escape generated \
+                    //   record values lifetimes out of this context.
+                    Self::dispatch(response, header, response_handle)
+                } else {
+                    // Serve error code
+                    debug!("did not find records for query: {:?}", query);
 
-                        let response_error = match records_local {
-                            AuthLookup::NoName => {
-                                debug!("domain not found for query: {:?}", query);
+                    let response_error = match records_local {
+                        AuthLookup::NoName => {
+                            debug!("domain not found for query: {:?}", query);
 
-                                ResponseCode::NXDomain
-                            }
-                            AuthLookup::NameExists => {
-                                debug!("domain found for query: {:?}", query);
+                            ResponseCode::NXDomain
+                        }
+                        AuthLookup::NameExists => {
+                            debug!("domain found for query: {:?}", query);
 
-                                ResponseCode::NoError
-                            }
-                            AuthLookup::Records(..) => panic!("error, should return noerror"),
-                        };
-
-                        Self::stamp_response(
-                            request,
-                            &mut response,
-                            &mut header,
-                            authority,
-                            soa_records_vec,
-                            response_error,
-                            &zone_name,
-                            false,
-                        );
-
-                        // Dispatch empty records response
-                        Self::dispatch(response, header, response_handle)
-                    }
-                }
-                Err(err) => {
-                    debug!("query refused for: {:?} because: {}", query, err);
+                            ResponseCode::NoError
+                        }
+                        AuthLookup::Records(..) => panic!("error, should return noerror"),
+                    };
 
                     Self::stamp_response(
                         request,
@@ -239,19 +205,100 @@ impl DNSHandler {
                         &mut header,
                         authority,
                         soa_records_vec,
-                        err,
+                        response_error,
                         &zone_name,
                         false,
                     );
 
-                    // Dispatch error response
+                    // Dispatch empty records response
                     Self::dispatch(response, header, response_handle)
                 }
             }
-        };
+            Err(err) => {
+                debug!("query refused for: {:?} because: {}", query, err);
 
-        // Return dispatch result
-        return dispatch_result;
+                Self::stamp_response(
+                    request,
+                    &mut response,
+                    &mut header,
+                    authority,
+                    soa_records_vec,
+                    err,
+                    &zone_name,
+                    false,
+                );
+
+                // Dispatch error response
+                Self::dispatch(response, header, response_handle)
+            }
+        };
+    }
+
+    fn lookup_invalid_query<R: ResponseHandler>(
+        &self,
+        request: &MessageRequest,
+        response: MessageResponseBuilder,
+        mut header: Header,
+        response_handle: R,
+    ) -> Result<(), Error> {
+        warn!(
+            "request has no query, or too many queries for: {}",
+            request.id()
+        );
+
+        header.set_response_code(ResponseCode::FormErr);
+
+        // Format error response dispatch
+        Self::dispatch(response, header, response_handle)
+    }
+
+    fn lookup_no_authority<R: ResponseHandler>(
+        &self,
+        request: &MessageRequest,
+        response: MessageResponseBuilder,
+        mut header: Header,
+        query: &LowerQuery,
+        response_handle: R,
+    ) -> Result<(), Error> {
+        debug!(
+            "domain authority not found for query: {:?} on request: {}",
+            query,
+            request.id()
+        );
+
+        header.set_response_code(ResponseCode::Refused);
+
+        // Authority not found response dispatch
+        Self::dispatch(response, header, response_handle)
+    }
+
+    fn lookup_local<'a, R: ResponseHandler>(
+        &self,
+        request: &MessageRequest,
+        mut response: MessageResponseBuilder<'_, 'a>,
+        mut header: Header,
+        query: &LowerQuery,
+        authority: &'a Authority,
+        zone_name: Option<ZoneName>,
+        soa_records: Vec<&'a Record>,
+        local_records: Vec<&'a Record>,
+        response_handle: R,
+    ) -> Result<(), Error> {
+        debug!("found records for query from local store: {:?}", query);
+
+        Self::serve_response_records(
+            request,
+            &mut response,
+            &mut header,
+            &zone_name,
+            local_records,
+            &authority,
+            soa_records,
+        );
+
+        // Dispatch request from this block, as we cannot escape generated record \
+        //   values lifetimes out of this context.
+        Self::dispatch(response, header, response_handle)
     }
 
     fn not_impl<R: ResponseHandler>(

@@ -4,11 +4,15 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use futures::{future, Future};
 use std::collections::BTreeMap;
-use std::net::{TcpListener, UdpSocket};
+use std::io::{Error, ErrorKind};
 use std::time::Duration;
+use tokio::runtime::current_thread::Runtime;
+use tokio_tcp::TcpListener;
+use tokio_udp::UdpSocket;
 use trust_dns::rr::rdata::SOA;
-use trust_dns::rr::{Name, RData, Record, RecordSet, RecordType, RrKey};
+use trust_dns::rr::{LowerName, Name, RData, Record, RecordSet, RecordType, RrKey};
 use trust_dns_server::authority::{Authority, ZoneType};
 use trust_dns_server::server::ServerFuture;
 
@@ -41,32 +45,47 @@ impl DNSListen {
 
         for (zone_name, _) in &APP_CONF.dns.zone {
             match Self::map_authority(&zone_name) {
-                Ok((name, authority)) => handler.upsert(name, authority),
+                Ok((name, authority)) => handler.upsert(LowerName::new(&name), authority),
                 Err(_) => error!("could not load zone {}", zone_name),
             }
         }
 
-        let mut server = ServerFuture::new(handler).expect("error creating dns server");
+        let mut runtime = Runtime::new().expect("error when creating dns listen runtime");
+        let server = ServerFuture::new(handler);
 
-        // Register sockets & listeners
-        for inet in &APP_CONF.dns.inets {
-            let udp_socket = UdpSocket::bind(inet).expect(&format!("udp bind failed: {}", inet));
-            let tcp_listener =
-                TcpListener::bind(inet).expect(&format!("tcp bind failed: {}", inet));
+        let server_future: Box<Future<Item = (), Error = ()> + Send> =
+            Box::new(future::lazy(move || {
+                // Register sockets & listeners
+                for inet in &APP_CONF.dns.inets {
+                    let udp_socket =
+                        UdpSocket::bind(inet).expect(&format!("udp bind failed: {}", inet));
+                    let tcp_listener =
+                        TcpListener::bind(inet).expect(&format!("tcp bind failed: {}", inet));
 
-            info!("listening for udp on {:?}", udp_socket);
-            server.register_socket(udp_socket);
+                    info!("will listen for udp on {:?}", udp_socket);
+                    server.register_socket(udp_socket);
 
-            info!("listening for tcp on {:?}", tcp_listener);
-            server
-                .register_listener(tcp_listener, Duration::from_secs(APP_CONF.dns.tcp_timeout))
-                .expect("could not register tcp listener");
-        }
+                    info!("will listen for tcp on {:?}", tcp_listener);
+                    server
+                        .register_listener(
+                            tcp_listener,
+                            Duration::from_secs(APP_CONF.dns.tcp_timeout),
+                        )
+                        .expect("could not register tcp listener");
+                }
+
+                future::empty()
+            }));
 
         // Listen for connections
         info!("listening for dns connections");
 
-        if let Err(err) = server.listen() {
+        if let Err(err) = runtime.block_on(server_future.map_err(|_| {
+            Error::new(
+                ErrorKind::Interrupted,
+                "server stopping due to interruption",
+            )
+        })) {
             error!("failed to listen on dns: {}", err);
         }
     }
@@ -91,7 +110,10 @@ impl DNSListen {
                 )),
             ));
 
-            records.insert(RrKey::new(&name, RecordType::SOA), soa_records);
+            records.insert(
+                RrKey::new(LowerName::new(&name), RecordType::SOA),
+                soa_records,
+            );
 
             // Insert base NS records
             let mut ns_records = RecordSet::new(&name, RecordType::NS, SERIAL_DEFAULT);
@@ -111,7 +133,10 @@ impl DNSListen {
                 );
             }
 
-            records.insert(RrKey::new(&name, RecordType::NS), ns_records);
+            records.insert(
+                RrKey::new(LowerName::new(&name), RecordType::NS),
+                ns_records,
+            );
 
             Ok((
                 name.to_owned(),

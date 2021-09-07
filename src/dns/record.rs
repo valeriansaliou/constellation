@@ -15,7 +15,10 @@ use std::ops::Deref;
 use std::{fmt, str};
 use trust_dns::rr::rdata::mx::MX;
 use trust_dns::rr::rdata::txt::TXT;
-use trust_dns::rr::{Name as TrustName, RData as TrustRData, RecordType as TrustRecordType};
+use trust_dns::rr::{
+    LowerName as TrustLowerName, Name as TrustName, RData as TrustRData,
+    RecordType as TrustRecordType,
+};
 
 use crate::geo::country::CountryCode;
 
@@ -140,7 +143,10 @@ impl RecordName {
         }
     }
 
-    pub fn from_trust(zone_name: &TrustName, query_name: &TrustName) -> Option<RecordName> {
+    pub fn from_trust(
+        zone_name: &TrustLowerName,
+        query_name: &TrustLowerName,
+    ) -> Option<RecordName> {
         let mut query_string = query_name.to_string().to_lowercase();
         let query_len = query_string.len();
 

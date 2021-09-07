@@ -31,7 +31,7 @@ static KEY_RESCUE: &'static str = "f"; // Alias for 'failover'
 static KEY_VALUE: &'static str = "v";
 
 const LIMITS_GET_REMOTE_TIMESPAN_TOTAL: Duration = Duration::from_secs(3);
-const LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD: Duration = Duration::from_secs(2);
+const LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD: Duration = Duration::from_secs(1);
 
 type StoreGetType = (
     String,

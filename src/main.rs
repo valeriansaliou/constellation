@@ -28,7 +28,6 @@ extern crate serde;
 extern crate serde_json;
 extern crate tar;
 extern crate tempfile;
-extern crate thiserror;
 extern crate tokio;
 extern crate tokio_tcp;
 extern crate tokio_udp;

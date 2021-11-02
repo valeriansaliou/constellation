@@ -7,7 +7,8 @@
 use actix_web::{
     dev::ServiceRequest,
     guard,
-    middleware::{self, normalize::TrailingSlash},
+    http::StatusCode,
+    middleware::{self, errhandlers::ErrorHandlers, normalize::TrailingSlash},
     rt, web, App, Error as ActixError, HttpServer,
 };
 use actix_web_httpauth::{
@@ -20,7 +21,7 @@ use actix_web_httpauth::{
 
 use crate::APP_CONF;
 
-use super::{errors, routes};
+use super::{catchers, routes};
 
 pub struct HTTPListenBuilder;
 pub struct HTTPListen;
@@ -35,12 +36,11 @@ impl HTTPListen {
     pub fn run(&self) {
         let mut runtime = rt::System::new("http");
 
-        // TODO: restore last missed things?
-
         let server = HttpServer::new(move || {
             App::new()
                 .wrap(middleware::NormalizePath::new(TrailingSlash::Trim))
                 .wrap(HttpAuthentication::basic(authenticate))
+                .wrap(catchers::HTTPCatchers::errors())
                 .service(routes::head_zone_record)
                 .service(routes::get_zone_record)
                 .service(routes::put_zone_record)
@@ -62,8 +62,6 @@ async fn authenticate(
     request: ServiceRequest,
     credentials: BasicAuth,
 ) -> Result<ServiceRequest, ActixError> {
-    // TODO: map unauthorized custom error?
-
     let password = if let Some(password) = credentials.password() {
         &*password
     } else {
@@ -80,7 +78,6 @@ async fn authenticate(
                 .unwrap_or_else(ConfigAuth::default),
         );
 
-        // TODO: map forbidden custom error?
         *error.status_code_mut() = actix_web::http::StatusCode::FORBIDDEN;
 
         Err(error.into())

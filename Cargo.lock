@@ -562,7 +562,6 @@ version = "1.13.0"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
- "base64 0.13.0",
  "clap",
  "farmhash",
  "flate2",

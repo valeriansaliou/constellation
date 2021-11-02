@@ -14,7 +14,6 @@ extern crate lazy_static;
 extern crate serde_derive;
 extern crate actix_web;
 extern crate actix_web_httpauth;
-extern crate base64;
 extern crate farmhash;
 extern crate flate2;
 extern crate http_req;

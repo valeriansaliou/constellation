@@ -11,8 +11,6 @@ DNS entries are stored in Redis. The DNS database can thus be easily modified an
 
 _Tested at Rust version: `rustc 1.54.0 (a178d0322 2021-07-26)`_
 
-**⚠️ Note that due to the number of out-of-date dependencies and the amount of breaking changes their updates introduced, I have chosen to stick on older, functional, dependencies (for now). This means that when building Constellation, you will have to stick to the tested Rust compiler version shown above.**
-
 **🇫🇷 Crafted in Angers, France.**
 
 ![Constellation](https://valeriansaliou.github.io/constellation/images/constellation.jpg)

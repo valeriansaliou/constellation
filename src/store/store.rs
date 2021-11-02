@@ -122,7 +122,7 @@ impl StoreBuilder {
         // Establish pool connection for this Redis target
         match Self::pool_connect(host, port, password) {
             Ok(master_pool) => pools.push(master_pool),
-            Err(err) => panic!(err),
+            Err(err) => panic!("store error: {}", err),
         }
     }
 

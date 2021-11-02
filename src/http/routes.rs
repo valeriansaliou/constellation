@@ -4,14 +4,11 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use rocket::http::Status;
-use rocket_contrib::json::Json;
-use std::collections::HashMap;
+use actix_web::{delete, get, head, put, web, HttpResponse};
 
-use super::record_guard::RecordGuard;
-use crate::dns::metrics::{MetricsStoreCountType, MetricsTimespan, MetricsType, METRICS_STORE};
+use crate::dns::metrics::{MetricsTimespan, MetricsType, METRICS_STORE};
 use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};
-use crate::dns::zone::ZoneName;
+use crate::dns::zone::ZoneNameExists;
 use crate::store::store::{StoreAccessOrigin, StoreRecord};
 use crate::APP_STORE;
 
@@ -39,42 +36,42 @@ pub struct RecordGetResponse {
     values: RecordValues,
 }
 
-type MetricsGenericGetResponse = HashMap<String, MetricsStoreCountType>;
-
-#[head("/zone/<zone_name>/record/<record_name>/<record_type>")]
-pub fn head_zone_record(
-    _auth: RecordGuard,
-    zone_name: ZoneName,
-    record_name: RecordName,
-    record_type: RecordType,
-) -> Result<(), Status> {
+#[head("/zone/{zone_name}/record/{record_name}/{record_type}")]
+async fn head_zone_record(
+    web::Path((zone_name, record_name, record_type)): web::Path<(
+        ZoneNameExists,
+        RecordName,
+        RecordType,
+    )>,
+) -> HttpResponse {
     APP_STORE
         .get(
-            &zone_name,
+            &zone_name.into_inner(),
             &record_name,
             &record_type,
             StoreAccessOrigin::Internal,
         )
-        .map(|_| ())
-        .or(Err(Status::NotFound))
+        .map(|_| HttpResponse::Ok().finish())
+        .unwrap_or(HttpResponse::NotFound().finish())
 }
 
-#[get("/zone/<zone_name>/record/<record_name>/<record_type>")]
-pub fn get_zone_record(
-    _auth: RecordGuard,
-    zone_name: ZoneName,
-    record_name: RecordName,
-    record_type: RecordType,
-) -> Result<Json<RecordGetResponse>, Status> {
+#[get("/zone/{zone_name}/record/{record_name}/{record_type}")]
+async fn get_zone_record(
+    web::Path((zone_name, record_name, record_type)): web::Path<(
+        ZoneNameExists,
+        RecordName,
+        RecordType,
+    )>,
+) -> HttpResponse {
     APP_STORE
         .get(
-            &zone_name,
+            &zone_name.into_inner(),
             &record_name,
             &record_type,
             StoreAccessOrigin::Internal,
         )
         .map(|record| {
-            Json(RecordGetResponse {
+            HttpResponse::Ok().json(RecordGetResponse {
                 _type: record.kind,
                 name: record.name,
                 ttl: record.ttl,
@@ -85,24 +82,22 @@ pub fn get_zone_record(
                 values: record.values,
             })
         })
-        .or(Err(Status::NotFound))
+        .unwrap_or(HttpResponse::NotFound().finish())
 }
 
-#[put(
-    "/zone/<zone_name>/record/<record_name>/<record_type>",
-    data = "<data>",
-    format = "application/json"
-)]
-pub fn put_zone_record(
-    _auth: RecordGuard,
-    zone_name: ZoneName,
-    record_name: RecordName,
-    record_type: RecordType,
-    data: Json<RecordData>,
-) -> Result<(), Status> {
+#[put("/zone/{zone_name}/record/{record_name}/{record_type}")]
+async fn put_zone_record(
+    web::Path((zone_name, record_name, record_type)): web::Path<(
+        ZoneNameExists,
+        RecordName,
+        RecordType,
+    )>,
+
+    data: web::Json<RecordData>,
+) -> HttpResponse {
     APP_STORE
         .set(
-            &zone_name,
+            &zone_name.into_inner(),
             StoreRecord {
                 kind: record_type,
                 name: record_name,
@@ -114,53 +109,62 @@ pub fn put_zone_record(
                 values: data.values.to_owned(),
             },
         )
-        .or(Err(Status::ServiceUnavailable))
+        .map(|_| HttpResponse::Ok().finish())
+        .unwrap_or(HttpResponse::ServiceUnavailable().finish())
 }
 
-#[delete("/zone/<zone_name>/record/<record_name>/<record_type>")]
-pub fn delete_zone_record(
-    _auth: RecordGuard,
-    zone_name: ZoneName,
-    record_name: RecordName,
-    record_type: RecordType,
-) -> Result<(), Status> {
+#[delete("/zone/{zone_name}/record/{record_name}/{record_type}")]
+async fn delete_zone_record(
+    web::Path((zone_name, record_name, record_type)): web::Path<(
+        ZoneNameExists,
+        RecordName,
+        RecordType,
+    )>,
+) -> HttpResponse {
     APP_STORE
-        .remove(&zone_name, &record_name, &record_type)
-        .or(Err(Status::ServiceUnavailable))
+        .remove(&zone_name.into_inner(), &record_name, &record_type)
+        .map(|_| HttpResponse::Ok().finish())
+        .unwrap_or(HttpResponse::ServiceUnavailable().finish())
 }
 
-#[get("/zone/<zone_name>/metrics/<metrics_timespan>/query/types")]
-pub fn get_metrics_query_types(
-    _auth: RecordGuard,
-    zone_name: ZoneName,
-    metrics_timespan: MetricsTimespan,
-) -> Result<Json<MetricsGenericGetResponse>, Status> {
+#[get("/zone/{zone_name}/metrics/{metrics_timespan}/query/types")]
+async fn get_metrics_query_types(
+    web::Path((zone_name, metrics_timespan)): web::Path<(ZoneNameExists, MetricsTimespan)>,
+) -> HttpResponse {
     METRICS_STORE
-        .aggregate(&zone_name, MetricsType::QueryType, metrics_timespan)
-        .ok_or(Status::NotFound)
-        .map(|aggregated| Json(aggregated))
+        .aggregate(
+            &zone_name.into_inner(),
+            MetricsType::QueryType,
+            metrics_timespan,
+        )
+        .map(|aggregated| HttpResponse::Ok().json(aggregated))
+        .unwrap_or(HttpResponse::NotFound().finish())
 }
 
-#[get("/zone/<zone_name>/metrics/<metrics_timespan>/query/origins")]
-pub fn get_metrics_query_origins(
-    _auth: RecordGuard,
-    zone_name: ZoneName,
-    metrics_timespan: MetricsTimespan,
-) -> Result<Json<MetricsGenericGetResponse>, Status> {
+#[get("/zone/{zone_name}/metrics/{metrics_timespan}/query/origins")]
+async fn get_metrics_query_origins(
+    web::Path((zone_name, metrics_timespan)): web::Path<(ZoneNameExists, MetricsTimespan)>,
+) -> HttpResponse {
     METRICS_STORE
-        .aggregate(&zone_name, MetricsType::QueryOrigin, metrics_timespan)
-        .ok_or(Status::NotFound)
-        .map(|aggregated| Json(aggregated))
+        .aggregate(
+            &zone_name.into_inner(),
+            MetricsType::QueryOrigin,
+            metrics_timespan,
+        )
+        .map(|aggregated| HttpResponse::Ok().json(aggregated))
+        .unwrap_or(HttpResponse::NotFound().finish())
 }
 
-#[get("/zone/<zone_name>/metrics/<metrics_timespan>/answer/codes")]
-pub fn get_metrics_answer_codes(
-    _auth: RecordGuard,
-    zone_name: ZoneName,
-    metrics_timespan: MetricsTimespan,
-) -> Result<Json<MetricsGenericGetResponse>, Status> {
+#[get("/zone/{zone_name}/metrics/{metrics_timespan}/answer/codes")]
+async fn get_metrics_answer_codes(
+    web::Path((zone_name, metrics_timespan)): web::Path<(ZoneNameExists, MetricsTimespan)>,
+) -> HttpResponse {
     METRICS_STORE
-        .aggregate(&zone_name, MetricsType::AnswerCode, metrics_timespan)
-        .ok_or(Status::NotFound)
-        .map(|aggregated| Json(aggregated))
+        .aggregate(
+            &zone_name.into_inner(),
+            MetricsType::AnswerCode,
+            metrics_timespan,
+        )
+        .map(|aggregated| HttpResponse::Ok().json(aggregated))
+        .unwrap_or(HttpResponse::NotFound().finish())
 }

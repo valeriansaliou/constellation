@@ -53,7 +53,7 @@ impl DNSListen {
         let mut runtime = Runtime::new().expect("error when creating dns listen runtime");
         let server = ServerFuture::new(handler);
 
-        let server_future: Box<Future<Item = (), Error = ()> + Send> =
+        let server_future: Box<dyn Future<Item = (), Error = ()> + Send> =
             Box::new(future::lazy(move || {
                 // Register sockets & listeners
                 for inet in &APP_CONF.dns.inets {

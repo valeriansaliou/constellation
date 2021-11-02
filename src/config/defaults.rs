@@ -127,7 +127,7 @@ pub fn http_inet() -> SocketAddr {
     "[::1]:8080".parse().unwrap()
 }
 
-pub fn http_workers() -> u16 {
+pub fn http_workers() -> usize {
     2
 }
 

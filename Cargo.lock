@@ -1903,13 +1903,6 @@ dependencies = [
 [[package]]
 name = "rusqlite"
 version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9409d78a5a9646685688266e1833df8f08b71ffcae1b5db6c1bfb5970d8a80f"
-replace = "rusqlite 0.13.0 (git+https://github.com/rusqlite/rusqlite?rev=aa64e2fb33755c696337d443ac4e8af93551ad05)"
-
-[[package]]
-name = "rusqlite"
-version = "0.13.0"
 source = "git+https://github.com/rusqlite/rusqlite?rev=aa64e2fb33755c696337d443ac4e8af93551ad05#aa64e2fb33755c696337d443ac4e8af93551ad05"
 dependencies = [
  "bitflags",
@@ -2757,7 +2750,7 @@ dependencies = [
  "lazy_static",
  "log",
  "rand 0.4.6",
- "rusqlite 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rusqlite",
  "serde",
  "serde_derive",
  "time 0.1.43",

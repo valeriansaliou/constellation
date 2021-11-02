@@ -26,8 +26,8 @@ lazy_static! {
 
 static DATA_TXT_CHUNK_MAXIMUM: usize = 255;
 
-serde_string_impls!(RecordType);
-serde_string_impls!(RecordName);
+serde_string_impls!(RecordType, from_str);
+serde_string_impls!(RecordName, from_str);
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum RecordType {
@@ -294,20 +294,3 @@ impl Deref for RecordValue {
         &self.0
     }
 }
-
-// TODO: restore
-// impl<'r> FromParam<'r> for RecordType {
-//     type Error = &'r RawStr;
-
-//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-//         RecordType::from_str(param).ok_or(param)
-//     }
-// }
-
-// impl<'r> FromParam<'r> for RecordName {
-//     type Error = &'r RawStr;
-
-//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-//         RecordName::from_str(param).ok_or(param)
-//     }
-// }

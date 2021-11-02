@@ -4,13 +4,9 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use actix_web::{
-    dev::ServiceRequest,
-    guard,
-    http::StatusCode,
-    middleware::{self, errhandlers::ErrorHandlers, normalize::TrailingSlash},
-    rt, web, App, Error as ActixError, HttpServer,
-};
+use actix_web::dev::ServiceRequest;
+use actix_web::middleware::{self, normalize::TrailingSlash};
+use actix_web::{rt, App, Error as ActixError, HttpServer};
 use actix_web_httpauth::{
     extractors::{
         basic::{BasicAuth, Config as ConfigAuth},

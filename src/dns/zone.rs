@@ -17,10 +17,12 @@ lazy_static! {
         Regex::new(r"^(([^\\/:@&_\*]+)\.)[^\\/:@&_\*\-\.]{2,63}$").unwrap();
 }
 
-serde_string_impls!(ZoneName);
+serde_string_impls!(ZoneName, from_str);
+serde_string_impls!(ZoneNameExists, from_str);
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct ZoneName(String);
+pub struct ZoneNameExists(ZoneName);
 
 impl ZoneName {
     pub fn from_str(value: &str) -> Option<ZoneName> {
@@ -64,11 +66,16 @@ impl ZoneName {
     }
 }
 
-// TODO: restore
-// impl<'r> FromParam<'r> for ZoneName {
-//     type Error = &'r RawStr;
+impl ZoneNameExists {
+    pub fn from_str(value: &str) -> Option<ZoneNameExists> {
+        ZoneName::from_str_exists(value).map(|zone_name| ZoneNameExists(zone_name))
+    }
 
-//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-//         ZoneName::from_str_exists(param).ok_or(param)
-//     }
-// }
+    pub fn to_str(&self) -> &str {
+        &self.0.to_str()
+    }
+
+    pub fn into_inner(self) -> ZoneName {
+        self.0
+    }
+}

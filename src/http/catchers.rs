@@ -4,13 +4,11 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use actix_web::http::{self, header::ContentType, StatusCode as Status};
+use actix_web::body::{Body, ResponseBody};
+use actix_web::dev::ServiceResponse;
+use actix_web::http::{self, StatusCode as Status};
 use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
-use actix_web::{
-    body::{Body, ResponseBody},
-    dev::ServiceResponse,
-    web, App, HttpRequest, HttpResponse, Result,
-};
+use actix_web::Result;
 use serde_json;
 
 #[derive(Serialize)]
@@ -53,37 +51,35 @@ impl HTTPCatchers {
         Ok(ErrorHandlerResponse::Response(error))
     }
 
-    fn bad_request<B>(mut response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+    fn bad_request<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "bad_request")
     }
 
-    fn unauthorized<B>(mut response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+    fn unauthorized<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "unauthorized")
     }
 
-    fn forbidden<B>(mut response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+    fn forbidden<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "forbidden")
     }
 
-    fn not_found<B>(mut response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+    fn not_found<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "not_found")
     }
 
-    fn method_not_allowed<B>(mut response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+    fn method_not_allowed<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "method_not_allowed")
     }
 
-    fn not_acceptable<B>(mut response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+    fn not_acceptable<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "not_acceptable")
     }
 
-    fn payload_too_large<B>(mut response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
+    fn payload_too_large<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "payload_too_large")
     }
 
-    fn internal_server_error<B>(
-        mut response: ServiceResponse<B>,
-    ) -> Result<ErrorHandlerResponse<B>> {
+    fn internal_server_error<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {
         Self::respond(response, "internal_server_error")
     }
 }

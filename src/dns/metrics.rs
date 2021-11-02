@@ -4,11 +4,14 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use serde::de::{Error as DeserializeError, Unexpected, Visitor};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::min;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
+use std::{fmt, str};
 
 use super::code::CodeName;
 use super::record::RecordType;
@@ -22,6 +25,12 @@ lazy_static! {
 
 const METRICS_TICK_INTERVAL: Duration = Duration::from_secs(60);
 const METRICS_BACKLOG_MINUTES: usize = 15;
+
+const METRICS_TIMESPAN_ONE_MINUTE: &'static str = "1m";
+const METRICS_TIMESPAN_FIVE_MINUTES: &'static str = "5m";
+const METRICS_TIMESPAN_FIFTEEN_MINUTES: &'static str = "15m";
+
+serde_string_impls!(MetricsTimespan, from_str);
 
 pub type MetricsStoreCountType = u32;
 
@@ -148,7 +157,7 @@ impl MetricsStore {
         metrics_timespan: MetricsTimespan,
     ) -> Option<HashMap<String, MetricsStoreCountType>> {
         if APP_CONF.dns.zone_exists(zone_name.to_str()) == true {
-            let mut aggregated_map: HashMap<String, MetricsStoreCountType>;
+            let aggregated_map: HashMap<String, MetricsStoreCountType>;
 
             let zone_read = METRICS_STORE.zones.read().unwrap();
 
@@ -242,11 +251,19 @@ impl MetricsStore {
 }
 
 impl MetricsTimespan {
+    pub fn to_str(&self) -> &str {
+        match self {
+            MetricsTimespan::OneMinute => METRICS_TIMESPAN_ONE_MINUTE,
+            MetricsTimespan::FiveMinutes => METRICS_TIMESPAN_FIVE_MINUTES,
+            MetricsTimespan::FifteenMinutes => METRICS_TIMESPAN_FIFTEEN_MINUTES,
+        }
+    }
+
     pub fn from_str(value: &str) -> Option<MetricsTimespan> {
         match value {
-            "1m" => Some(MetricsTimespan::OneMinute),
-            "5m" => Some(MetricsTimespan::FiveMinutes),
-            "15m" => Some(MetricsTimespan::FifteenMinutes),
+            METRICS_TIMESPAN_ONE_MINUTE => Some(MetricsTimespan::OneMinute),
+            METRICS_TIMESPAN_FIVE_MINUTES => Some(MetricsTimespan::FiveMinutes),
+            METRICS_TIMESPAN_FIFTEEN_MINUTES => Some(MetricsTimespan::FifteenMinutes),
             _ => None,
         }
     }
@@ -259,12 +276,3 @@ impl MetricsTimespan {
         }
     }
 }
-
-// TODO: restore
-// impl<'r> FromParam<'r> for MetricsTimespan {
-//     type Error = &'r RawStr;
-
-//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-//         MetricsTimespan::from_str(param).ok_or(param)
-//     }
-// }

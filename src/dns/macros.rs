@@ -6,7 +6,7 @@
 
 #[macro_export]
 macro_rules! serde_string_impls {
-    ($Target:ident) => {
+    ($Target:ident, $from_method:ident) => {
         impl Serialize for $Target {
             fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
                 serializer.collect_str(self.to_str())
@@ -25,7 +25,7 @@ macro_rules! serde_string_impls {
                     }
 
                     fn visit_str<E: DeserializeError>(self, value: &str) -> Result<Self::Value, E> {
-                        match $Target::from_str(value) {
+                        match $Target::$from_method(value) {
                             Some(inner) => Ok(inner),
                             None => Err(E::invalid_type(Unexpected::Enum, &self)),
                         }

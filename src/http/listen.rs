@@ -35,7 +35,6 @@ impl HTTPListen {
     pub fn run(&self) {
         let mut runtime = rt::System::new("http");
 
-        // TODO: routes
         // TODO: error catchers
         // TODO: restore last missed things?
 
@@ -43,6 +42,13 @@ impl HTTPListen {
             App::new()
                 .wrap(middleware::NormalizePath::new(TrailingSlash::Trim))
                 .wrap(HttpAuthentication::basic(authenticate))
+                .service(routes::head_zone_record)
+                .service(routes::get_zone_record)
+                .service(routes::put_zone_record)
+                .service(routes::delete_zone_record)
+                .service(routes::get_metrics_query_types)
+                .service(routes::get_metrics_query_origins)
+                .service(routes::get_metrics_answer_codes)
         })
         .workers(APP_CONF.http.workers)
         .bind(APP_CONF.http.inet)

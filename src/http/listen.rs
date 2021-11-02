@@ -20,7 +20,7 @@ use actix_web_httpauth::{
 
 use crate::APP_CONF;
 
-use super::{catchers, routes};
+use super::{errors, routes};
 
 pub struct HTTPListenBuilder;
 pub struct HTTPListen;
@@ -35,7 +35,6 @@ impl HTTPListen {
     pub fn run(&self) {
         let mut runtime = rt::System::new("http");
 
-        // TODO: error catchers
         // TODO: restore last missed things?
 
         let server = HttpServer::new(move || {
@@ -63,6 +62,8 @@ async fn authenticate(
     request: ServiceRequest,
     credentials: BasicAuth,
 ) -> Result<ServiceRequest, ActixError> {
+    // TODO: map unauthorized custom error?
+
     let password = if let Some(password) = credentials.password() {
         &*password
     } else {
@@ -79,6 +80,7 @@ async fn authenticate(
                 .unwrap_or_else(ConfigAuth::default),
         );
 
+        // TODO: map forbidden custom error?
         *error.status_code_mut() = actix_web::http::StatusCode::FORBIDDEN;
 
         Err(error.into())

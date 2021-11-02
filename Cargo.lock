@@ -581,6 +581,7 @@ dependencies = [
  "serde_json",
  "tar",
  "tempfile",
+ "thiserror",
  "tokio 0.1.22",
  "tokio-tcp",
  "tokio-udp",

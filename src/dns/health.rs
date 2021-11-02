@@ -9,6 +9,7 @@ use http_req::request::{Method, Request, RequestBuilder};
 use http_req::response::{Headers, Response, StatusCode};
 use http_req::tls;
 use http_req::uri::Uri;
+use log::{debug, error, info, warn};
 use serde_derive::Serialize;
 use serde_json;
 use std::collections::HashSet;
@@ -18,7 +19,6 @@ use std::str::FromStr;
 use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
-use log::{debug, info, warn, error};
 
 use crate::config::config::{ConfigDNSHealthHTTP, ConfigDNSHealthHTTPMethod};
 use crate::dns::record::{RecordName, RecordType, RecordValue};

@@ -5,6 +5,7 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use futures::{future, Future};
+use log::{error, info};
 use std::collections::BTreeMap;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
@@ -15,7 +16,6 @@ use trust_dns::rr::rdata::SOA;
 use trust_dns::rr::{LowerName, Name, RData, Record, RecordSet, RecordType, RrKey};
 use trust_dns_server::authority::{Authority, ZoneType};
 use trust_dns_server::server::ServerFuture;
-use log::{info, error};
 
 use super::handler::DNSHandler;
 use crate::APP_CONF;

@@ -4,6 +4,7 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use log::{debug, info};
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::min;
@@ -12,7 +13,6 @@ use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
 use std::{fmt, str};
-use log::{debug, info};
 
 use super::code::CodeName;
 use super::record::RecordType;

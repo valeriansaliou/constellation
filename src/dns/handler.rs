@@ -4,6 +4,7 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use log::{debug, error, info, trace, warn};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
@@ -17,7 +18,6 @@ use trust_dns_server::authority::{
     AuthLookup, Authority, MessageRequest, MessageResponse, MessageResponseBuilder,
 };
 use trust_dns_server::server::{Request, RequestHandler, ResponseHandler};
-use log::{trace, debug, info, warn, error};
 
 use super::code::CodeName;
 use super::flatten::DNS_FLATTEN;

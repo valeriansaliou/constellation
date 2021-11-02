@@ -4,6 +4,7 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::ops::Deref;
@@ -13,7 +14,6 @@ use std::time::{Duration, Instant, SystemTime};
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use trust_dns_resolver::error::ResolveError;
 use trust_dns_resolver::Resolver;
-use log::{debug, info, warn};
 
 use super::record::{RecordType, RecordValue, RecordValues};
 use crate::APP_CONF;

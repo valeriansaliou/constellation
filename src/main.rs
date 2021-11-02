@@ -16,7 +16,7 @@ use std::thread;
 use std::time::Duration;
 
 use clap::{App, Arg};
-use log::{LevelFilter, debug, info, error};
+use log::{debug, error, info, LevelFilter};
 
 use config::config::Config;
 use config::logger::ConfigLogger;

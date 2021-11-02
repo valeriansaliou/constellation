@@ -4,10 +4,10 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use log::debug;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::SystemTime;
-use log::debug;
 
 use super::store::StoreRecord;
 use crate::APP_CONF;

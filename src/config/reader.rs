@@ -4,10 +4,10 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use log::debug;
 use std::fs::File;
 use std::io::Read;
 use toml;
-use log::debug;
 
 use super::config::*;
 use crate::APP_ARGS;

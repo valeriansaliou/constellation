@@ -4,8 +4,6 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-#![feature(proc_macro_hygiene, decl_macro)]
-
 #[macro_use]
 extern crate log;
 #[macro_use]
@@ -14,8 +12,8 @@ extern crate clap;
 extern crate lazy_static;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
-extern crate rocket;
+extern crate actix_web;
+extern crate actix_web_httpauth;
 extern crate base64;
 extern crate farmhash;
 extern crate flate2;
@@ -26,7 +24,6 @@ extern crate r2d2_redis;
 extern crate rand;
 extern crate redis;
 extern crate regex;
-extern crate rocket_contrib;
 extern crate serde;
 extern crate serde_json;
 extern crate tar;

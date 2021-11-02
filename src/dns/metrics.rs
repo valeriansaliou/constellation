@@ -4,8 +4,6 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use rocket::http::RawStr;
-use rocket::request::FromParam;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::sync::RwLock;
@@ -262,10 +260,11 @@ impl MetricsTimespan {
     }
 }
 
-impl<'r> FromParam<'r> for MetricsTimespan {
-    type Error = &'r RawStr;
+// TODO: restore
+// impl<'r> FromParam<'r> for MetricsTimespan {
+//     type Error = &'r RawStr;
 
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        MetricsTimespan::from_str(param).ok_or(param)
-    }
-}
+//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+//         MetricsTimespan::from_str(param).ok_or(param)
+//     }
+// }

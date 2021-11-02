@@ -5,8 +5,6 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use regex::Regex;
-use rocket::http::RawStr;
-use rocket::request::FromParam;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{fmt, str};
@@ -66,10 +64,11 @@ impl ZoneName {
     }
 }
 
-impl<'r> FromParam<'r> for ZoneName {
-    type Error = &'r RawStr;
+// TODO: restore
+// impl<'r> FromParam<'r> for ZoneName {
+//     type Error = &'r RawStr;
 
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        ZoneName::from_str_exists(param).ok_or(param)
-    }
-}
+//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+//         ZoneName::from_str_exists(param).ok_or(param)
+//     }
+// }

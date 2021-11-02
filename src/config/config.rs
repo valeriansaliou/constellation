@@ -158,7 +158,7 @@ pub struct ConfigHTTP {
     pub inet: SocketAddr,
 
     #[serde(default = "defaults::http_workers")]
-    pub workers: u16,
+    pub workers: usize,
 
     pub record_token: String,
 }

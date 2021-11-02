@@ -30,8 +30,8 @@ regex = "1.3"
 r2d2 = "0.8"
 r2d2_redis = "0.11"
 redis = "0.12"
-rocket = { version = "0.4", default-features = false }
-rocket_contrib = { version = "0.4", features = ["json"], default-features = false }
+actix-web = { version = "3.3", default-features = false }
+actix-web-httpauth = "0.5"
 trust-dns = { version = "0.14", default-features = false }
 trust-dns-server = { version = "0.14", default-features = false }
 trust-dns-proto = { version = "0.4", default-features = false }
@@ -47,6 +47,9 @@ maxminddb = "0.17"
 tempfile = "3.1"
 flate2 = "1.0"
 tar = "0.4"
+
+[replace]
+"rusqlite:0.13.0" = { git = "https://github.com/rusqlite/rusqlite", rev = "aa64e2fb33755c696337d443ac4e8af93551ad05" }
 
 [profile.dev]
 opt-level = 0

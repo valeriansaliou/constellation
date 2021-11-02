@@ -5,8 +5,6 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use regex::Regex;
-use rocket::http::RawStr;
-use rocket::request::FromParam;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp;
@@ -297,18 +295,19 @@ impl Deref for RecordValue {
     }
 }
 
-impl<'r> FromParam<'r> for RecordType {
-    type Error = &'r RawStr;
+// TODO: restore
+// impl<'r> FromParam<'r> for RecordType {
+//     type Error = &'r RawStr;
 
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        RecordType::from_str(param).ok_or(param)
-    }
-}
+//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+//         RecordType::from_str(param).ok_or(param)
+//     }
+// }
 
-impl<'r> FromParam<'r> for RecordName {
-    type Error = &'r RawStr;
+// impl<'r> FromParam<'r> for RecordName {
+//     type Error = &'r RawStr;
 
-    fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
-        RecordName::from_str(param).ok_or(param)
-    }
-}
+//     fn from_param(param: &'r RawStr) -> Result<Self, Self::Error> {
+//         RecordName::from_str(param).ok_or(param)
+//     }
+// }

@@ -231,11 +231,11 @@ fn main() {
         thread::spawn(spawn_geo_updater);
     }
 
-    // Spawn HTTP server (background thread)
-    thread::spawn(spawn_http);
+    // Run DNS server (background thread)
+    thread::spawn(spawn_dns);
 
-    // Run DNS server (from main thread, maintain thread active if down)
-    spawn_dns();
+    // Spawn HTTP server (foreground thread)
+    spawn_http();
 
     error!("could not start");
 }

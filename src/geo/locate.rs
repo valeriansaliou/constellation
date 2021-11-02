@@ -9,6 +9,7 @@ use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::RwLock;
+use log::{debug, info};
 
 use super::country::CountryCode;
 use crate::APP_CONF;
@@ -17,7 +18,7 @@ type GeoReaderType = GeoReader<Vec<u8>>;
 
 pub struct Locator;
 
-lazy_static! {
+lazy_static::lazy_static! {
     pub static ref DB_READER: Arc<RwLock<GeoReaderType>> =
         Arc::new(RwLock::new(Locator::geo_open()));
 }

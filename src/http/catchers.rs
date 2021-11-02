@@ -9,6 +9,7 @@ use actix_web::dev::ServiceResponse;
 use actix_web::http::{self, StatusCode as Status};
 use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::Result;
+use serde_derive::Serialize;
 use serde_json;
 
 #[derive(Serialize)]

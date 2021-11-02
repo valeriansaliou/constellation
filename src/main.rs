@@ -4,39 +4,6 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate clap;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate serde_derive;
-extern crate actix_web;
-extern crate actix_web_httpauth;
-extern crate farmhash;
-extern crate flate2;
-extern crate http_req;
-extern crate maxminddb;
-extern crate r2d2;
-extern crate r2d2_redis;
-extern crate rand;
-extern crate redis;
-extern crate regex;
-extern crate serde;
-extern crate serde_json;
-extern crate tar;
-extern crate tempfile;
-extern crate tokio;
-extern crate tokio_tcp;
-extern crate tokio_udp;
-extern crate toml;
-extern crate trust_dns;
-extern crate trust_dns_proto;
-extern crate trust_dns_resolver;
-extern crate trust_dns_server;
-extern crate url_serde;
-
 mod config;
 mod dns;
 mod geo;
@@ -49,7 +16,7 @@ use std::thread;
 use std::time::Duration;
 
 use clap::{App, Arg};
-use log::LevelFilter;
+use log::{LevelFilter, debug, info, error};
 
 use config::config::Config;
 use config::logger::ConfigLogger;
@@ -106,7 +73,7 @@ macro_rules! gen_spawn_managed {
     };
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref APP_ARGS: AppArgs = make_app_args();
     static ref APP_CONF: Config = ConfigReader::make();
     static ref APP_STORE: Store = StoreBuilder::new();
@@ -162,10 +129,10 @@ gen_spawn_managed!(
 );
 
 fn make_app_args() -> AppArgs {
-    let matches = App::new(crate_name!())
-        .version(crate_version!())
-        .author(crate_authors!())
-        .about(crate_description!())
+    let matches = App::new(clap::crate_name!())
+        .version(clap::crate_version!())
+        .author(clap::crate_authors!())
+        .about(clap::crate_description!())
         .arg(
             Arg::with_name("config")
                 .short("c")

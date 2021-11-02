@@ -7,12 +7,13 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::SystemTime;
+use log::debug;
 
 use super::store::StoreRecord;
 use crate::APP_CONF;
 use crate::APP_STORE;
 
-lazy_static! {
+lazy_static::lazy_static! {
     pub static ref STORE_CACHE: StoreCache = StoreCacheBuilder::new();
 }
 

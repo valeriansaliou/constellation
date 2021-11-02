@@ -17,6 +17,7 @@ use trust_dns_server::authority::{
     AuthLookup, Authority, MessageRequest, MessageResponse, MessageResponseBuilder,
 };
 use trust_dns_server::server::{Request, RequestHandler, ResponseHandler};
+use log::{trace, debug, info, warn, error};
 
 use super::code::CodeName;
 use super::flatten::DNS_FLATTEN;

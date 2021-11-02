@@ -12,7 +12,7 @@ use trust_dns::rr::LowerName as TrustLowerName;
 
 use crate::APP_CONF;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref ZONE_NAME_REGEX: Regex =
         Regex::new(r"^(([^\\/:@&_\*]+)\.)[^\\/:@&_\*\-\.]{2,63}$").unwrap();
 }

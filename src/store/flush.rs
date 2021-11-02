@@ -6,6 +6,7 @@
 
 use std::thread;
 use std::time::{Duration, Instant};
+use log::{debug, info};
 
 use super::cache::StoreCacheFlush;
 

@@ -15,11 +15,12 @@ use trust_dns::rr::rdata::SOA;
 use trust_dns::rr::{LowerName, Name, RData, Record, RecordSet, RecordType, RrKey};
 use trust_dns_server::authority::{Authority, ZoneType};
 use trust_dns_server::server::ServerFuture;
+use log::{info, error};
 
 use super::handler::DNSHandler;
 use crate::APP_CONF;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref NAME_SOA_MASTER: Name =
         Name::parse(&APP_CONF.dns.soa_master, Some(&Name::new())).expect("invalid soa master");
     static ref NAME_SOA_RESPONSIBLE: Name =

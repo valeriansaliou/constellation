@@ -13,6 +13,7 @@ use std::thread;
 use std::time::Duration;
 use tar::{Archive, Entries};
 use tempfile::tempfile;
+use log::{debug, info, error};
 
 use super::locate::Locator;
 use crate::APP_CONF;

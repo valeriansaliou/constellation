@@ -20,7 +20,7 @@ use trust_dns::rr::{
 
 use crate::geo::country::CountryCode;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref RECORD_NAME_REGEX: Regex = Regex::new(r"^(\*\.)?(([^\\/:@&\*]+)\.)?@$").unwrap();
 }
 

@@ -13,11 +13,12 @@ use std::time::{Duration, Instant, SystemTime};
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use trust_dns_resolver::error::ResolveError;
 use trust_dns_resolver::Resolver;
+use log::{debug, info, warn};
 
 use super::record::{RecordType, RecordValue, RecordValues};
 use crate::APP_CONF;
 
-lazy_static! {
+lazy_static::lazy_static! {
     pub static ref DNS_BOOTSTRAP: RwLock<HashMap<DNSFlattenRegistryKey, u32>> =
         RwLock::new(HashMap::new());
     pub static ref DNS_FLATTEN: DNSFlatten = DNSFlattenBuilder::new();

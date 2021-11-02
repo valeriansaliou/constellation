@@ -11,6 +11,7 @@ use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
 use std::sync::RwLock;
 use std::time::{Duration, Instant, SystemTime};
+use log::{debug, info, warn, error};
 
 use super::cache::STORE_CACHE;
 use super::key::StoreKey;

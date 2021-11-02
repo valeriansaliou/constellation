@@ -7,6 +7,7 @@
 use std::fs::File;
 use std::io::Read;
 use toml;
+use log::debug;
 
 use super::config::*;
 use crate::APP_ARGS;

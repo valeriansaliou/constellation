@@ -4,6 +4,8 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use serde_derive::{Serialize, Deserialize};
+
 use super::region::RegionCode;
 
 //- Source: https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/blob/master/all/all.csv

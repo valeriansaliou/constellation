@@ -5,6 +5,7 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use trust_dns::op::ResponseCode;
+use serde_derive::Serialize;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize)]
 pub enum CodeName {

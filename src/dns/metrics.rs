@@ -12,6 +12,7 @@ use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
 use std::{fmt, str};
+use log::{debug, info};
 
 use super::code::CodeName;
 use super::record::RecordType;
@@ -19,7 +20,7 @@ use super::zone::ZoneName;
 use crate::geo::country::CountryCode;
 use crate::APP_CONF;
 
-lazy_static! {
+lazy_static::lazy_static! {
     pub static ref METRICS_STORE: MetricsStore = MetricsStoreBuilder::new();
 }
 

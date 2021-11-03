@@ -9,8 +9,6 @@ use http_req::request::{Method, Request, RequestBuilder};
 use http_req::response::{Headers, Response, StatusCode};
 use http_req::tls;
 use http_req::uri::Uri;
-use log::{debug, error, info, warn};
-use serde_derive::Serialize;
 use serde_json;
 use std::collections::HashSet;
 use std::io;
@@ -27,7 +25,7 @@ use crate::store::store::StoreAccessOrigin;
 use crate::APP_CONF;
 use crate::APP_STORE;
 
-lazy_static::lazy_static! {
+lazy_static! {
     static ref HEALTH_DEAD_REGISTER: RwLock<HashSet<(ZoneName, RecordName, RecordValue)>> =
         RwLock::new(HashSet::new());
 }

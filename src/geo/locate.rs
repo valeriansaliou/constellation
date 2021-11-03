@@ -4,7 +4,6 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log::{debug, info};
 use maxminddb::{geoip2, MaxMindDBError, Reader as GeoReader};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
@@ -18,7 +17,7 @@ type GeoReaderType = GeoReader<Vec<u8>>;
 
 pub struct Locator;
 
-lazy_static::lazy_static! {
+lazy_static! {
     pub static ref DB_READER: Arc<RwLock<GeoReaderType>> =
         Arc::new(RwLock::new(Locator::geo_open()));
 }

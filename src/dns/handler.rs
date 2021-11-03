@@ -4,7 +4,6 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log::{debug, error, info, trace, warn};
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;

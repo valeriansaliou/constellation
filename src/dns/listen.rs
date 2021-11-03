@@ -5,7 +5,6 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use futures::{future, Future};
-use log::{error, info};
 use std::collections::BTreeMap;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
@@ -20,7 +19,7 @@ use trust_dns_server::server::ServerFuture;
 use super::handler::DNSHandler;
 use crate::APP_CONF;
 
-lazy_static::lazy_static! {
+lazy_static! {
     static ref NAME_SOA_MASTER: Name =
         Name::parse(&APP_CONF.dns.soa_master, Some(&Name::new())).expect("invalid soa master");
     static ref NAME_SOA_RESPONSIBLE: Name =

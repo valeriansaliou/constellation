@@ -4,7 +4,6 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::ops::Deref;
@@ -18,7 +17,7 @@ use trust_dns_resolver::Resolver;
 use super::record::{RecordType, RecordValue, RecordValues};
 use crate::APP_CONF;
 
-lazy_static::lazy_static! {
+lazy_static! {
     pub static ref DNS_BOOTSTRAP: RwLock<HashMap<DNSFlattenRegistryKey, u32>> =
         RwLock::new(HashMap::new());
     pub static ref DNS_FLATTEN: DNSFlatten = DNSFlattenBuilder::new();

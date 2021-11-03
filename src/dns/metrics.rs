@@ -4,7 +4,6 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log::{debug, info};
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::min;
@@ -20,7 +19,7 @@ use super::zone::ZoneName;
 use crate::geo::country::CountryCode;
 use crate::APP_CONF;
 
-lazy_static::lazy_static! {
+lazy_static! {
     pub static ref METRICS_STORE: MetricsStore = MetricsStoreBuilder::new();
 }
 

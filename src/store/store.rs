@@ -4,7 +4,6 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log::{debug, error, info, warn};
 use r2d2::Pool;
 use r2d2_redis::RedisConnectionManager;
 use redis::{Commands, ErrorKind, RedisError};

@@ -4,7 +4,6 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use log::{debug, info};
 use std::thread;
 use std::time::{Duration, Instant};
 

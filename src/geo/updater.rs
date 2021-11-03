@@ -7,7 +7,6 @@
 use flate2::read::GzDecoder;
 use http_req::error as HTTPError;
 use http_req::request as HTTPRequest;
-use log::{debug, error, info};
 use std::fs::File;
 use std::io::{Seek, SeekFrom};
 use std::thread;

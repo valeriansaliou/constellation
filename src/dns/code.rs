@@ -4,7 +4,6 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use serde_derive::Serialize;
 use trust_dns::op::ResponseCode;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize)]

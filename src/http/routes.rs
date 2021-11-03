@@ -5,7 +5,6 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use actix_web::{delete, get, head, put, web, HttpResponse};
-use serde_derive::{Deserialize, Serialize};
 
 use crate::dns::metrics::{MetricsTimespan, MetricsType, METRICS_STORE};
 use crate::dns::record::{RecordBlackhole, RecordName, RecordRegions, RecordType, RecordValues};

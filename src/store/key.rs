@@ -5,7 +5,6 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use farmhash;
-use log::debug;
 
 use crate::dns::record::{RecordName, RecordType};
 use crate::dns::zone::ZoneName;

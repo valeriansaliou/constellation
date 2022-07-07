@@ -1,7 +1,7 @@
 Constellation
 =============
 
-[![Test and Build](https://github.com/valeriansaliou/constellation/workflows/Test%20and%20Build/badge.svg?branch=master)](https://github.com/valeriansaliou/constellation/actions?query=workflow%3A%22Test+and+Build%22) [![dependency status](https://deps.rs/repo/github/valeriansaliou/constellation/status.svg)](https://deps.rs/repo/github/valeriansaliou/constellation) [![Buy Me A Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg)](https://www.buymeacoffee.com/valeriansaliou)
+[![Test and Build](https://github.com/valeriansaliou/constellation/workflows/Test%20and%20Build/badge.svg?branch=master)](https://github.com/valeriansaliou/constellation/actions?query=workflow%3A%22Test+and+Build%22) [![Build and Release](https://github.com/valeriansaliou/constellation/workflows/Build%20and%20Release/badge.svg)](https://github.com/valeriansaliou/constellation/actions?query=workflow%3A%22Build+and+Release%22) [![dependency status](https://deps.rs/repo/github/valeriansaliou/constellation/status.svg)](https://deps.rs/repo/github/valeriansaliou/constellation) [![Buy Me A Coffee](https://img.shields.io/badge/buy%20me%20a%20coffee-donate-yellow.svg)](https://www.buymeacoffee.com/valeriansaliou)
 
 **Pluggable authoritative DNS server. Entries can be added & removed from an HTTP REST API.**
 
@@ -74,13 +74,13 @@ You might find it convenient to run Constellation via Docker. You can find the p
 First, pull the `valeriansaliou/constellation` image:
 
 ```bash
-docker pull valeriansaliou/constellation:v1.14.0
+docker pull valeriansaliou/constellation:v1.14.1
 ```
 
 Then, seed it a configuration file and run it (replace `/path/to/your/constellation/config.cfg` with the path to your configuration file):
 
 ```bash
-docker run -p 53:53/udp -p 8080:8080 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg -v /path/to/your/constellation/res/:/var/lib/constellation/ valeriansaliou/constellation:v1.14.0
+docker run -p 53:53/udp -p 8080:8080 -v /path/to/your/constellation/config.cfg:/etc/constellation.cfg -v /path/to/your/constellation/res/:/var/lib/constellation/ valeriansaliou/constellation:v1.14.1
 ```
 
 In the configuration file, ensure that:

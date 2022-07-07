@@ -43,7 +43,7 @@ function release_for_architecture {
         mkdir ./constellation && \
         cp -p "target/$2/release/constellation" ./constellation/ && \
         cp ./config.cfg constellation/ && \
-        tar -czvf "$final_tar" ./constellation && \
+        tar --owner=0 --group=0 -czvf "$final_tar" ./constellation && \
         rm -r ./constellation/
     release_result=$?
 

@@ -15,7 +15,8 @@ while [ "$1" != "" ]; do
 
     case $argument_key in
         -v | --version)
-            CONSTELLATION_VERSION="$argument_value"
+            # Notice: strip any leading 'v' to the version number
+            CONSTELLATION_VERSION="${argument_value/v}"
             ;;
         *)
             echo "Unknown argument received: '$argument_key'"
@@ -36,16 +37,14 @@ fi
 # Define release pipeline
 function release_for_architecture {
     final_tar="v$CONSTELLATION_VERSION-$1.tar.gz"
-    gpg_signer="valerian@valeriansaliou.name"
 
     rm -rf ./constellation/ && \
-        RUSTFLAGS="-C link-arg=-s" cross build --target "$2" --release && \
+        cross build --target "$2" --release && \
         mkdir ./constellation && \
         cp -p "target/$2/release/constellation" ./constellation/ && \
         cp ./config.cfg constellation/ && \
         tar -czvf "$final_tar" ./constellation && \
-        rm -r ./constellation/ && \
-        gpg -u "$gpg_signer" --armor --detach-sign "$final_tar"
+        rm -r ./constellation/
     release_result=$?
 
     if [ $release_result -eq 0 ]; then

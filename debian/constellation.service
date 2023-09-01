@@ -1,0 +1,16 @@
+[Unit]
+Description=Pluggable authoritative DNS server
+After=network.target
+
+[Service]
+Type=simple
+User=constellation
+Group=constellation
+ExecStartPre=/sbin/setcap 'cap_net_bind_service=+ep' /usr/bin/constellation/constellation
+ExecStart=/usr/bin/constellation/constellation -c /etc/constellation.cfg
+Restart=on-failure
+PermissionsStartOnly=true
+LimitNOFILE=infinity
+
+[Install]
+WantedBy=multi-user.target

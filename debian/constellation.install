@@ -1,0 +1,3 @@
+constellation/constellation usr/bin/
+constellation/constellation.cfg etc/
+constellation/geo/ var/lib/constellation/

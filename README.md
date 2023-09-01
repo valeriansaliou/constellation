@@ -43,6 +43,44 @@ Constellation is built in Rust. To install it, either download a version from th
 
 👉 _Each release binary comes with an `.asc` signature file, which can be verified using [@valeriansaliou](https://github.com/valeriansaliou) GPG public key: [:key:valeriansaliou.gpg.pub.asc](https://valeriansaliou.name/files/keys/valeriansaliou.gpg.pub.asc)._
 
+**Install from packages:**
+
+Constellation provides [pre-built packages](https://packagecloud.io/valeriansaliou/constellation) for Debian-based systems (Debian, Ubuntu, etc.).
+
+**Important: Constellation only provides 64 bits packages targeting Debian 10, 11 & 12 for now (codenames: `buster`, `bullseye` & `bookworm`). You will still be able to use them on other Debian versions, as well as Ubuntu.**
+
+First, add the Constellation APT repository (eg. for Debian `bookworm`):
+
+```bash
+echo "deb https://packagecloud.io/valeriansaliou/constellation/debian/ bookworm main" > /etc/apt/sources.list.d/valeriansaliou_constellation.list
+```
+
+```bash
+curl --silent -L https://packagecloud.io/valeriansaliou/constellation/gpgkey | apt-key add -
+```
+
+```bash
+apt-get update
+```
+
+Then, install the Constellation package:
+
+```bash
+apt-get install constellation
+```
+
+Then, edit the pre-filled Constellation configuration file:
+
+```bash
+nano /etc/constellation.cfg
+```
+
+Finally, restart Constellation:
+
+```
+service constellation restart
+```
+
 **Install from source:**
 
 If you pulled the source code from Git, you can build it using `cargo`:

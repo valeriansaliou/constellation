@@ -1,0 +1,13 @@
+Source: constellation
+Section: net
+Priority: ext
+Maintainer: Valerian Saliou <valerian@valeriansaliou.name>
+Standards-Version: 3.9.4
+Build-Depends: wget, ca-certificates
+Homepage: https://github.com/valeriansaliou/constellation
+
+Package: constellation
+Architecture: any
+Depends: adduser
+Provides: constellation
+Description: Pluggable authoritative DNS server. Entries can be added & removed from an HTTP REST API.

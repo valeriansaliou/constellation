@@ -574,7 +574,7 @@ checksum = "fbdcdcb6d86f71c5e97409ad45898af11cbc995b4ee8112d59095a28d376c935"
 
 [[package]]
 name = "constellation-server"
-version = "1.14.2"
+version = "1.14.3"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",

@@ -11,9 +11,9 @@ use http_req::tls;
 use http_req::uri::Uri;
 use serde_json;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 use std::io;
 use std::net::{TcpStream, ToSocketAddrs};
-use std::str::FromStr;
 use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
@@ -198,7 +198,7 @@ impl DNSHealthHTTP {
         attempt: u8,
     ) {
         // Generate request URL
-        let request_url = Self::generate_request_url(
+        let (request_url, request_virtual_host) = Self::generate_request_url(
             &domain.zone,
             &domain.name,
             domain.port,
@@ -209,7 +209,7 @@ impl DNSHealthHTTP {
             record_value,
         );
 
-        if let (Ok(request_url), request_virtual_host) = request_url {
+        if let Ok(request_url) = Uri::try_from(request_url.as_str()) {
             debug!(
                 "triggered a dns health check on target: {} on zone: {} with url: {} on host: {}",
                 domain.name.to_str(),
@@ -462,7 +462,7 @@ impl DNSHealthHTTP {
         true
     }
 
-    fn generate_request_url(
+    fn generate_request_url<'a>(
         zone: &ZoneName,
         name: &RecordName,
         port: u16,
@@ -470,8 +470,8 @@ impl DNSHealthHTTP {
         path: &str,
         secure: bool,
         kind: &RecordType,
-        value: &RecordValue,
-    ) -> (Result<Uri, Error>, String) {
+        value: &'a RecordValue,
+    ) -> (String, String) {
         // Format: [protocol]://[name].[zone]:[port]/[path]
 
         let mut request_url = String::new();
@@ -510,7 +510,7 @@ impl DNSHealthHTTP {
             format!("{}{}", name.to_subdomain(), zone.to_str())
         };
 
-        return (request_url.parse(), virtual_host);
+        return (request_url, virtual_host);
     }
 
     fn extract_inner_host<'a>(record_type: &RecordType, outer_host: &'a str) -> &'a str {
@@ -598,7 +598,7 @@ impl DNSHealthNotify {
             let (slack_hook_url_raw, mut response_sink) = (slack_hook_url.as_str(), io::sink());
 
             let response =
-                Request::new(&Uri::from_str(slack_hook_url_raw).expect("invalid slack hooks uri"))
+                Request::new(&Uri::try_from(slack_hook_url_raw).expect("invalid slack hooks uri"))
                     .connect_timeout(Some(HEALTH_CHECK_NOTIFY_TIMEOUT))
                     .read_timeout(Some(HEALTH_CHECK_NOTIFY_TIMEOUT))
                     .write_timeout(Some(HEALTH_CHECK_NOTIFY_TIMEOUT))

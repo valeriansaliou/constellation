@@ -6,7 +6,7 @@
 
 use r2d2::Pool;
 use r2d2_redis::RedisConnectionManager;
-use redis::{Commands, ErrorKind, RedisError};
+use redis::{Commands, ErrorKind};
 use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
 use std::sync::RwLock;
@@ -76,8 +76,8 @@ pub struct StoreRecord {
 
 pub enum StoreError {
     Corrupted,
-    Encoding(SerdeJSONError),
-    Connector(RedisError),
+    Encoding,
+    Connector,
     NotFound,
     Disconnected,
 }
@@ -279,7 +279,7 @@ impl Store {
 
     pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
         get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
-            let flatten_encoder = match record.flatten {
+            let flatten_encoder: Result<String, SerdeJSONError> = match record.flatten {
                 Some(true) => {
                     Ok("1".to_owned())
                 },
@@ -335,16 +335,14 @@ impl Store {
                             (KEY_RESCUE, &rescue),
                             (KEY_VALUE, &values),
                         ]
-                    ).map_err(|err| {
-                        StoreError::Connector(err)
-                    })
+                    ).or(Err(StoreError::Connector))
                 },
-                (Err(err), _, _, _, _) |
-                (_, Err(err), _, _, _) |
-                (_, _, Err(err), _, _) |
-                (_, _, _, Err(err), _) |
-                (_, _, _, _, Err(err)) => {
-                    Err(StoreError::Encoding(err))
+                (Err(_), _, _, _, _) |
+                (_, Err(_), _, _, _) |
+                (_, _, Err(_), _, _) |
+                (_, _, _, Err(_), _) |
+                (_, _, _, _, Err(_)) => {
+                    Err(StoreError::Encoding)
                 }
             }
         })
@@ -363,9 +361,7 @@ impl Store {
             STORE_CACHE.pop(&store_key);
 
             // Delete from remote
-            client.del(store_key).map_err(|err| {
-                StoreError::Connector(err)
-            })
+            client.del(store_key).or(Err(StoreError::Connector))
         })
     }
 

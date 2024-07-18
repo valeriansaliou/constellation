@@ -7,15 +7,14 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
-use std::future::Future;
 use std::io::Error;
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 use trust_dns_proto::op::header::Header;
 use trust_dns_proto::op::{LowerQuery, MessageType, OpCode, ResponseCode};
 use trust_dns_proto::rr::dnssec::SupportedAlgorithms;
 use trust_dns_proto::rr::{LowerName, Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{
-    AuthLookup, Authority, LookupOptions, MessageRequest, MessageResponse, MessageResponseBuilder,
+    AuthLookup, Authority, LookupOptions, MessageRequest, MessageResponseBuilder,
 };
 use trust_dns_server::server::{Request, RequestHandler, ResponseHandler, ResponseInfo};
 use trust_dns_server::store::in_memory::InMemoryAuthority;
@@ -46,12 +45,7 @@ impl RequestHandler for DNSHandler {
         request: &Request,
         responder: R,
     ) -> ResponseInfo {
-        let (request_source, request_message) = (request.src(), **request);
-
-        match self
-            .handle(request_source, request_message, responder)
-            .await
-        {
+        match self.handle(responder, request).await {
             Ok(info) => info,
             Err(error) => {
                 error!("error handling dns request: {}", error);
@@ -76,45 +70,31 @@ impl DNSHandler {
         self.authorities.insert(name, authority);
     }
 
-    async fn handle<R: ResponseHandler>(
-        &self,
-        source: SocketAddr,
-        request: MessageRequest,
-        responder: R,
-    ) -> DNSResponse {
-        trace!("request: {:?} from: {}", request, source.ip());
+    async fn handle<R: ResponseHandler>(&self, responder: R, request: &Request) -> DNSResponse {
+        trace!("request: {:?} from: {}", request, request.src().ip());
 
         match request.message_type() {
             MessageType::Query => match request.op_code() {
                 OpCode::Query => {
                     info!("lookup request with id: {}", request.id());
 
-                    self.lookup(source.ip(), request, responder).await
+                    self.lookup(responder, request).await
                 }
                 code @ _ => {
                     error!("unimplemented opcode: {:?}", code);
 
-                    self.not_impl(&request, responder).await
+                    self.not_impl()
                 }
             },
             MessageType::Response => {
                 warn!("got a response as a request from id: {}", request.id());
 
-                self.not_impl(&request, responder).await
+                self.not_impl()
             }
         }
     }
 
-    async fn lookup<R: ResponseHandler>(
-        &self,
-        source: IpAddr,
-        request: MessageRequest,
-        responder: R,
-    ) -> DNSResponse {
-        // Initialize response builder
-        let mut response: MessageResponseBuilder =
-            MessageResponse::new(Some(request.raw_queries()));
-
+    async fn lookup<R: ResponseHandler>(&self, responder: R, request: &Request) -> DNSResponse {
         // Generate response header
         let mut header: Header = Header::new();
 
@@ -122,30 +102,19 @@ impl DNSHandler {
         header.set_op_code(OpCode::Query);
         header.set_message_type(MessageType::Response);
 
-        // #1. Extract queries, and first query
-        // Notice: check if request has no query, or too many of them? If so, reject straight away.
-        let queries = request.queries();
-        let query_first = queries.first();
-
-        if query_first.is_none() == true || queries.len() > 1 {
-            return self
-                .lookup_invalid_query(request, response, header, responder)
-                .await;
-        }
-
-        // #2. Acquire base authority (ie. zone) for request
+        // #1. Acquire base authority (ie. zone) for request
         // Notice: if zone cannot be found, then reject straight away.
         // Notice: since we checked the status of the unwrapped query variable, this is panic-safe.
-        let query = query_first.unwrap();
+        let query = request.query();
         let authority_lookup = self.find_auth_recurse(query.name());
 
         if authority_lookup.is_none() == true {
             return self
-                .lookup_no_authority(request, response, header, query, responder)
+                .lookup_no_authority(responder, request, header, query)
                 .await;
         }
 
-        // #3. Handle the first query only
+        // #2. Handle the first query only
         // Notice: multiple queries are typically not supported by DNS servers anyway, \
         //   therefore we would only respond to the first query there.
         // Notice: since we checked the status of the unwrapped authority variable, this is \
@@ -163,32 +132,35 @@ impl DNSHandler {
         let supported_algorithms = SupportedAlgorithms::new();
         let lookup_options = LookupOptions::for_dnssec(false, supported_algorithms);
 
-        let soa_records = authority.soa_secure(lookup_options);
-        let soa_records_vec = soa_records.iter().collect();
+        let soa_records = authority.soa_secure(lookup_options).await;
 
-        // #4. Attempt to resolve from local store
-        let records_local = authority.search(query, lookup_options);
+        // TODO: fix this
+        //let soa_records_vec = soa_records.iter().collect();
+        let soa_records_vec = vec![];
+
+        // #3. Attempt to resolve from local store
+        let records_local = authority
+            .search(request.request_info(), lookup_options)
+            .await?;
 
         if !records_local.is_empty() {
             let records_local_vec = records_local.iter().collect();
 
             return self
                 .lookup_local(
-                    &request,
-                    response,
+                    responder,
+                    request,
                     header,
                     query,
-                    authority,
                     zone_name,
                     soa_records_vec,
                     records_local_vec,
-                    responder,
                 )
                 .await;
         }
 
-        // #5. Fallback on resolving from remote store
-        return match Self::records_from_store(authority, &zone_name, source, query) {
+        // #4. Fallback on resolving from remote store
+        return match Self::records_from_store(authority, &zone_name, request.src().ip(), query) {
             Ok(records_remote) => {
                 // Serve response data?
                 if let Some(records_remote_inner) = records_remote {
@@ -200,97 +172,60 @@ impl DNSHandler {
 
                     let records_remote_vec = records_remote_inner.iter().collect();
 
-                    Self::serve_response_records(
-                        &request,
-                        &mut response,
-                        &mut header,
-                        &zone_name,
-                        records_remote_vec,
-                        &authority,
-                        soa_records_vec,
-                    );
-
                     // Dispatch request from this block, as we cannot escape generated \
                     //   record values lifetimes out of this context.
-                    Self::dispatch(response, header, responder).await
+                    Self::dispatch_response_with_records(
+                        responder,
+                        request,
+                        header,
+                        &zone_name,
+                        records_remote_vec,
+                        soa_records_vec,
+                    )
+                    .await
                 } else {
                     // Serve error code
                     debug!("did not find records for query: {:?}", query);
 
                     let response_error = match records_local {
-                        AuthLookup::NoName => {
+                        AuthLookup::Empty => {
                             debug!("domain not found for query: {:?}", query);
 
                             ResponseCode::NXDomain
                         }
-                        AuthLookup::NameExists => {
+                        AuthLookup::SOA { .. } => {
                             debug!("domain found for query: {:?}", query);
 
                             ResponseCode::NoError
                         }
-                        AuthLookup::Records(..) => panic!("error, should return noerror"),
+                        AuthLookup::Records { .. } | AuthLookup::AXFR { .. } => {
+                            panic!("error, should return noerror")
+                        }
                     };
 
-                    Self::stamp_response(
-                        &request,
-                        &mut response,
-                        &mut header,
-                        authority,
-                        soa_records_vec,
-                        response_error,
-                        &zone_name,
-                        false,
-                    );
+                    Self::stamp_header(request, &mut header, response_error, &zone_name);
 
                     // Dispatch empty records response
-                    Self::dispatch(response, header, responder).await
+                    Self::dispatch_response(responder, request, header, Some(soa_records_vec)).await
                 }
             }
             Err(err) => {
                 debug!("query refused for: {:?} because: {}", query, err);
 
-                Self::stamp_response(
-                    &request,
-                    &mut response,
-                    &mut header,
-                    authority,
-                    soa_records_vec,
-                    err,
-                    &zone_name,
-                    false,
-                );
+                Self::stamp_header(request, &mut header, err, &zone_name);
 
                 // Dispatch error response
-                Self::dispatch(response, header, responder).await
+                Self::dispatch_response(responder, request, header, Some(soa_records_vec)).await
             }
         };
     }
 
-    async fn lookup_invalid_query<R: ResponseHandler>(
-        &self,
-        request: &MessageRequest,
-        response: MessageResponseBuilder,
-        mut header: Header,
-        responder: R,
-    ) -> DNSResponse {
-        warn!(
-            "request has no query, or too many queries for: {}",
-            request.id()
-        );
-
-        header.set_response_code(ResponseCode::FormErr);
-
-        // Format error response dispatch
-        Self::dispatch(response, header, responder).await
-    }
-
     async fn lookup_no_authority<R: ResponseHandler>(
         &self,
+        responder: R,
         request: &MessageRequest,
-        response: MessageResponseBuilder,
         mut header: Header,
         query: &LowerQuery,
-        responder: R,
     ) -> DNSResponse {
         debug!(
             "domain authority not found for query: {:?} on request: {}",
@@ -301,61 +236,90 @@ impl DNSHandler {
         header.set_response_code(ResponseCode::Refused);
 
         // Authority not found response dispatch
-        Self::dispatch(response, header, responder).await
+        Self::dispatch_response(responder, request, header, None).await
     }
 
     async fn lookup_local<'a, R: ResponseHandler>(
         &self,
+        responder: R,
         request: &MessageRequest,
-        mut response: MessageResponseBuilder<'_, 'a>,
-        mut header: Header,
+        header: Header,
         query: &LowerQuery,
-        authority: &'a DNSAuthority,
         zone_name: Option<ZoneName>,
         soa_records: Vec<&'a Record>,
         local_records: Vec<&'a Record>,
-        responder: R,
     ) -> Result<ResponseInfo, Error> {
         debug!("found records for query from local store: {:?}", query);
 
-        Self::serve_response_records(
+        Self::dispatch_response_with_records(
+            responder,
             request,
-            &mut response,
-            &mut header,
+            header,
             &zone_name,
             local_records,
-            &authority,
             soa_records,
-        );
-
-        // Dispatch request from this block, as we cannot escape generated record \
-        //   values lifetimes out of this context.
-        Self::dispatch(response, header, responder).await
+        )
+        .await
     }
 
-    async fn not_impl<R: ResponseHandler>(
-        &self,
+    fn not_impl(&self) -> DNSResponse {
+        let mut header = Header::new();
+
+        header.set_response_code(ResponseCode::NotImp);
+
+        Ok(header.into())
+    }
+
+    async fn dispatch_response<R: ResponseHandler>(
+        mut responder: R,
         request: &MessageRequest,
-        responder: R,
-    ) -> Result<ResponseInfo, Error> {
-        responder
-            .send_response(MessageResponse::new(None).error_msg(
-                request.id(),
-                request.op_code(),
-                ResponseCode::NotImp,
-            ))
-            .await
-    }
-
-    async fn dispatch<R: ResponseHandler>(
-        response: MessageResponseBuilder,
         header: Header,
-        responder: R,
+        name_servers: Option<Vec<&Record>>,
     ) -> Result<ResponseInfo, Error> {
         // Dispatch final response message
-        let response_message = response.build(header);
+        let response_message = MessageResponseBuilder::from_message_request(request).build(
+            header,
+            &[],
+            name_servers.unwrap_or(vec![]),
+            &[],
+            &[],
+        );
 
         trace!("query response: {:?}", response_message);
+
+        responder.send_response(response_message).await
+    }
+
+    async fn dispatch_response_with_records<'a, 'b, R: ResponseHandler>(
+        mut responder: R,
+        request: &MessageRequest,
+        mut header: Header,
+        zone_name: &Option<ZoneName>,
+        mut records: Vec<&'a Record>,
+        name_servers: Vec<&'a Record>,
+    ) -> DNSResponse {
+        let has_records = !records.is_empty();
+
+        Self::stamp_header(request, &mut header, ResponseCode::NoError, zone_name);
+
+        // Add records to response?
+        if has_records == true {
+            // Randomize records order, as most DNS servers do to balance eg. IP resource usage
+            if records.len() > 1 {
+                records.shuffle(&mut thread_rng());
+            }
+        }
+
+        // Dispatch final response message
+        let response_message = MessageResponseBuilder::from_message_request(request).build(
+            header,
+            records,
+            name_servers,
+            &[],
+            &[],
+        );
+
+        trace!("query response with records: {:?}", response_message);
 
         responder.send_response(response_message).await
     }
@@ -788,49 +752,11 @@ impl DNSHandler {
         }
     }
 
-    fn serve_response_records<'a, 'b>(
+    fn stamp_header<'a, 'b>(
         request: &MessageRequest,
-        response: &'b mut MessageResponseBuilder<'_, 'a>,
-        header: &'b mut Header,
-        zone_name: &Option<ZoneName>,
-        mut records: Vec<&'a Record>,
-        authority: &'a DNSAuthority,
-        soa_records: Vec<&'a Record>,
-    ) {
-        let has_records = !records.is_empty();
-
-        // Stamp response with flags and required response data
-        Self::stamp_response(
-            request,
-            response,
-            header,
-            authority,
-            soa_records,
-            ResponseCode::NoError,
-            zone_name,
-            has_records,
-        );
-
-        // Add records to response?
-        if has_records == true {
-            // Randomize records order, as most DNS servers do to balance eg. IP resource usage
-            if records.len() > 1 {
-                records.shuffle(&mut thread_rng());
-            }
-
-            response.answers(records);
-        }
-    }
-
-    fn stamp_response<'a, 'b>(
-        request: &MessageRequest,
-        response: &'b mut MessageResponseBuilder<'_, 'a>,
         header: &mut Header,
-        authority: &'a DNSAuthority,
-        soa_records: Vec<&'a Record>,
         code: ResponseCode,
         zone_name: &Option<ZoneName>,
-        has_records: bool,
     ) {
         // Stack answer code to metrics?
         if let Some(ref zone_name) = zone_name {
@@ -848,15 +774,6 @@ impl DNSHandler {
         // Stamp response with 'RD' flag? (if requested by client)
         if request.recursion_desired() == true {
             header.set_recursion_desired(true);
-        }
-
-        // Add SOA records? (if response is empty)
-        if has_records == false {
-            if soa_records.is_empty() {
-                warn!("no soa record for authority: {:?}", authority.origin());
-            } else {
-                response.name_servers(soa_records);
-            }
         }
     }
 

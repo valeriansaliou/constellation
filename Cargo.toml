@@ -39,7 +39,6 @@ trust-dns-proto = { version = "0.23", default-features = false, features = [
     "dnssec-ring",
 ] }
 trust-dns-resolver = { version = "0.10", default-features = false }
-futures = "0.1"
 tokio = "1.21"
 rand = "0.8"
 farmhash = "1.1"

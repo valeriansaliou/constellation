@@ -569,7 +569,6 @@ dependencies = [
  "clap",
  "farmhash",
  "flate2",
- "futures 0.1.31",
  "http_req",
  "lazy_static",
  "log",

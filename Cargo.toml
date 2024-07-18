@@ -18,8 +18,8 @@ doc = false
 
 [dependencies]
 log = { version = "0.4", features = ["std"] }
-toml = "0.5"
-clap = { version = "3.2", features = ["std", "cargo"] }
+toml = "0.8"
+clap = { version = "4.5", features = ["std", "cargo"] }
 lazy_static = "1.4"
 serde = "1.0"
 serde_derive = "1.0"
@@ -41,7 +41,9 @@ tokio-tcp = "0.1"
 tokio-udp = "0.1"
 rand = "0.8"
 farmhash = "1.1"
-http_req = { version = "0.7", features = ["rust-tls"], default-features = false }
+http_req = { version = "0.7", features = [
+    "rust-tls",
+], default-features = false }
 maxminddb = "0.21"
 tempfile = "3.1"
 flate2 = "1.0"

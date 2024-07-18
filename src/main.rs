@@ -22,7 +22,7 @@ use std::str::FromStr;
 use std::thread;
 use std::time::Duration;
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use log::LevelFilter;
 
 use config::config::Config;
@@ -136,7 +136,7 @@ gen_spawn_managed!(
 );
 
 fn make_app_args() -> AppArgs {
-    let matches = App::new(clap::crate_name!())
+    let matches = Command::new(clap::crate_name!())
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
         .about(clap::crate_description!())
@@ -145,14 +145,16 @@ fn make_app_args() -> AppArgs {
                 .short('c')
                 .long("config")
                 .help("Path to configuration file")
-                .default_value("./config.cfg")
-                .takes_value(true),
+                .default_value("./config.cfg"),
         )
         .get_matches();
 
     // Generate owned app arguments
     AppArgs {
-        config: String::from(matches.value_of("config").expect("invalid config value")),
+        config: matches
+            .get_one::<String>("config")
+            .expect("invalid config value")
+            .to_owned(),
     }
 }
 

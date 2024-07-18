@@ -114,11 +114,7 @@ impl DNSHandler {
                 .await;
         }
 
-        // #2. Handle the first query only
-        // Notice: multiple queries are typically not supported by DNS servers anyway, \
-        //   therefore we would only respond to the first query there.
-        // Notice: since we checked the status of the unwrapped authority variable, this is \
-        //   panic-safe.
+        // #2. Handle the query
         let authority = authority_lookup.unwrap();
         let zone_name = ZoneName::from_trust(&authority.origin());
 
@@ -139,9 +135,11 @@ impl DNSHandler {
         let soa_records_vec = vec![];
 
         // #3. Attempt to resolve from local store
+        // TODO: it seems that the NS record is not being fetched correctly
         let records_local = authority
             .search(request.request_info(), lookup_options)
-            .await?;
+            .await
+            .unwrap_or(AuthLookup::Empty);
 
         if !records_local.is_empty() {
             let records_local_vec = records_local.iter().collect();

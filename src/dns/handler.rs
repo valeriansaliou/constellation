@@ -128,14 +128,14 @@ impl DNSHandler {
         let supported_algorithms = SupportedAlgorithms::new();
         let lookup_options = LookupOptions::for_dnssec(false, supported_algorithms);
 
-        let soa_records = authority.soa_secure(lookup_options).await;
+        let soa_records = authority
+            .soa_secure(lookup_options)
+            .await
+            .unwrap_or(AuthLookup::Empty);
 
-        // TODO: fix this
-        //let soa_records_vec = soa_records.iter().collect();
-        let soa_records_vec = vec![];
+        let soa_records_vec = soa_records.iter().collect();
 
         // #3. Attempt to resolve from local store
-        // TODO: it seems that the NS record is not being fetched correctly
         let records_local = authority
             .search(request.request_info(), lookup_options)
             .await
@@ -172,7 +172,7 @@ impl DNSHandler {
 
                     // Dispatch request from this block, as we cannot escape generated \
                     //   record values lifetimes out of this context.
-                    Self::dispatch_response_with_records(
+                    Self::serve_response_records(
                         responder,
                         request,
                         header,
@@ -204,7 +204,7 @@ impl DNSHandler {
                     Self::stamp_header(request, &mut header, response_error, &zone_name);
 
                     // Dispatch empty records response
-                    Self::dispatch_response(responder, request, header, Some(soa_records_vec)).await
+                    Self::dispatch(responder, request, header, None, Some(soa_records_vec)).await
                 }
             }
             Err(err) => {
@@ -213,7 +213,7 @@ impl DNSHandler {
                 Self::stamp_header(request, &mut header, err, &zone_name);
 
                 // Dispatch error response
-                Self::dispatch_response(responder, request, header, Some(soa_records_vec)).await
+                Self::dispatch(responder, request, header, None, Some(soa_records_vec)).await
             }
         };
     }
@@ -234,7 +234,7 @@ impl DNSHandler {
         header.set_response_code(ResponseCode::Refused);
 
         // Authority not found response dispatch
-        Self::dispatch_response(responder, request, header, None).await
+        Self::dispatch(responder, request, header, None, None).await
     }
 
     async fn lookup_local<'a, R: ResponseHandler>(
@@ -249,7 +249,7 @@ impl DNSHandler {
     ) -> Result<ResponseInfo, Error> {
         debug!("found records for query from local store: {:?}", query);
 
-        Self::dispatch_response_with_records(
+        Self::serve_response_records(
             responder,
             request,
             header,
@@ -268,37 +268,15 @@ impl DNSHandler {
         Ok(header.into())
     }
 
-    async fn dispatch_response<R: ResponseHandler>(
+    async fn dispatch<'a, R: ResponseHandler>(
         mut responder: R,
         request: &MessageRequest,
         header: Header,
-        name_servers: Option<Vec<&Record>>,
+        records: Option<Vec<&'a Record>>,
+        soa_records: Option<Vec<&Record>>,
     ) -> Result<ResponseInfo, Error> {
-        // Dispatch final response message
-        let response_message = MessageResponseBuilder::from_message_request(request).build(
-            header,
-            &[],
-            name_servers.unwrap_or(vec![]),
-            &[],
-            &[],
-        );
-
-        trace!("query response: {:?}", response_message);
-
-        responder.send_response(response_message).await
-    }
-
-    async fn dispatch_response_with_records<'a, 'b, R: ResponseHandler>(
-        mut responder: R,
-        request: &MessageRequest,
-        mut header: Header,
-        zone_name: &Option<ZoneName>,
-        mut records: Vec<&'a Record>,
-        name_servers: Vec<&'a Record>,
-    ) -> DNSResponse {
+        let mut records = records.unwrap_or(vec![]);
         let has_records = !records.is_empty();
-
-        Self::stamp_header(request, &mut header, ResponseCode::NoError, zone_name);
 
         // Add records to response?
         if has_records == true {
@@ -308,18 +286,39 @@ impl DNSHandler {
             }
         }
 
+        // Acquire response SOA records
+        // Notice: only append SOA records if this is an empty response
+        let soa_records = if records.is_empty() {
+            soa_records
+        } else {
+            None
+        };
+
         // Dispatch final response message
         let response_message = MessageResponseBuilder::from_message_request(request).build(
             header,
             records,
-            name_servers,
             &[],
+            soa_records.unwrap_or(vec![]),
             &[],
         );
 
-        trace!("query response with records: {:?}", response_message);
+        trace!("query response: {:?}", response_message);
 
         responder.send_response(response_message).await
+    }
+
+    async fn serve_response_records<'a, 'b, R: ResponseHandler>(
+        responder: R,
+        request: &MessageRequest,
+        mut header: Header,
+        zone_name: &Option<ZoneName>,
+        records: Vec<&'a Record>,
+        soa_records: Vec<&'a Record>,
+    ) -> DNSResponse {
+        Self::stamp_header(request, &mut header, ResponseCode::NoError, zone_name);
+
+        Self::dispatch(responder, request, header, Some(records), Some(soa_records)).await
     }
 
     fn find_auth_recurse(&self, name: &LowerName) -> Option<&DNSAuthority> {

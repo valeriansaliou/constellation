@@ -7,16 +7,18 @@
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
+use std::future::Future;
 use std::io::Error;
 use std::net::IpAddr;
-use trust_dns::op::{LowerQuery, MessageType, OpCode, ResponseCode};
-use trust_dns::rr::dnssec::SupportedAlgorithms;
-use trust_dns::rr::{LowerName, Name, Record, RecordType as TrustRecordType};
 use trust_dns_proto::op::header::Header;
+use trust_dns_proto::op::{LowerQuery, MessageType, OpCode, ResponseCode};
+use trust_dns_proto::rr::dnssec::SupportedAlgorithms;
+use trust_dns_proto::rr::{LowerName, Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{
-    AuthLookup, Authority, MessageRequest, MessageResponse, MessageResponseBuilder,
+    AuthLookup, Authority, LookupOptions, MessageRequest, MessageResponse, MessageResponseBuilder,
 };
-use trust_dns_server::server::{Request, RequestHandler, ResponseHandler};
+use trust_dns_server::server::{Request, RequestHandler, ResponseHandler, ResponseInfo};
+use trust_dns_server::store::in_memory::InMemoryAuthority;
 
 use super::code::CodeName;
 use super::flatten::DNS_FLATTEN;
@@ -30,17 +32,20 @@ use crate::store::store::{StoreAccessOrigin, StoreError, StoreRecord};
 use crate::APP_CONF;
 use crate::APP_STORE;
 
+pub type DNSAuthority = InMemoryAuthority;
+
 pub struct DNSHandler {
-    authorities: HashMap<LowerName, Authority>,
+    authorities: HashMap<LowerName, DNSAuthority>,
 }
 
+#[async_trait::async_trait]
 impl RequestHandler for DNSHandler {
-    fn handle_request<R: ResponseHandler>(
+    async fn handle_request<R: ResponseHandler>(
         &self,
         request: &Request,
         response_handle: R,
-    ) -> Result<(), Error> {
-        let request_message = &request.message;
+    ) -> ResponseInfo {
+        let request_message = **request;
 
         trace!("request: {:?}", request_message);
 
@@ -49,12 +54,12 @@ impl RequestHandler for DNSHandler {
                 OpCode::Query => {
                     info!("lookup request with id: {}", request_message.id());
 
-                    self.lookup(request.src.ip(), request_message, response_handle)
+                    self.lookup(request.src().ip(), request_message, response_handle)
                 }
                 code @ _ => {
                     error!("unimplemented opcode: {:?}", code);
 
-                    self.not_impl(request_message, response_handle)
+                    self.not_impl(&request_message, response_handle)
                 }
             },
             MessageType::Response => {
@@ -63,7 +68,7 @@ impl RequestHandler for DNSHandler {
                     request_message.id()
                 );
 
-                self.not_impl(request_message, response_handle)
+                self.not_impl(&request_message, response_handle)
             }
         }
     }
@@ -76,14 +81,14 @@ impl DNSHandler {
         }
     }
 
-    pub fn upsert(&mut self, name: LowerName, authority: Authority) {
+    pub fn upsert(&mut self, name: LowerName, authority: DNSAuthority) {
         self.authorities.insert(name, authority);
     }
 
-    fn lookup<'a, R: ResponseHandler>(
-        &'a self,
+    fn lookup<R: ResponseHandler>(
+        &self,
         source: IpAddr,
-        request: &'a MessageRequest<'a>,
+        request: MessageRequest,
         response_handle: R,
     ) -> Result<(), Error> {
         // Initialize response builder
@@ -132,18 +137,19 @@ impl DNSHandler {
 
         // Acquire SOA records
         let supported_algorithms = SupportedAlgorithms::new();
+        let lookup_options = LookupOptions::for_dnssec(false, supported_algorithms);
 
-        let soa_records = authority.soa_secure(false, supported_algorithms);
+        let soa_records = authority.soa_secure(lookup_options);
         let soa_records_vec = soa_records.iter().collect();
 
         // #4. Attempt to resolve from local store
-        let records_local = authority.search(query, false, supported_algorithms);
+        let records_local = authority.search(query, lookup_options);
 
         if !records_local.is_empty() {
             let records_local_vec = records_local.iter().collect();
 
             return self.lookup_local(
-                request,
+                &request,
                 response,
                 header,
                 query,
@@ -169,7 +175,7 @@ impl DNSHandler {
                     let records_remote_vec = records_remote_inner.iter().collect();
 
                     Self::serve_response_records(
-                        request,
+                        &request,
                         &mut response,
                         &mut header,
                         &zone_name,
@@ -200,7 +206,7 @@ impl DNSHandler {
                     };
 
                     Self::stamp_response(
-                        request,
+                        &request,
                         &mut response,
                         &mut header,
                         authority,
@@ -218,7 +224,7 @@ impl DNSHandler {
                 debug!("query refused for: {:?} because: {}", query, err);
 
                 Self::stamp_response(
-                    request,
+                    &request,
                     &mut response,
                     &mut header,
                     authority,
@@ -278,7 +284,7 @@ impl DNSHandler {
         mut response: MessageResponseBuilder<'_, 'a>,
         mut header: Header,
         query: &LowerQuery,
-        authority: &'a Authority,
+        authority: &'a DNSAuthority,
         zone_name: Option<ZoneName>,
         soa_records: Vec<&'a Record>,
         local_records: Vec<&'a Record>,
@@ -326,7 +332,7 @@ impl DNSHandler {
         response_handle.send(response_message)
     }
 
-    fn find_auth_recurse(&self, name: &LowerName) -> Option<&Authority> {
+    fn find_auth_recurse(&self, name: &LowerName) -> Option<&DNSAuthority> {
         let authority = self.authorities.get(name);
 
         if authority.is_some() {
@@ -343,7 +349,7 @@ impl DNSHandler {
     }
 
     fn records_from_store(
-        authority: &Authority,
+        authority: &DNSAuthority,
         zone_name: &Option<ZoneName>,
         source: IpAddr,
         query: &LowerQuery,
@@ -411,7 +417,7 @@ impl DNSHandler {
     }
 
     fn records_from_store_attempt(
-        authority: &Authority,
+        authority: &DNSAuthority,
         source: IpAddr,
         zone_name: &Option<ZoneName>,
         query_name_client: &LowerName,
@@ -726,12 +732,15 @@ impl DNSHandler {
                 // Append final prepared values to response
                 for value in final_values {
                     if let Ok(value_data) = value.to_trust(final_kind) {
-                        records.push(Record::from_rdata(
+                        let mut record = Record::from_rdata(
                             Name::from(query_name_client.to_owned()),
                             record_ttl,
-                            final_type,
                             value_data,
-                        ));
+                        );
+
+                        record.set_record_type(final_type);
+
+                        records.push(record);
                     } else {
                         warn!(
                             "could not convert to dns record type: {} with value: {:?}",
@@ -757,7 +766,7 @@ impl DNSHandler {
         header: &'b mut Header,
         zone_name: &Option<ZoneName>,
         mut records: Vec<&'a Record>,
-        authority: &'a Authority,
+        authority: &'a DNSAuthority,
         soa_records: Vec<&'a Record>,
     ) {
         let has_records = !records.is_empty();
@@ -789,7 +798,7 @@ impl DNSHandler {
         request: &MessageRequest,
         response: &'b mut MessageResponseBuilder<'_, 'a>,
         header: &mut Header,
-        authority: &'a Authority,
+        authority: &'a DNSAuthority,
         soa_records: Vec<&'a Record>,
         code: ResponseCode,
         zone_name: &Option<ZoneName>,

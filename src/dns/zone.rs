@@ -8,7 +8,7 @@ use regex::Regex;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{fmt, str};
-use trust_dns::rr::LowerName as TrustLowerName;
+use trust_dns_proto::rr::LowerName as TrustLowerName;
 
 use crate::APP_CONF;
 

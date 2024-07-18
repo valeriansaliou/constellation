@@ -11,11 +11,9 @@ use std::cmp;
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::{fmt, str};
-use trust_dns::rr::rdata::mx::MX;
-use trust_dns::rr::rdata::txt::TXT;
-use trust_dns::rr::{
-    LowerName as TrustLowerName, Name as TrustName, RData as TrustRData,
-    RecordType as TrustRecordType,
+use trust_dns_proto::rr::rdata as TrustRData;
+use trust_dns_proto::rr::{
+    LowerName as TrustLowerName, Name as TrustName, RData, RecordType as TrustRecordType,
 };
 
 use crate::geo::country::CountryCode;
@@ -186,22 +184,24 @@ impl RecordName {
 }
 
 impl RecordValue {
-    pub fn to_trust(&self, record_type: &RecordType) -> Result<TrustRData, ()> {
+    pub fn to_trust(&self, record_type: &RecordType) -> Result<RData, ()> {
         match record_type {
             RecordType::A => {
                 // Parse A into actual IPv4
-                self.parse().map(|value| TrustRData::A(value)).or(Err(()))
+                self.parse()
+                    .map(|value| RData::A(TrustRData::a::A(value)))
+                    .or(Err(()))
             }
             RecordType::AAAA => {
                 // Parse AAAA into actual IPv6
                 self.parse()
-                    .map(|value| TrustRData::AAAA(value))
+                    .map(|value| RData::AAAA(TrustRData::aaaa::AAAA(value)))
                     .or(Err(()))
             }
             RecordType::CNAME => {
                 // Parse CNAME into domain name
                 TrustName::parse(self, Some(&TrustName::new()))
-                    .map(|value| TrustRData::CNAME(value))
+                    .map(|value| RData::CNAME(TrustRData::name::CNAME(value)))
                     .or(Err(()))
             }
             RecordType::MX => {
@@ -215,7 +215,7 @@ impl RecordValue {
                     priority_str.parse::<u16>(),
                     TrustName::parse(exchange_str, Some(&TrustName::new())),
                 ) {
-                    Ok(TrustRData::MX(MX::new(priority, exchange)))
+                    Ok(RData::MX(TrustRData::mx::MX::new(priority, exchange)))
                 } else {
                     Err(())
                 }
@@ -235,13 +235,13 @@ impl RecordValue {
                 }
 
                 if !txt_splits.is_empty() {
-                    Ok(TrustRData::TXT(TXT::new(txt_splits)))
+                    Ok(RData::TXT(TrustRData::txt::TXT::new(txt_splits)))
                 } else {
                     Err(())
                 }
             }
             RecordType::PTR => TrustName::parse(self, Some(&TrustName::new()))
-                .map(|value| TrustRData::PTR(value))
+                .map(|value| RData::PTR(TrustRData::PTR(value)))
                 .or(Err(())),
         }
     }

@@ -12,7 +12,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use trust_dns_resolver::error::ResolveError;
-use trust_dns_resolver::Resolver;
+use trust_dns_resolver::Resolver; // TODO: migrate this one to latest version
 
 use super::record::{RecordType, RecordValue, RecordValues};
 use crate::APP_CONF;

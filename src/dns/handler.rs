@@ -11,7 +11,6 @@ use std::io::Error;
 use std::net::IpAddr;
 use trust_dns_proto::op::header::Header;
 use trust_dns_proto::op::{LowerQuery, MessageType, OpCode, ResponseCode};
-use trust_dns_proto::rr::dnssec::SupportedAlgorithms;
 use trust_dns_proto::rr::{LowerName, Name, Record, RecordType as TrustRecordType};
 use trust_dns_server::authority::{
     AuthLookup, Authority, LookupOptions, MessageRequest, MessageResponseBuilder,
@@ -125,19 +124,12 @@ impl DNSHandler {
         );
 
         // Acquire SOA records
-        let supported_algorithms = SupportedAlgorithms::new();
-        let lookup_options = LookupOptions::for_dnssec(false, supported_algorithms);
-
-        let soa_records = authority
-            .soa_secure(lookup_options)
-            .await
-            .unwrap_or(AuthLookup::Empty);
-
+        let soa_records = authority.soa().await.unwrap_or(AuthLookup::Empty);
         let soa_records_vec = soa_records.iter().collect();
 
         // #3. Attempt to resolve from local store
         let records_local = authority
-            .search(request.request_info(), lookup_options)
+            .search(request.request_info(), LookupOptions::default())
             .await
             .unwrap_or(AuthLookup::Empty);
 

@@ -32,12 +32,8 @@ r2d2_redis = "0.14"
 redis = "0.20"
 actix-web = { version = "3.3", default-features = false }
 actix-web-httpauth = "0.5"
-trust-dns-server = { version = "0.23", default-features = false, features = [
-    "dnssec-ring",
-] }
-trust-dns-proto = { version = "0.23", default-features = false, features = [
-    "dnssec-ring",
-] }
+trust-dns-server = { version = "0.23", default-features = false }
+trust-dns-proto = { version = "0.23", default-features = false }
 trust-dns-resolver = { version = "0.10", default-features = false }
 tokio = "1.21"
 rand = "0.8"

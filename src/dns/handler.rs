@@ -9,7 +9,7 @@ use rand::thread_rng;
 use std::collections::HashMap;
 use std::future::Future;
 use std::io::Error;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use trust_dns_proto::op::header::Header;
 use trust_dns_proto::op::{LowerQuery, MessageType, OpCode, ResponseCode};
 use trust_dns_proto::rr::dnssec::SupportedAlgorithms;
@@ -33,6 +33,7 @@ use crate::APP_CONF;
 use crate::APP_STORE;
 
 pub type DNSAuthority = InMemoryAuthority;
+type DNSResponse = Result<ResponseInfo, Error>;
 
 pub struct DNSHandler {
     authorities: HashMap<LowerName, DNSAuthority>,
@@ -43,32 +44,22 @@ impl RequestHandler for DNSHandler {
     async fn handle_request<R: ResponseHandler>(
         &self,
         request: &Request,
-        response_handle: R,
+        responder: R,
     ) -> ResponseInfo {
-        let request_message = **request;
+        let (request_source, request_message) = (request.src(), **request);
 
-        trace!("request: {:?}", request_message);
+        match self
+            .handle(request_source, request_message, responder)
+            .await
+        {
+            Ok(info) => info,
+            Err(error) => {
+                error!("error handling dns request: {}", error);
 
-        match request_message.message_type() {
-            MessageType::Query => match request_message.op_code() {
-                OpCode::Query => {
-                    info!("lookup request with id: {}", request_message.id());
+                let mut header = Header::new();
 
-                    self.lookup(request.src().ip(), request_message, response_handle)
-                }
-                code @ _ => {
-                    error!("unimplemented opcode: {:?}", code);
-
-                    self.not_impl(&request_message, response_handle)
-                }
-            },
-            MessageType::Response => {
-                warn!(
-                    "got a response as a request from id: {}",
-                    request_message.id()
-                );
-
-                self.not_impl(&request_message, response_handle)
+                header.set_response_code(ResponseCode::ServFail);
+                header.into()
             }
         }
     }
@@ -85,12 +76,41 @@ impl DNSHandler {
         self.authorities.insert(name, authority);
     }
 
-    fn lookup<R: ResponseHandler>(
+    async fn handle<R: ResponseHandler>(
+        &self,
+        source: SocketAddr,
+        request: MessageRequest,
+        responder: R,
+    ) -> DNSResponse {
+        trace!("request: {:?} from: {}", request, source.ip());
+
+        match request.message_type() {
+            MessageType::Query => match request.op_code() {
+                OpCode::Query => {
+                    info!("lookup request with id: {}", request.id());
+
+                    self.lookup(source.ip(), request, responder).await
+                }
+                code @ _ => {
+                    error!("unimplemented opcode: {:?}", code);
+
+                    self.not_impl(&request, responder).await
+                }
+            },
+            MessageType::Response => {
+                warn!("got a response as a request from id: {}", request.id());
+
+                self.not_impl(&request, responder).await
+            }
+        }
+    }
+
+    async fn lookup<R: ResponseHandler>(
         &self,
         source: IpAddr,
         request: MessageRequest,
-        response_handle: R,
-    ) -> Result<(), Error> {
+        responder: R,
+    ) -> DNSResponse {
         // Initialize response builder
         let mut response: MessageResponseBuilder =
             MessageResponse::new(Some(request.raw_queries()));
@@ -108,7 +128,9 @@ impl DNSHandler {
         let query_first = queries.first();
 
         if query_first.is_none() == true || queries.len() > 1 {
-            return self.lookup_invalid_query(request, response, header, response_handle);
+            return self
+                .lookup_invalid_query(request, response, header, responder)
+                .await;
         }
 
         // #2. Acquire base authority (ie. zone) for request
@@ -118,7 +140,9 @@ impl DNSHandler {
         let authority_lookup = self.find_auth_recurse(query.name());
 
         if authority_lookup.is_none() == true {
-            return self.lookup_no_authority(request, response, header, query, response_handle);
+            return self
+                .lookup_no_authority(request, response, header, query, responder)
+                .await;
         }
 
         // #3. Handle the first query only
@@ -148,17 +172,19 @@ impl DNSHandler {
         if !records_local.is_empty() {
             let records_local_vec = records_local.iter().collect();
 
-            return self.lookup_local(
-                &request,
-                response,
-                header,
-                query,
-                authority,
-                zone_name,
-                soa_records_vec,
-                records_local_vec,
-                response_handle,
-            );
+            return self
+                .lookup_local(
+                    &request,
+                    response,
+                    header,
+                    query,
+                    authority,
+                    zone_name,
+                    soa_records_vec,
+                    records_local_vec,
+                    responder,
+                )
+                .await;
         }
 
         // #5. Fallback on resolving from remote store
@@ -186,7 +212,7 @@ impl DNSHandler {
 
                     // Dispatch request from this block, as we cannot escape generated \
                     //   record values lifetimes out of this context.
-                    Self::dispatch(response, header, response_handle)
+                    Self::dispatch(response, header, responder).await
                 } else {
                     // Serve error code
                     debug!("did not find records for query: {:?}", query);
@@ -217,7 +243,7 @@ impl DNSHandler {
                     );
 
                     // Dispatch empty records response
-                    Self::dispatch(response, header, response_handle)
+                    Self::dispatch(response, header, responder).await
                 }
             }
             Err(err) => {
@@ -235,18 +261,18 @@ impl DNSHandler {
                 );
 
                 // Dispatch error response
-                Self::dispatch(response, header, response_handle)
+                Self::dispatch(response, header, responder).await
             }
         };
     }
 
-    fn lookup_invalid_query<R: ResponseHandler>(
+    async fn lookup_invalid_query<R: ResponseHandler>(
         &self,
         request: &MessageRequest,
         response: MessageResponseBuilder,
         mut header: Header,
-        response_handle: R,
-    ) -> Result<(), Error> {
+        responder: R,
+    ) -> DNSResponse {
         warn!(
             "request has no query, or too many queries for: {}",
             request.id()
@@ -255,17 +281,17 @@ impl DNSHandler {
         header.set_response_code(ResponseCode::FormErr);
 
         // Format error response dispatch
-        Self::dispatch(response, header, response_handle)
+        Self::dispatch(response, header, responder).await
     }
 
-    fn lookup_no_authority<R: ResponseHandler>(
+    async fn lookup_no_authority<R: ResponseHandler>(
         &self,
         request: &MessageRequest,
         response: MessageResponseBuilder,
         mut header: Header,
         query: &LowerQuery,
-        response_handle: R,
-    ) -> Result<(), Error> {
+        responder: R,
+    ) -> DNSResponse {
         debug!(
             "domain authority not found for query: {:?} on request: {}",
             query,
@@ -275,10 +301,10 @@ impl DNSHandler {
         header.set_response_code(ResponseCode::Refused);
 
         // Authority not found response dispatch
-        Self::dispatch(response, header, response_handle)
+        Self::dispatch(response, header, responder).await
     }
 
-    fn lookup_local<'a, R: ResponseHandler>(
+    async fn lookup_local<'a, R: ResponseHandler>(
         &self,
         request: &MessageRequest,
         mut response: MessageResponseBuilder<'_, 'a>,
@@ -288,8 +314,8 @@ impl DNSHandler {
         zone_name: Option<ZoneName>,
         soa_records: Vec<&'a Record>,
         local_records: Vec<&'a Record>,
-        response_handle: R,
-    ) -> Result<(), Error> {
+        responder: R,
+    ) -> Result<ResponseInfo, Error> {
         debug!("found records for query from local store: {:?}", query);
 
         Self::serve_response_records(
@@ -304,32 +330,34 @@ impl DNSHandler {
 
         // Dispatch request from this block, as we cannot escape generated record \
         //   values lifetimes out of this context.
-        Self::dispatch(response, header, response_handle)
+        Self::dispatch(response, header, responder).await
     }
 
-    fn not_impl<R: ResponseHandler>(
+    async fn not_impl<R: ResponseHandler>(
         &self,
         request: &MessageRequest,
-        response_handle: R,
-    ) -> Result<(), Error> {
-        response_handle.send(MessageResponse::new(None).error_msg(
-            request.id(),
-            request.op_code(),
-            ResponseCode::NotImp,
-        ))
+        responder: R,
+    ) -> Result<ResponseInfo, Error> {
+        responder
+            .send_response(MessageResponse::new(None).error_msg(
+                request.id(),
+                request.op_code(),
+                ResponseCode::NotImp,
+            ))
+            .await
     }
 
-    fn dispatch<R: ResponseHandler>(
+    async fn dispatch<R: ResponseHandler>(
         response: MessageResponseBuilder,
         header: Header,
-        response_handle: R,
-    ) -> Result<(), Error> {
+        responder: R,
+    ) -> Result<ResponseInfo, Error> {
         // Dispatch final response message
         let response_message = response.build(header);
 
         trace!("query response: {:?}", response_message);
 
-        response_handle.send(response_message)
+        responder.send_response(response_message).await
     }
 
     fn find_auth_recurse(&self, name: &LowerName) -> Option<&DNSAuthority> {

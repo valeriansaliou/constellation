@@ -148,6 +148,7 @@ impl StoreCacheFlush {
             for (store_key, store_accessed_at) in &refresh_register {
                 // Notice: restore 'accessed_at' time, otherwise a never-accessed cache entry \
                 //   would never be expired.
+                // TODO: this is a blocking code path (method must be made async)
                 APP_STORE
                     .raw_get_remote(store_key, Some(*store_accessed_at))
                     .ok();

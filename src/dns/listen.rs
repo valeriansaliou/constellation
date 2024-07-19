@@ -38,7 +38,8 @@ impl DNSListenBuilder {
 impl DNSListen {
     #[tokio::main]
     pub async fn run(&self) {
-        // Run the DNS server
+        // Prepare the DNS handler
+        // Notice: upsert all available authorities from the configuration.
         let mut handler: DNSHandler = DNSHandler::new();
 
         for (zone_name, _) in &APP_CONF.dns.zone {
@@ -48,6 +49,7 @@ impl DNSListen {
             }
         }
 
+        // Run the DNS server
         let mut server = ServerFuture::new(handler);
 
         // Register sockets & listeners

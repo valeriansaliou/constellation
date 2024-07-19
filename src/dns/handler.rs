@@ -45,7 +45,11 @@ impl RequestHandler for DNSHandler {
         responder: R,
     ) -> ResponseInfo {
         match self.handle(responder, request).await {
-            Ok(info) => info,
+            Ok(info) => {
+                debug!("success handling dns request");
+
+                info
+            }
             Err(error) => {
                 error!("error handling dns request: {}", error);
 
@@ -117,17 +121,17 @@ impl DNSHandler {
         let authority = authority_lookup.unwrap();
         let zone_name = ZoneName::from_hickory(&authority.origin());
 
+        let soa_records = authority.soa().await.unwrap_or(AuthLookup::Empty);
+        let soa_records_vec = soa_records.iter().collect();
+
         info!(
             "request: {} found authority: {}",
             request.id(),
             authority.origin()
         );
 
-        // Acquire SOA records
-        let soa_records = authority.soa().await.unwrap_or(AuthLookup::Empty);
-        let soa_records_vec = soa_records.iter().collect();
-
         // #3. Attempt to resolve from local store
+        // Notice: this is used to serve local SOA and NS records.
         let records_local = authority
             .search(request.request_info(), LookupOptions::default())
             .await
@@ -149,7 +153,9 @@ impl DNSHandler {
                 .await;
         }
 
-        // #4. Fallback on resolving from remote store
+        // #4. Resolve from remote store
+        // Notice: this is used to serve all records set with the HTTP API.
+        // TODO: this is a blocking code path (records_from_store() must be made async)
         return match Self::records_from_store(authority, &zone_name, request.src().ip(), query) {
             Ok(records_remote) => {
                 // Serve response data?
@@ -189,6 +195,7 @@ impl DNSHandler {
                             ResponseCode::NoError
                         }
                         AuthLookup::Records { .. } | AuthLookup::AXFR { .. } => {
+                            // This code path is unexpected and should never be reached
                             panic!("error, should return noerror")
                         }
                     };
@@ -344,6 +351,7 @@ impl DNSHandler {
         }
 
         // Attempt with requested domain
+        // TODO: this is a blocking code path (method must be made async)
         let mut records = Self::records_from_store_attempt(
             authority,
             source,
@@ -375,6 +383,7 @@ impl DNSHandler {
                     let wildcard_name_lower = LowerName::new(&wildcard_name);
 
                     if &wildcard_name_lower != query_name {
+                        // TODO: this is a blocking code path (method must be made async)
                         let records_wildcard = Self::records_from_store_attempt(
                             authority,
                             source,
@@ -418,6 +427,7 @@ impl DNSHandler {
                 let mut records = Vec::new();
 
                 if let &Some(ref record_type_inner) = record_type {
+                    // TODO: this is a blocking code path (method must be made async)
                     match APP_STORE.get(
                         &zone_name,
                         &record_name,
@@ -451,6 +461,7 @@ impl DNSHandler {
 
                     // Look for a CNAME result? (if no records were acquired)
                     if record_type_inner != &RecordType::CNAME && records.is_empty() {
+                        // TODO: this is a blocking code path (method must be made async)
                         match APP_STORE.get(
                             &zone_name,
                             &record_name,
@@ -491,6 +502,7 @@ impl DNSHandler {
 
                 // No record found, exhaust all record types to check if name exists
                 // Notice: a DNS server must return NOERROR if name exists, else NXDOMAIN
+                // TODO: this is a blocking code path (method must be made async)
                 if Self::check_name_exists(&zone_name, &record_name, StoreAccessOrigin::External)?
                     == true
                 {
@@ -777,6 +789,7 @@ impl DNSHandler {
             // Notice: instead of performing a simple exist check, we acquire full record data, \
             //   as this lets us use the local store and therefore prevent non-existing domain \
             //   attacks on the remote store.
+            // TODO: this is a blocking code path (method must be made async)
             match APP_STORE.get(zone_name, record_name, &record_type, origin) {
                 Ok(_) => {
                     // Record exists for name and type; abort there.

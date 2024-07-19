@@ -175,6 +175,7 @@ impl DNSHealthHTTP {
                 record_type
             );
 
+            // TODO: this is a blocking code path (method must be made async)
             if let Ok(record) = APP_STORE.get(
                 &domain.zone,
                 &domain.name,

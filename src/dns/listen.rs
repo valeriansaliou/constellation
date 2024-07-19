@@ -4,14 +4,14 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use hickory_proto::rr::rdata as HickoryRData;
+use hickory_proto::rr::record_data::RData;
+use hickory_proto::rr::{LowerName, Name, Record, RecordSet, RecordType, RrKey};
+use hickory_server::authority::ZoneType;
+use hickory_server::server::ServerFuture;
 use std::collections::BTreeMap;
 use std::time::Duration;
 use tokio::net::{TcpListener, UdpSocket};
-use trust_dns_proto::rr::rdata as TrustRData;
-use trust_dns_proto::rr::record_data::RData;
-use trust_dns_proto::rr::{LowerName, Name, Record, RecordSet, RecordType, RrKey};
-use trust_dns_server::authority::ZoneType;
-use trust_dns_server::server::ServerFuture;
 
 use super::handler::{DNSAuthority, DNSHandler};
 use crate::APP_CONF;
@@ -82,7 +82,7 @@ impl DNSListen {
             let soa_records = RecordSet::from(Record::from_rdata(
                 name.to_owned(),
                 APP_CONF.dns.record_ttl,
-                RData::SOA(TrustRData::SOA::new(
+                RData::SOA(HickoryRData::SOA::new(
                     NAME_SOA_MASTER.to_owned(),
                     NAME_SOA_RESPONSIBLE.to_owned(),
                     SERIAL_DEFAULT,
@@ -106,7 +106,7 @@ impl DNSListen {
                     Record::from_rdata(
                         name.to_owned(),
                         APP_CONF.dns.record_ttl,
-                        RData::NS(TrustRData::NS(
+                        RData::NS(HickoryRData::NS(
                             Name::parse(nameserver, Some(&Name::new()))
                                 .expect("invalid nameserver"),
                         )),

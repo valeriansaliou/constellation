@@ -4,19 +4,19 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use hickory_proto::op::header::Header;
+use hickory_proto::op::{LowerQuery, MessageType, OpCode, ResponseCode};
+use hickory_proto::rr::{LowerName, Name, Record, RecordType as HickoryRecordType};
+use hickory_server::authority::{
+    AuthLookup, Authority, LookupOptions, MessageRequest, MessageResponseBuilder,
+};
+use hickory_server::server::{Request, RequestHandler, ResponseHandler, ResponseInfo};
+use hickory_server::store::in_memory::InMemoryAuthority;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::collections::HashMap;
 use std::io::Error;
 use std::net::IpAddr;
-use trust_dns_proto::op::header::Header;
-use trust_dns_proto::op::{LowerQuery, MessageType, OpCode, ResponseCode};
-use trust_dns_proto::rr::{LowerName, Name, Record, RecordType as TrustRecordType};
-use trust_dns_server::authority::{
-    AuthLookup, Authority, LookupOptions, MessageRequest, MessageResponseBuilder,
-};
-use trust_dns_server::server::{Request, RequestHandler, ResponseHandler, ResponseInfo};
-use trust_dns_server::store::in_memory::InMemoryAuthority;
 
 use super::code::CodeName;
 use super::flatten::DNS_FLATTEN;
@@ -115,7 +115,7 @@ impl DNSHandler {
 
         // #2. Handle the query
         let authority = authority_lookup.unwrap();
-        let zone_name = ZoneName::from_trust(&authority.origin());
+        let zone_name = ZoneName::from_hickory(&authority.origin());
 
         info!(
             "request: {} found authority: {}",
@@ -336,7 +336,7 @@ impl DNSHandler {
         query: &LowerQuery,
     ) -> Result<Option<Vec<Record>>, ResponseCode> {
         let (query_name, query_type) = (query.name(), query.query_type());
-        let record_type = RecordType::from_trust(&query_type);
+        let record_type = RecordType::from_hickory(&query_type);
 
         // Stack query type to metrics?
         if let Some(ref zone_name) = zone_name {
@@ -403,10 +403,10 @@ impl DNSHandler {
         zone_name: &Option<ZoneName>,
         query_name_client: &LowerName,
         query_name_effective: &LowerName,
-        query_type: &TrustRecordType,
+        query_type: &HickoryRecordType,
         record_type: &Option<RecordType>,
     ) -> Result<Option<Vec<Record>>, ResponseCode> {
-        let record_name = RecordName::from_trust(&authority.origin(), query_name_effective);
+        let record_name = RecordName::from_hickory(&authority.origin(), query_name_effective);
 
         debug!(
             "lookup record in store for query: {} {} on zone: {:?}, record: {:?}, and type: {:?}",
@@ -506,14 +506,14 @@ impl DNSHandler {
 
     fn parse_from_records(
         query_name_client: &LowerName,
-        query_type: &TrustRecordType,
+        query_type: &HickoryRecordType,
         record_type: &RecordType,
         source: IpAddr,
         zone_name: &ZoneName,
         record: &StoreRecord,
         records: &mut Vec<Record>,
     ) {
-        if let Ok(type_data) = record.kind.to_trust() {
+        if let Ok(type_data) = record.kind.to_hickory() {
             // Check if should resolve IP to country?
             let ip_country =
                 if record.blackhole.is_some() == true || record.regions.is_some() == true {
@@ -712,7 +712,7 @@ impl DNSHandler {
 
                 // Append final prepared values to response
                 for value in final_values {
-                    if let Ok(value_data) = value.to_trust(final_kind) {
+                    if let Ok(value_data) = value.to_hickory(final_kind) {
                         let mut record = Record::from_rdata(
                             Name::from(query_name_client.to_owned()),
                             record_ttl,
@@ -749,7 +749,7 @@ impl DNSHandler {
     ) {
         // Stack answer code to metrics?
         if let Some(ref zone_name) = zone_name {
-            let code_name = CodeName::from_trust(&code);
+            let code_name = CodeName::from_hickory(&code);
 
             METRICS_STORE.stack(zone_name, MetricsValue::AnswerCode(&code_name));
         }

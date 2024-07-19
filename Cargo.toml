@@ -34,7 +34,9 @@ actix-web = { version = "3.3", default-features = false }
 actix-web-httpauth = "0.5"
 trust-dns-server = { version = "0.23", default-features = false }
 trust-dns-proto = { version = "0.23", default-features = false }
-trust-dns-resolver = { version = "0.10", default-features = false }
+trust-dns-resolver = { version = "0.23", default-features = false, features = [
+    "tokio-runtime",
+] }
 tokio = "1.21"
 rand = "0.8"
 farmhash = "1.1"

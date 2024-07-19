@@ -12,7 +12,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use trust_dns_resolver::error::ResolveError;
-use trust_dns_resolver::Resolver; // TODO: migrate this one to latest version
+use trust_dns_resolver::Resolver;
 
 use super::record::{RecordType, RecordValue, RecordValues};
 use crate::APP_CONF;
@@ -86,8 +86,10 @@ impl DNSFlattenBuilder {
             for socket_address in socket_addresses {
                 resolver_config.add_name_server(NameServerConfig {
                     socket_addr: socket_address,
+                    bind_addr: None,
                     protocol: Protocol::Udp,
                     tls_dns_name: None,
+                    trust_negative_responses: true,
                 });
             }
         }
@@ -194,35 +196,41 @@ impl DNSFlatten {
         let values: Result<Vec<String>, ResolveError> = match registry_key.1 {
             RecordType::A => self
                 .resolver
-                .ipv4_lookup(&registry_key.0)
+                .ipv4_lookup(registry_key.0.to_str())
                 .map(|values| values.iter().map(|value| value.to_string()).collect()),
             RecordType::AAAA => self
                 .resolver
-                .ipv6_lookup(&registry_key.0)
+                .ipv6_lookup(registry_key.0.to_str())
                 .map(|values| values.iter().map(|value| value.to_string()).collect()),
             RecordType::MX => {
                 // Format as `{priority} {exchange}`, eg. `10 inbound.crisp.email`
-                self.resolver.mx_lookup(&registry_key.0).map(|values| {
-                    values
-                        .iter()
-                        .map(|value| format!("{} {}", value.preference(), value.exchange()))
-                        .collect()
-                })
+                self.resolver
+                    .mx_lookup(registry_key.0.to_str())
+                    .map(|values| {
+                        values
+                            .iter()
+                            .map(|value| format!("{} {}", value.preference(), value.exchange()))
+                            .collect()
+                    })
             }
             RecordType::TXT => {
                 // Assemble all TXT data segments
-                self.resolver.txt_lookup(&registry_key.0).map(|values| {
-                    values
-                        .iter()
-                        .map(|value_chunks| {
-                            value_chunks
-                                .txt_data()
-                                .iter()
-                                .map(|value_chunk| std::str::from_utf8(value_chunk).unwrap_or(""))
-                                .collect()
-                        })
-                        .collect()
-                })
+                self.resolver
+                    .txt_lookup(registry_key.0.to_str())
+                    .map(|values| {
+                        values
+                            .iter()
+                            .map(|value_chunks| {
+                                value_chunks
+                                    .txt_data()
+                                    .iter()
+                                    .map(|value_chunk| {
+                                        std::str::from_utf8(value_chunk).unwrap_or("")
+                                    })
+                                    .collect()
+                            })
+                            .collect()
+                    })
             }
             RecordType::PTR | RecordType::CNAME => Ok(Vec::new()),
         };

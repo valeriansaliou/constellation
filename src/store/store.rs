@@ -88,7 +88,6 @@ pub enum StoreAccessOrigin {
     Internal,
 }
 
-// TODO: make this non-blocking (async)
 impl StoreBuilder {
     pub fn new() -> Store {
         let mut pools = Vec::new();

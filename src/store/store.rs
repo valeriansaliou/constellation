@@ -4,9 +4,9 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use r2d2::Pool;
+use r2d2_redis::r2d2::Pool;
+use r2d2_redis::redis::{Commands, ErrorKind};
 use r2d2_redis::RedisConnectionManager;
-use redis::{Commands, ErrorKind};
 use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
 use std::sync::RwLock;

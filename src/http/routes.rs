@@ -44,7 +44,6 @@ async fn head_zone_record(
         RecordType,
     )>,
 ) -> HttpResponse {
-    // TODO: this is a blocking code path (method must be made async)
     APP_STORE
         .get(
             &zone_name.into_inner(),
@@ -52,6 +51,7 @@ async fn head_zone_record(
             &record_type,
             StoreAccessOrigin::Internal,
         )
+        .await
         .map(|_| HttpResponse::Ok().finish())
         .unwrap_or(HttpResponse::NotFound().finish())
 }
@@ -64,7 +64,6 @@ async fn get_zone_record(
         RecordType,
     )>,
 ) -> HttpResponse {
-    // TODO: this is a blocking code path (method must be made async)
     APP_STORE
         .get(
             &zone_name.into_inner(),
@@ -72,6 +71,7 @@ async fn get_zone_record(
             &record_type,
             StoreAccessOrigin::Internal,
         )
+        .await
         .map(|record| {
             HttpResponse::Ok().json(RecordGetResponse {
                 _type: record.kind,
@@ -97,7 +97,6 @@ async fn put_zone_record(
 
     data: web::Json<RecordData>,
 ) -> HttpResponse {
-    // TODO: this is a blocking code path (method must be made async)
     APP_STORE
         .set(
             &zone_name.into_inner(),
@@ -112,6 +111,7 @@ async fn put_zone_record(
                 values: data.values.to_owned(),
             },
         )
+        .await
         .map(|_| HttpResponse::Ok().finish())
         .unwrap_or(HttpResponse::ServiceUnavailable().finish())
 }
@@ -124,9 +124,9 @@ async fn delete_zone_record(
         RecordType,
     )>,
 ) -> HttpResponse {
-    // TODO: this is a blocking code path (method must be made async)
     APP_STORE
         .remove(&zone_name.into_inner(), &record_name, &record_type)
+        .await
         .map(|_| HttpResponse::Ok().finish())
         .unwrap_or(HttpResponse::ServiceUnavailable().finish())
 }

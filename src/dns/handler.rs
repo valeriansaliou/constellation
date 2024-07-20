@@ -155,8 +155,9 @@ impl DNSHandler {
 
         // #4. Resolve from remote store
         // Notice: this is used to serve all records set with the HTTP API.
-        // TODO: this is a blocking code path (records_from_store() must be made async)
-        return match Self::records_from_store(authority, &zone_name, request.src().ip(), query) {
+        return match Self::records_from_store(authority, &zone_name, request.src().ip(), query)
+            .await
+        {
             Ok(records_remote) => {
                 // Serve response data?
                 if let Some(records_remote_inner) = records_remote {
@@ -336,7 +337,7 @@ impl DNSHandler {
         None
     }
 
-    fn records_from_store(
+    async fn records_from_store(
         authority: &DNSAuthority,
         zone_name: &Option<ZoneName>,
         source: IpAddr,
@@ -351,7 +352,6 @@ impl DNSHandler {
         }
 
         // Attempt with requested domain
-        // TODO: this is a blocking code path (method must be made async)
         let mut records = Self::records_from_store_attempt(
             authority,
             source,
@@ -360,7 +360,8 @@ impl DNSHandler {
             &query_name,
             &query_type,
             &record_type,
-        )?;
+        )
+        .await?;
 
         // Check if 'records' is empty
         let is_records_empty = if let Some(ref records_inner) = records {
@@ -383,7 +384,6 @@ impl DNSHandler {
                     let wildcard_name_lower = LowerName::new(&wildcard_name);
 
                     if &wildcard_name_lower != query_name {
-                        // TODO: this is a blocking code path (method must be made async)
                         let records_wildcard = Self::records_from_store_attempt(
                             authority,
                             source,
@@ -392,7 +392,8 @@ impl DNSHandler {
                             &wildcard_name_lower,
                             &query_type,
                             &record_type,
-                        )?;
+                        )
+                        .await?;
 
                         // Assign non-none wildcard records? (retain any NOERROR from 'records')
                         if records_wildcard.is_none() == false {
@@ -406,7 +407,7 @@ impl DNSHandler {
         Ok(records)
     }
 
-    fn records_from_store_attempt(
+    async fn records_from_store_attempt(
         authority: &DNSAuthority,
         source: IpAddr,
         zone_name: &Option<ZoneName>,
@@ -427,13 +428,15 @@ impl DNSHandler {
                 let mut records = Vec::new();
 
                 if let &Some(ref record_type_inner) = record_type {
-                    // TODO: this is a blocking code path (method must be made async)
-                    match APP_STORE.get(
-                        &zone_name,
-                        &record_name,
-                        record_type_inner,
-                        StoreAccessOrigin::External,
-                    ) {
+                    match APP_STORE
+                        .get(
+                            &zone_name,
+                            &record_name,
+                            record_type_inner,
+                            StoreAccessOrigin::External,
+                        )
+                        .await
+                    {
                         Ok(record) => {
                             debug!(
                                 "found record in store for query: {} {}; got: {:?}",
@@ -461,13 +464,15 @@ impl DNSHandler {
 
                     // Look for a CNAME result? (if no records were acquired)
                     if record_type_inner != &RecordType::CNAME && records.is_empty() {
-                        // TODO: this is a blocking code path (method must be made async)
-                        match APP_STORE.get(
-                            &zone_name,
-                            &record_name,
-                            &RecordType::CNAME,
-                            StoreAccessOrigin::External,
-                        ) {
+                        match APP_STORE
+                            .get(
+                                &zone_name,
+                                &record_name,
+                                &RecordType::CNAME,
+                                StoreAccessOrigin::External,
+                            )
+                            .await
+                        {
                             Ok(record_cname) => {
                                 debug!(
                                     "found cname hint record in store for query: {} {}; got: {:?}",
@@ -502,8 +507,8 @@ impl DNSHandler {
 
                 // No record found, exhaust all record types to check if name exists
                 // Notice: a DNS server must return NOERROR if name exists, else NXDOMAIN
-                // TODO: this is a blocking code path (method must be made async)
-                if Self::check_name_exists(&zone_name, &record_name, StoreAccessOrigin::External)?
+                if Self::check_name_exists(&zone_name, &record_name, StoreAccessOrigin::External)
+                    .await?
                     == true
                 {
                     // Name exists, return empty records (ie. NOERROR)
@@ -778,7 +783,7 @@ impl DNSHandler {
         }
     }
 
-    fn check_name_exists(
+    async fn check_name_exists(
         zone_name: &ZoneName,
         record_name: &RecordName,
         origin: StoreAccessOrigin,
@@ -789,8 +794,10 @@ impl DNSHandler {
             // Notice: instead of performing a simple exist check, we acquire full record data, \
             //   as this lets us use the local store and therefore prevent non-existing domain \
             //   attacks on the remote store.
-            // TODO: this is a blocking code path (method must be made async)
-            match APP_STORE.get(zone_name, record_name, &record_type, origin) {
+            match APP_STORE
+                .get(zone_name, record_name, &record_type, origin)
+                .await
+            {
                 Ok(_) => {
                     // Record exists for name and type; abort there.
                     return Ok(true);

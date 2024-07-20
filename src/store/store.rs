@@ -4,9 +4,9 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use r2d2_redis::r2d2::Pool;
-use r2d2_redis::redis::{Commands, ErrorKind};
-use r2d2_redis::RedisConnectionManager;
+use bb8_redis::bb8::Pool;
+use bb8_redis::redis::{AsyncCommands, ErrorKind};
+use bb8_redis::RedisConnectionManager;
 use serde_json::{self, Error as SerdeJSONError};
 use std::collections::HashSet;
 use std::sync::RwLock;
@@ -89,7 +89,8 @@ pub enum StoreAccessOrigin {
 }
 
 impl StoreBuilder {
-    pub fn new() -> Store {
+    #[tokio::main]
+    pub async fn new() -> Store {
         let mut pools = Vec::new();
 
         // Bind to master pool
@@ -98,12 +99,13 @@ impl StoreBuilder {
             &APP_CONF.redis.master.host,
             APP_CONF.redis.master.port,
             &APP_CONF.redis.master.password,
-        );
+        )
+        .await;
 
         // Bind to rescue pools (if any)
         if let Some(ref rescue_items) = APP_CONF.redis.rescue {
             for rescue in rescue_items {
-                Self::pool_bind(&mut pools, &rescue.host, rescue.port, &rescue.password);
+                Self::pool_bind(&mut pools, &rescue.host, rescue.port, &rescue.password).await;
             }
         }
 
@@ -112,21 +114,23 @@ impl StoreBuilder {
             rate: RwLock::new(StoreLimitsRate::default()),
         };
 
-        Store {
-            pools: pools,
-            limits: limits,
-        }
+        Store { pools, limits }
     }
 
-    fn pool_bind(pools: &mut Vec<StorePoolType>, host: &str, port: u16, password: &Option<String>) {
+    async fn pool_bind(
+        pools: &mut Vec<StorePoolType>,
+        host: &str,
+        port: u16,
+        password: &Option<String>,
+    ) {
         // Establish pool connection for this Redis target
-        match Self::pool_connect(host, port, password) {
+        match Self::pool_connect(host, port, password).await {
             Ok(master_pool) => pools.push(master_pool),
             Err(err) => panic!("store error: {}", err),
         }
     }
 
-    fn pool_connect(
+    async fn pool_connect(
         host: &str,
         port: u16,
         password: &Option<String>,
@@ -160,7 +164,7 @@ impl StoreBuilder {
                         APP_CONF.redis.connection_timeout_seconds,
                     ));
 
-                match builder.build(manager) {
+                match builder.build(manager).await {
                     Ok(pool) => {
                         info!("connected to redis at: {}", tcp_addr_raw);
 
@@ -175,7 +179,7 @@ impl StoreBuilder {
 }
 
 impl Store {
-    pub fn get(
+    pub async fn get(
         &self,
         zone_name: &ZoneName,
         record_name: &RecordName,
@@ -206,7 +210,7 @@ impl Store {
             );
 
             // Read result from remote store
-            return self.raw_get_remote(&store_key, None);
+            return self.raw_get_remote(&store_key, None).await;
         }
 
         // #3. Get from store (external origin, ie. DOS-unsafe, thus we need to apply limits)
@@ -260,7 +264,7 @@ impl Store {
         }
 
         // Read result from remote store
-        let result_remote = self.raw_get_remote(&store_key, None);
+        let result_remote = self.raw_get_remote(&store_key, None).await;
 
         // Update time spent in current timespan
         {
@@ -277,7 +281,7 @@ impl Store {
         result_remote
     }
 
-    pub fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
+    pub async fn set(&self, zone_name: &ZoneName, record: StoreRecord) -> Result<(), StoreError> {
         get_cache_store_client!(&self.pools, StoreError::Disconnected, client {
             let flatten_encoder: Result<String, SerdeJSONError> = match record.flatten {
                 Some(true) => {
@@ -335,7 +339,7 @@ impl Store {
                             (KEY_RESCUE, &rescue),
                             (KEY_VALUE, &values),
                         ]
-                    ).or(Err(StoreError::Connector))
+                    ).await.or(Err(StoreError::Connector))
                 },
                 (Err(_), _, _, _, _) |
                 (_, Err(_), _, _, _) |
@@ -348,7 +352,7 @@ impl Store {
         })
     }
 
-    pub fn remove(
+    pub async fn remove(
         &self,
         zone_name: &ZoneName,
         record_name: &RecordName,
@@ -361,11 +365,11 @@ impl Store {
             STORE_CACHE.pop(&store_key);
 
             // Delete from remote
-            client.del(store_key).or(Err(StoreError::Connector))
+            client.del(store_key).await.or(Err(StoreError::Connector))
         })
     }
 
-    pub fn raw_get_remote(
+    pub async fn raw_get_remote(
         &self,
         store_key: &str,
         cache_accessed_at: Option<SystemTime>,
@@ -384,7 +388,7 @@ impl Store {
                     KEY_RESCUE,
                     KEY_VALUE
                 ),
-            ) {
+            ).await {
                 Ok(values) => {
                     if let (Some(kind_value), Some(name_value), Ok(value_value)) = (
                         RecordType::from_str(&values.0),

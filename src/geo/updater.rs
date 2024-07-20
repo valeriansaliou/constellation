@@ -51,7 +51,7 @@ impl GeoUpdater {
             // Hold on 2 seconds
             thread::sleep(Duration::from_secs(2));
 
-            match Self::update_database(&update_url) {
+            match Self::update_database(&update_url, false) {
                 Ok(_) => {
                     info!("ran geo update operation");
 
@@ -94,39 +94,70 @@ impl GeoUpdater {
         return false;
     }
 
-    fn update_database(update_url: &str) -> Result<(), Option<HTTPError::Error>> {
+    fn update_database(update_url: &str, redirected: bool) -> Result<(), Option<HTTPError::Error>> {
         debug!("acquiring updated geo database");
 
         match tempfile() {
             Ok(mut tmp_file) => {
                 match HTTPRequest::get(update_url, &mut tmp_file) {
-                    Ok(_) => {
-                        debug!(
-                            "downloaded updated geo database archive to file: {:?}",
-                            tmp_file
-                        );
+                    Ok(response) => {
+                        let status = response.status_code();
 
-                        // Reset file cursor to the beginning (prepare for reading)
-                        tmp_file.seek(SeekFrom::Start(0)).unwrap();
+                        if status.is_success() {
+                            debug!(
+                                "downloaded updated geo database archive with status: {} to file: {:?}",
+                                response.status_code(),
+                                tmp_file
+                            );
 
-                        // Extract archive
-                        let tar = GzDecoder::new(tmp_file);
+                            // Reset file cursor to the beginning (prepare for reading)
+                            tmp_file.seek(SeekFrom::Start(0)).unwrap();
 
-                        match Archive::new(tar).entries() {
-                            Ok(entries) => {
-                                if Self::extract_archive(entries) == true {
-                                    Ok(())
-                                } else {
-                                    error!("no matching mmdb file found in geo database archive");
+                            // Extract archive
+                            let tar = GzDecoder::new(tmp_file);
+
+                            match Archive::new(tar).entries() {
+                                Ok(entries) => {
+                                    if Self::extract_archive(entries) == true {
+                                        Ok(())
+                                    } else {
+                                        error!(
+                                            "no matching mmdb file found in geo database archive"
+                                        );
+
+                                        Err(None)
+                                    }
+                                }
+                                Err(_) => {
+                                    error!("failed to list entries in geo database archive");
 
                                     Err(None)
                                 }
                             }
-                            Err(_) => {
-                                error!("failed to list entries in geo database archive");
+                        } else if status.is_redirect() {
+                            // Redirect to target location?
+                            // Important: if not already redirected!
+                            if let Some(location_url) = response.headers().get("Location") {
+                                if !location_url.is_empty() && redirected == false {
+                                    info!(
+                                        "redirected to download updated geo database archive: {}",
+                                        location_url
+                                    );
 
-                                Err(None)
+                                    return Self::update_database(location_url, true);
+                                }
                             }
+
+                            error!("bad redirection to download updated geo database archive");
+
+                            Err(None)
+                        } else {
+                            error!(
+                                "refused to download updated geo database archive (got status: {})",
+                                status
+                            );
+
+                            Err(None)
                         }
                     }
                     Err(err) => {

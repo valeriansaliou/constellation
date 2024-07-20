@@ -14,15 +14,18 @@ macro_rules! get_cache_store_client {
 
         for (pool, target) in $pools {
             // Attempt to get the first healthy pool, in order
-            match pool.try_get() {
-                Some(mut $client) => {
+            match pool.get().await {
+                Ok(mut $client) => {
                     debug!("acquired cache store client at: {}", target);
 
                     // Healthy pool acquired, return immediately (break the acquire loop)
                     return $code;
                 }
-                None => {
-                    warn!("could not acquire cache store client from sub-pool");
+                Err(err) => {
+                    warn!(
+                        "could not acquire cache store client from sub-pool: {}",
+                        err
+                    );
 
                     last_error = $error
                 }

@@ -4,6 +4,10 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use hickory_proto::rr::rdata as HickoryRData;
+use hickory_proto::rr::{
+    LowerName as HickoryLowerName, Name as HickoryName, RData, RecordType as HickoryRecordType,
+};
 use regex::Regex;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -11,12 +15,6 @@ use std::cmp;
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::{fmt, str};
-use trust_dns::rr::rdata::mx::MX;
-use trust_dns::rr::rdata::txt::TXT;
-use trust_dns::rr::{
-    LowerName as TrustLowerName, Name as TrustName, RData as TrustRData,
-    RecordType as TrustRecordType,
-};
 
 use crate::geo::country::CountryCode;
 
@@ -86,14 +84,14 @@ impl RecordType {
         }
     }
 
-    pub fn from_trust(record_type: &TrustRecordType) -> Option<RecordType> {
+    pub fn from_hickory(record_type: &HickoryRecordType) -> Option<RecordType> {
         match record_type {
-            &TrustRecordType::A => Some(RecordType::A),
-            &TrustRecordType::AAAA => Some(RecordType::AAAA),
-            &TrustRecordType::CNAME => Some(RecordType::CNAME),
-            &TrustRecordType::MX => Some(RecordType::MX),
-            &TrustRecordType::TXT => Some(RecordType::TXT),
-            &TrustRecordType::PTR => Some(RecordType::PTR),
+            &HickoryRecordType::A => Some(RecordType::A),
+            &HickoryRecordType::AAAA => Some(RecordType::AAAA),
+            &HickoryRecordType::CNAME => Some(RecordType::CNAME),
+            &HickoryRecordType::MX => Some(RecordType::MX),
+            &HickoryRecordType::TXT => Some(RecordType::TXT),
+            &HickoryRecordType::PTR => Some(RecordType::PTR),
             _ => None,
         }
     }
@@ -109,14 +107,14 @@ impl RecordType {
         }
     }
 
-    pub fn to_trust(&self) -> Result<TrustRecordType, ()> {
+    pub fn to_hickory(&self) -> Result<HickoryRecordType, ()> {
         match *self {
-            RecordType::A => Ok(TrustRecordType::A),
-            RecordType::AAAA => Ok(TrustRecordType::AAAA),
-            RecordType::CNAME => Ok(TrustRecordType::CNAME),
-            RecordType::MX => Ok(TrustRecordType::MX),
-            RecordType::TXT => Ok(TrustRecordType::TXT),
-            RecordType::PTR => Ok(TrustRecordType::PTR),
+            RecordType::A => Ok(HickoryRecordType::A),
+            RecordType::AAAA => Ok(HickoryRecordType::AAAA),
+            RecordType::CNAME => Ok(HickoryRecordType::CNAME),
+            RecordType::MX => Ok(HickoryRecordType::MX),
+            RecordType::TXT => Ok(HickoryRecordType::TXT),
+            RecordType::PTR => Ok(HickoryRecordType::PTR),
         }
     }
 
@@ -141,9 +139,9 @@ impl RecordName {
         }
     }
 
-    pub fn from_trust(
-        zone_name: &TrustLowerName,
-        query_name: &TrustLowerName,
+    pub fn from_hickory(
+        zone_name: &HickoryLowerName,
+        query_name: &HickoryLowerName,
     ) -> Option<RecordName> {
         let mut query_string = query_name.to_string().to_lowercase();
         let query_len = query_string.len();
@@ -186,22 +184,24 @@ impl RecordName {
 }
 
 impl RecordValue {
-    pub fn to_trust(&self, record_type: &RecordType) -> Result<TrustRData, ()> {
+    pub fn to_hickory(&self, record_type: &RecordType) -> Result<RData, ()> {
         match record_type {
             RecordType::A => {
                 // Parse A into actual IPv4
-                self.parse().map(|value| TrustRData::A(value)).or(Err(()))
+                self.parse()
+                    .map(|value| RData::A(HickoryRData::a::A(value)))
+                    .or(Err(()))
             }
             RecordType::AAAA => {
                 // Parse AAAA into actual IPv6
                 self.parse()
-                    .map(|value| TrustRData::AAAA(value))
+                    .map(|value| RData::AAAA(HickoryRData::aaaa::AAAA(value)))
                     .or(Err(()))
             }
             RecordType::CNAME => {
                 // Parse CNAME into domain name
-                TrustName::parse(self, Some(&TrustName::new()))
-                    .map(|value| TrustRData::CNAME(value))
+                HickoryName::parse(self, Some(&HickoryName::new()))
+                    .map(|value| RData::CNAME(HickoryRData::name::CNAME(value)))
                     .or(Err(()))
             }
             RecordType::MX => {
@@ -213,9 +213,9 @@ impl RecordValue {
 
                 if let (Ok(priority), Ok(exchange)) = (
                     priority_str.parse::<u16>(),
-                    TrustName::parse(exchange_str, Some(&TrustName::new())),
+                    HickoryName::parse(exchange_str, Some(&HickoryName::new())),
                 ) {
-                    Ok(TrustRData::MX(MX::new(priority, exchange)))
+                    Ok(RData::MX(HickoryRData::mx::MX::new(priority, exchange)))
                 } else {
                     Err(())
                 }
@@ -235,13 +235,13 @@ impl RecordValue {
                 }
 
                 if !txt_splits.is_empty() {
-                    Ok(TrustRData::TXT(TXT::new(txt_splits)))
+                    Ok(RData::TXT(HickoryRData::txt::TXT::new(txt_splits)))
                 } else {
                     Err(())
                 }
             }
-            RecordType::PTR => TrustName::parse(self, Some(&TrustName::new()))
-                .map(|value| TrustRData::PTR(value))
+            RecordType::PTR => HickoryName::parse(self, Some(&HickoryName::new()))
+                .map(|value| RData::PTR(HickoryRData::PTR(value)))
                 .or(Err(())),
         }
     }

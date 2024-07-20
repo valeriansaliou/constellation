@@ -4,11 +4,11 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use hickory_proto::rr::LowerName as HickoryLowerName;
 use regex::Regex;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{fmt, str};
-use trust_dns::rr::LowerName as TrustLowerName;
 
 use crate::APP_CONF;
 
@@ -33,7 +33,7 @@ impl ZoneName {
         }
     }
 
-    pub fn from_trust(query_name: &TrustLowerName) -> Option<ZoneName> {
+    pub fn from_hickory(query_name: &HickoryLowerName) -> Option<ZoneName> {
         let zone_string = query_name.to_string().to_lowercase();
         let mut zone_len = zone_string.len();
 

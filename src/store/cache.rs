@@ -121,7 +121,7 @@ impl StoreCacheFlush {
         );
     }
 
-    pub fn refresh() {
+    pub async fn refresh() {
         debug!("flushing to-be-refreshed store cache records");
 
         let mut refresh_register: Vec<(String, SystemTime)> = Vec::new();
@@ -150,6 +150,7 @@ impl StoreCacheFlush {
                 //   would never be expired.
                 APP_STORE
                     .raw_get_remote(store_key, Some(*store_accessed_at))
+                    .await
                     .ok();
             }
         }

@@ -21,7 +21,8 @@ impl StoreFlushBuilder {
 }
 
 impl StoreFlush {
-    pub fn run(&self) {
+    #[tokio::main]
+    pub async fn run(&self) {
         info!("store flusher is now active");
 
         loop {
@@ -32,7 +33,7 @@ impl StoreFlush {
 
             let flush_start = Instant::now();
 
-            Self::perform();
+            Self::perform().await;
 
             let flush_took = flush_start.elapsed();
 
@@ -44,13 +45,13 @@ impl StoreFlush {
         }
     }
 
-    fn perform() {
+    async fn perform() {
         // Proceed all perform actions
 
         // #1: Flush expired cache
         StoreCacheFlush::expire();
 
         // #2: Flush to-be-refreshed cache
-        StoreCacheFlush::refresh();
+        StoreCacheFlush::refresh().await;
     }
 }

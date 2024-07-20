@@ -26,19 +26,16 @@ serde_derive = "1.0"
 serde_json = "1.0"
 url_serde = { version = "0.2", default-features = false }
 regex = "1.10"
-r2d2 = "0.8"
-r2d2_redis = "0.14"
-redis = "0.20"
+async-trait = "0.1"
+bb8-redis = "0.15"
 actix-web = { version = "3.3", default-features = false }
 actix-web-httpauth = "0.5"
-trust-dns = { version = "0.14", default-features = false }
-trust-dns-server = { version = "0.14", default-features = false }
-trust-dns-proto = { version = "0.4", default-features = false }
-trust-dns-resolver = { version = "0.10", default-features = false }
-futures = "0.1"
-tokio = "0.1"
-tokio-tcp = "0.1"
-tokio-udp = "0.1"
+hickory-server = { version = "0.24", default-features = false }
+hickory-proto = { version = "0.24", default-features = false }
+hickory-resolver = { version = "0.24", default-features = false, features = [
+    "tokio-runtime",
+] }
+tokio = "1.21"
 rand = "0.8"
 farmhash = "1.1"
 http_req = { version = "0.10", features = [
@@ -48,9 +45,6 @@ maxminddb = "0.24"
 tempfile = "3.1"
 flate2 = "1.0"
 tar = "0.4"
-
-[patch.crates-io]
-rusqlite = { git = "https://github.com/rusqlite/rusqlite", rev = "aa64e2fb33755c696337d443ac4e8af93551ad05" }
 
 [profile.dev]
 opt-level = 0

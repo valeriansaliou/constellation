@@ -4,7 +4,7 @@
 // Copyright: 2019, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use trust_dns::op::ResponseCode;
+use hickory_proto::op::ResponseCode;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize)]
 pub enum CodeName {
@@ -22,7 +22,7 @@ pub enum CodeName {
 }
 
 impl CodeName {
-    pub fn from_trust(response_code: &ResponseCode) -> Option<CodeName> {
+    pub fn from_hickory(response_code: &ResponseCode) -> Option<CodeName> {
         match response_code {
             &ResponseCode::NoError => Some(CodeName::NoError),
             &ResponseCode::FormErr => Some(CodeName::FormErr),

@@ -7,7 +7,7 @@
 use super::region::RegionCode;
 
 //- Source: https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/blob/master/all/all.csv
-//- Last update: 13 August 2018
+//- Last update: 19 July 2024
 
 #[derive(Serialize, Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum CountryCode {
@@ -796,7 +796,7 @@ impl CountryCode {
             CountryCode::BJ => "Benin",
             CountryCode::BM => "Bermuda",
             CountryCode::BT => "Bhutan",
-            CountryCode::BO => "Bolivia (Plurinational State of)",
+            CountryCode::BO => "Bolivia, Plurinational State of",
             CountryCode::BQ => "Bonaire, Sint Eustatius and Saba",
             CountryCode::BA => "Bosnia and Herzegovina",
             CountryCode::BW => "Botswana",
@@ -821,7 +821,7 @@ impl CountryCode {
             CountryCode::CO => "Colombia",
             CountryCode::KM => "Comoros",
             CountryCode::CG => "Congo",
-            CountryCode::CD => "Congo (Democratic Republic of the)",
+            CountryCode::CD => "Congo, Democratic Republic of the",
             CountryCode::CK => "Cook Islands",
             CountryCode::CR => "Costa Rica",
             CountryCode::CI => "Côte d'Ivoire",
@@ -875,7 +875,7 @@ impl CountryCode {
             CountryCode::IS => "Iceland",
             CountryCode::IN => "India",
             CountryCode::ID => "Indonesia",
-            CountryCode::IR => "Iran (Islamic Republic of)",
+            CountryCode::IR => "Iran, Islamic Republic of",
             CountryCode::IQ => "Iraq",
             CountryCode::IE => "Ireland",
             CountryCode::IM => "Isle of Man",
@@ -888,8 +888,8 @@ impl CountryCode {
             CountryCode::KZ => "Kazakhstan",
             CountryCode::KE => "Kenya",
             CountryCode::KI => "Kiribati",
-            CountryCode::KP => "Korea (Democratic People's Republic of)",
-            CountryCode::KR => "Korea (Republic of)",
+            CountryCode::KP => "Korea, Democratic People's Republic of",
+            CountryCode::KR => "Korea, Republic of",
             CountryCode::KW => "Kuwait",
             CountryCode::KG => "Kyrgyzstan",
             CountryCode::LA => "Lao People's Democratic Republic",
@@ -902,7 +902,7 @@ impl CountryCode {
             CountryCode::LT => "Lithuania",
             CountryCode::LU => "Luxembourg",
             CountryCode::MO => "Macao",
-            CountryCode::MK => "Macedonia (the former Yugoslav Republic of)",
+            CountryCode::MK => "North Macedonia",
             CountryCode::MG => "Madagascar",
             CountryCode::MW => "Malawi",
             CountryCode::MY => "Malaysia",
@@ -915,8 +915,8 @@ impl CountryCode {
             CountryCode::MU => "Mauritius",
             CountryCode::YT => "Mayotte",
             CountryCode::MX => "Mexico",
-            CountryCode::FM => "Micronesia (Federated States of)",
-            CountryCode::MD => "Moldova (Republic of)",
+            CountryCode::FM => "Micronesia, Federated States of",
+            CountryCode::MD => "Moldova, Republic of",
             CountryCode::MC => "Monaco",
             CountryCode::MN => "Mongolia",
             CountryCode::ME => "Montenegro",
@@ -927,7 +927,7 @@ impl CountryCode {
             CountryCode::NA => "Namibia",
             CountryCode::NR => "Nauru",
             CountryCode::NP => "Nepal",
-            CountryCode::NL => "Netherlands",
+            CountryCode::NL => "Netherlands, Kingdom of the",
             CountryCode::NC => "New Caledonia",
             CountryCode::NZ => "New Zealand",
             CountryCode::NI => "Nicaragua",
@@ -997,7 +997,7 @@ impl CountryCode {
             CountryCode::TO => "Tonga",
             CountryCode::TT => "Trinidad and Tobago",
             CountryCode::TN => "Tunisia",
-            CountryCode::TR => "Turkey",
+            CountryCode::TR => "Türkiye",
             CountryCode::TM => "Turkmenistan",
             CountryCode::TC => "Turks and Caicos Islands",
             CountryCode::TV => "Tuvalu",
@@ -1010,7 +1010,7 @@ impl CountryCode {
             CountryCode::UY => "Uruguay",
             CountryCode::UZ => "Uzbekistan",
             CountryCode::VU => "Vanuatu",
-            CountryCode::VE => "Venezuela (Bolivarian Republic of)",
+            CountryCode::VE => "Venezuela, Bolivarian Republic of",
             CountryCode::VN => "Viet Nam",
             CountryCode::VG => "Virgin Islands (British)",
             CountryCode::VI => "Virgin Islands (U.S.)",

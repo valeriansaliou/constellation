@@ -51,6 +51,7 @@ async fn head_zone_record(
             &record_type,
             StoreAccessOrigin::Internal,
         )
+        .await
         .map(|_| HttpResponse::Ok().finish())
         .unwrap_or(HttpResponse::NotFound().finish())
 }
@@ -70,6 +71,7 @@ async fn get_zone_record(
             &record_type,
             StoreAccessOrigin::Internal,
         )
+        .await
         .map(|record| {
             HttpResponse::Ok().json(RecordGetResponse {
                 _type: record.kind,
@@ -109,6 +111,7 @@ async fn put_zone_record(
                 values: data.values.to_owned(),
             },
         )
+        .await
         .map(|_| HttpResponse::Ok().finish())
         .unwrap_or(HttpResponse::ServiceUnavailable().finish())
 }
@@ -123,6 +126,7 @@ async fn delete_zone_record(
 ) -> HttpResponse {
     APP_STORE
         .remove(&zone_name.into_inner(), &record_name, &record_type)
+        .await
         .map(|_| HttpResponse::Ok().finish())
         .unwrap_or(HttpResponse::ServiceUnavailable().finish())
 }

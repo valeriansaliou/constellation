@@ -156,17 +156,18 @@ impl DNSHealth {
 }
 
 impl DNSHealthHTTP {
-    fn run(notifier: &mut DNSHealthNotify) {
+    #[tokio::main]
+    async fn run(notifier: &mut DNSHealthNotify) {
         debug!("running dns health checks for the http protocol...");
 
         for domain in &APP_CONF.dns.health.http {
-            Self::check_domain(domain, notifier);
+            Self::check_domain(domain, notifier).await;
         }
 
         debug!("ran dns health checks for the http protocol");
     }
 
-    fn check_domain(domain: &ConfigDNSHealthHTTP, notifier: &mut DNSHealthNotify) {
+    async fn check_domain(domain: &ConfigDNSHealthHTTP, notifier: &mut DNSHealthNotify) {
         for record_type in HEALTH_CHECK_RECORD_TYPES.iter() {
             debug!(
                 "checking dns health for target: {} on zone: {} with type: {:?}",
@@ -175,12 +176,15 @@ impl DNSHealthHTTP {
                 record_type
             );
 
-            if let Ok(record) = APP_STORE.get(
-                &domain.zone,
-                &domain.name,
-                record_type,
-                StoreAccessOrigin::Internal,
-            ) {
+            if let Ok(record) = APP_STORE
+                .get(
+                    &domain.zone,
+                    &domain.name,
+                    record_type,
+                    StoreAccessOrigin::Internal,
+                )
+                .await
+            {
                 let unique_values = record.list_record_values();
 
                 for record_value in unique_values {

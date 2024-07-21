@@ -31,7 +31,9 @@ bb8-redis = "0.15"
 actix-web = { version = "3.3", default-features = false }
 actix-web-httpauth = "0.5"
 hickory-server = { version = "0.24", default-features = false }
-hickory-proto = { version = "0.24", default-features = false }
+hickory-proto = { version = "0.24", default-features = false, features = [
+    "text-parsing",
+] }
 hickory-resolver = { version = "0.24", default-features = false, features = [
     "tokio-runtime",
 ] }

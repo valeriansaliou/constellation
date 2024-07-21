@@ -35,7 +35,7 @@ hickory-proto = { version = "0.24", default-features = false }
 hickory-resolver = { version = "0.24", default-features = false, features = [
     "tokio-runtime",
 ] }
-tokio = "1.21"
+tokio = "1.38"
 rand = "0.8"
 farmhash = "1.1"
 http_req = { version = "0.10", features = [

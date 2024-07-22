@@ -4,7 +4,7 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use actix_web::body::BoxBody;
+use actix_web::body::{BoxBody, EitherBody};
 use actix_web::dev::ServiceResponse;
 use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
 use actix_web::http::StatusCode as Status;
@@ -20,7 +20,7 @@ pub struct CatcherResponse {
 pub struct HTTPCatchers;
 
 impl HTTPCatchers {
-    pub fn errors() -> ErrorHandlers<BoxBody> {
+    pub fn errors() -> ErrorHandlers<EitherBody<BoxBody>> {
         ErrorHandlers::new()
             .handler(Status::BAD_REQUEST, Self::bad_request)
             .handler(Status::UNAUTHORIZED, Self::unauthorized)

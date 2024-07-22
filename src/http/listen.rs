@@ -35,8 +35,8 @@ impl HTTPListen {
         let server = HttpServer::new(|| {
             App::new()
                 .wrap(NormalizePath::trim())
-                .wrap(catchers::HTTPCatchers::errors())
                 .wrap(HttpAuthentication::basic(authenticate))
+                .wrap(catchers::HTTPCatchers::errors())
                 .service(routes::head_zone_record)
                 .service(routes::get_zone_record)
                 .service(routes::put_zone_record)

@@ -34,7 +34,7 @@ _👋 You use Constellation and you want to be listed there? [Contact me](https:
 * **HTTP REST API** to check, read, insert, modify and delete DNS records on the fly.
 * **Persistence layer** in Redis. This means you can run multiple Constellations hitting against the same database on the network. You can even shard Redis if you need fault tolerance on the DNS data store.
 * **Geo-DNS** to serve records on a location basis. For instance, serve the IP to your US server for all North America users, and fallback to Europe for the rest. Based on MaxMind GeoLite2 free database, that is automatically updated when necessary.
-* **CNAME flattening** to save resolution round-trips for the users you serve. This can be enabled on a per record name basis.
+* **CNAME flattening** to save resolution round-trips for the users you serve. This can be enabled on a per record basis.
 
 ## Supported Record Types
 
@@ -49,6 +49,8 @@ Constellation supports all of the most widely used DNS record types:
 | `TXT`   | ✅         | ✅                |
 | `CAA`   | ✅         | ✅                |
 | `PTR`   | ✅         | ❌                 |
+
+If you would like me to add support for another record type, please [open an issue](https://github.com/valeriansaliou/constellation/issues).
 
 ## How to use it?
 

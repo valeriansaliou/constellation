@@ -4,6 +4,7 @@
 // Copyright: 2020, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
+use hickory_proto::rr::RecordType as HickoryRecordType;
 use hickory_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use hickory_resolver::error::ResolveError;
 use hickory_resolver::Resolver;
@@ -192,47 +193,56 @@ impl DNSFlatten {
         ttl: u32,
         accessed_at: Option<SystemTime>,
     ) {
+        let name = registry_key.0.to_str();
+
         // Convert each value type into its string representation
         let values: Result<Vec<String>, ResolveError> = match registry_key.1 {
             RecordType::A => self
                 .resolver
-                .ipv4_lookup(registry_key.0.to_str())
+                .ipv4_lookup(name)
                 .map(|values| values.iter().map(|value| value.to_string()).collect()),
             RecordType::AAAA => self
                 .resolver
-                .ipv6_lookup(registry_key.0.to_str())
+                .ipv6_lookup(name)
                 .map(|values| values.iter().map(|value| value.to_string()).collect()),
             RecordType::MX => {
                 // Format as `{priority} {exchange}`, eg. `10 inbound.crisp.email`
-                self.resolver
-                    .mx_lookup(registry_key.0.to_str())
-                    .map(|values| {
-                        values
-                            .iter()
-                            .map(|value| format!("{} {}", value.preference(), value.exchange()))
-                            .collect()
-                    })
+                self.resolver.mx_lookup(name).map(|values| {
+                    values
+                        .iter()
+                        .map(|value| format!("{} {}", value.preference(), value.exchange()))
+                        .collect()
+                })
             }
             RecordType::TXT => {
                 // Assemble all TXT data segments
-                self.resolver
-                    .txt_lookup(registry_key.0.to_str())
-                    .map(|values| {
-                        values
-                            .iter()
-                            .map(|value_chunks| {
-                                value_chunks
-                                    .txt_data()
-                                    .iter()
-                                    .map(|value_chunk| {
-                                        std::str::from_utf8(value_chunk).unwrap_or("")
-                                    })
-                                    .collect()
-                            })
-                            .collect()
-                    })
+                self.resolver.txt_lookup(name).map(|values| {
+                    values
+                        .iter()
+                        .map(|value_chunks| {
+                            value_chunks
+                                .txt_data()
+                                .iter()
+                                .map(|value_chunk| std::str::from_utf8(value_chunk).unwrap_or(""))
+                                .collect()
+                        })
+                        .collect()
+                })
             }
-            RecordType::PTR | RecordType::CNAME => Ok(Vec::new()),
+            RecordType::CAA => self
+                .resolver
+                .lookup(name, HickoryRecordType::CAA)
+                .map(|values| {
+                    values
+                        .record_iter()
+                        .filter_map(|record| record.data())
+                        .map(|data| data.to_string())
+                        .collect()
+                }),
+            RecordType::PTR | RecordType::CNAME => {
+                // Unsupported types (flatten to nothing)
+                Ok(Vec::new())
+            }
         };
 
         // Return final flattened record values

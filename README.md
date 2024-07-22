@@ -268,7 +268,7 @@ Where:
 
 * `zone_name`: The zone name (ie. base domain), eg. `relay.crisp.chat`
 * `record_name`: The record name to read or alter (ie. sub-domain or base domain), eg. `client.@` for the `client.relay.crisp.chat` FQDN, or `@` for the `relay.crisp.chat` FQDN
-* `record_type`: The DNS record type to read or alter for the `record_name`; either: `a`, `aaaa`, `cname`, `mx`, `txt` or `ptr` ([open an issue](https://github.com/valeriansaliou/constellation/issues) if you need support for another record type)
+* `record_type`: The DNS record type to read or alter for the `record_name`; either: `a`, `aaaa`, `cname`, `mx`, `txt`, `caa` or `ptr` ([open an issue](https://github.com/valeriansaliou/constellation/issues) if you need support for another record type)
 
 **Request headers:**
 

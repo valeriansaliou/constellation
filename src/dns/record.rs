@@ -4,10 +4,11 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use hickory_proto::rr::rdata as HickoryRData;
+use hickory_proto::rr::rdata::{self as HickoryRData};
 use hickory_proto::rr::{
     LowerName as HickoryLowerName, Name as HickoryName, RData, RecordType as HickoryRecordType,
 };
+use hickory_proto::serialize::txt::RDataParser;
 use regex::Regex;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -34,6 +35,7 @@ pub enum RecordType {
     CNAME,
     MX,
     TXT,
+    CAA,
     PTR,
 }
 
@@ -79,6 +81,7 @@ impl RecordType {
             "cname" => Some(RecordType::CNAME),
             "mx" => Some(RecordType::MX),
             "txt" => Some(RecordType::TXT),
+            "caa" => Some(RecordType::CAA),
             "ptr" => Some(RecordType::PTR),
             _ => None,
         }
@@ -91,6 +94,7 @@ impl RecordType {
             &HickoryRecordType::CNAME => Some(RecordType::CNAME),
             &HickoryRecordType::MX => Some(RecordType::MX),
             &HickoryRecordType::TXT => Some(RecordType::TXT),
+            &HickoryRecordType::CAA => Some(RecordType::CAA),
             &HickoryRecordType::PTR => Some(RecordType::PTR),
             _ => None,
         }
@@ -103,6 +107,7 @@ impl RecordType {
             RecordType::CNAME => "cname",
             RecordType::MX => "mx",
             RecordType::TXT => "txt",
+            RecordType::CAA => "caa",
             RecordType::PTR => "ptr",
         }
     }
@@ -114,6 +119,7 @@ impl RecordType {
             RecordType::CNAME => Ok(HickoryRecordType::CNAME),
             RecordType::MX => Ok(HickoryRecordType::MX),
             RecordType::TXT => Ok(HickoryRecordType::TXT),
+            RecordType::CAA => Ok(HickoryRecordType::CAA),
             RecordType::PTR => Ok(HickoryRecordType::PTR),
         }
     }
@@ -125,6 +131,7 @@ impl RecordType {
             RecordType::CNAME,
             RecordType::MX,
             RecordType::TXT,
+            RecordType::CAA,
             RecordType::PTR,
         ];
     }
@@ -223,7 +230,7 @@ impl RecordValue {
             RecordType::TXT => {
                 // Split TXT records to parts of 255 characters (enforced by specs)
                 let mut txt_splits = Vec::new();
-                let mut last_value = self.0.as_str();
+                let mut last_value = self.to_str();
 
                 while !last_value.is_empty() {
                     let (chunk_value, rest_value) =
@@ -239,6 +246,10 @@ impl RecordValue {
                 } else {
                     Err(())
                 }
+            }
+            RecordType::CAA => {
+                // Attempt to parse CAA record
+                RDataParser::try_from_str(HickoryRecordType::CAA, self.to_str()).or(Err(()))
             }
             RecordType::PTR => HickoryName::parse(self, Some(&HickoryName::new()))
                 .map(|value| RData::PTR(HickoryRData::PTR(value)))

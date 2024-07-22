@@ -50,7 +50,7 @@ Constellation supports all of the most widely used DNS record types:
 | `CAA`   | ✅         | ✅                |
 | `PTR`   | ✅         | ❌                 |
 
-If you would like me to add support for another record type, please [open an issue](https://github.com/valeriansaliou/constellation/issues).
+👉 _If you would like me to add support for a record type that is not listed here, please [open an issue](https://github.com/valeriansaliou/constellation/issues)._
 
 ## How to use it?
 

@@ -37,13 +37,11 @@ pub struct RecordGetResponse {
 }
 
 #[head("/zone/{zone_name}/record/{record_name}/{record_type}")]
-async fn head_zone_record(
-    web::Path((zone_name, record_name, record_type)): web::Path<(
-        ZoneNameExists,
-        RecordName,
-        RecordType,
-    )>,
+pub async fn head_zone_record(
+    path: web::Path<(ZoneNameExists, RecordName, RecordType)>,
 ) -> HttpResponse {
+    let (zone_name, record_name, record_type) = path.into_inner();
+
     APP_STORE
         .get(
             &zone_name.into_inner(),
@@ -57,13 +55,11 @@ async fn head_zone_record(
 }
 
 #[get("/zone/{zone_name}/record/{record_name}/{record_type}")]
-async fn get_zone_record(
-    web::Path((zone_name, record_name, record_type)): web::Path<(
-        ZoneNameExists,
-        RecordName,
-        RecordType,
-    )>,
+pub async fn get_zone_record(
+    path: web::Path<(ZoneNameExists, RecordName, RecordType)>,
 ) -> HttpResponse {
+    let (zone_name, record_name, record_type) = path.into_inner();
+
     APP_STORE
         .get(
             &zone_name.into_inner(),
@@ -88,15 +84,13 @@ async fn get_zone_record(
 }
 
 #[put("/zone/{zone_name}/record/{record_name}/{record_type}")]
-async fn put_zone_record(
-    web::Path((zone_name, record_name, record_type)): web::Path<(
-        ZoneNameExists,
-        RecordName,
-        RecordType,
-    )>,
+pub async fn put_zone_record(
+    path: web::Path<(ZoneNameExists, RecordName, RecordType)>,
 
     data: web::Json<RecordData>,
 ) -> HttpResponse {
+    let (zone_name, record_name, record_type) = path.into_inner();
+
     APP_STORE
         .set(
             &zone_name.into_inner(),
@@ -117,13 +111,11 @@ async fn put_zone_record(
 }
 
 #[delete("/zone/{zone_name}/record/{record_name}/{record_type}")]
-async fn delete_zone_record(
-    web::Path((zone_name, record_name, record_type)): web::Path<(
-        ZoneNameExists,
-        RecordName,
-        RecordType,
-    )>,
+pub async fn delete_zone_record(
+    path: web::Path<(ZoneNameExists, RecordName, RecordType)>,
 ) -> HttpResponse {
+    let (zone_name, record_name, record_type) = path.into_inner();
+
     APP_STORE
         .remove(&zone_name.into_inner(), &record_name, &record_type)
         .await
@@ -132,9 +124,11 @@ async fn delete_zone_record(
 }
 
 #[get("/zone/{zone_name}/metrics/{metrics_timespan}/query/types")]
-async fn get_metrics_query_types(
-    web::Path((zone_name, metrics_timespan)): web::Path<(ZoneNameExists, MetricsTimespan)>,
+pub async fn get_metrics_query_types(
+    path: web::Path<(ZoneNameExists, MetricsTimespan)>,
 ) -> HttpResponse {
+    let (zone_name, metrics_timespan) = path.into_inner();
+
     METRICS_STORE
         .aggregate(
             &zone_name.into_inner(),
@@ -146,9 +140,11 @@ async fn get_metrics_query_types(
 }
 
 #[get("/zone/{zone_name}/metrics/{metrics_timespan}/query/origins")]
-async fn get_metrics_query_origins(
-    web::Path((zone_name, metrics_timespan)): web::Path<(ZoneNameExists, MetricsTimespan)>,
+pub async fn get_metrics_query_origins(
+    path: web::Path<(ZoneNameExists, MetricsTimespan)>,
 ) -> HttpResponse {
+    let (zone_name, metrics_timespan) = path.into_inner();
+
     METRICS_STORE
         .aggregate(
             &zone_name.into_inner(),
@@ -160,9 +156,11 @@ async fn get_metrics_query_origins(
 }
 
 #[get("/zone/{zone_name}/metrics/{metrics_timespan}/answer/codes")]
-async fn get_metrics_answer_codes(
-    web::Path((zone_name, metrics_timespan)): web::Path<(ZoneNameExists, MetricsTimespan)>,
+pub async fn get_metrics_answer_codes(
+    path: web::Path<(ZoneNameExists, MetricsTimespan)>,
 ) -> HttpResponse {
+    let (zone_name, metrics_timespan) = path.into_inner();
+
     METRICS_STORE
         .aggregate(
             &zone_name.into_inner(),

@@ -5,7 +5,7 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use actix_web::dev::ServiceRequest;
-use actix_web::middleware::{self, normalize::TrailingSlash};
+use actix_web::middleware::NormalizePath;
 use actix_web::{rt, App, Error as ActixError, HttpServer};
 use actix_web_httpauth::{
     extractors::{
@@ -30,13 +30,13 @@ impl HTTPListenBuilder {
 
 impl HTTPListen {
     pub fn run(&self) {
-        let mut runtime = rt::System::new("http");
+        let runtime = rt::System::new();
 
-        let server = HttpServer::new(move || {
+        let server = HttpServer::new(|| {
             App::new()
-                .wrap(middleware::NormalizePath::new(TrailingSlash::Trim))
-                .wrap(HttpAuthentication::basic(authenticate))
+                .wrap(NormalizePath::trim())
                 .wrap(catchers::HTTPCatchers::errors())
+                .wrap(HttpAuthentication::basic(authenticate))
                 .service(routes::head_zone_record)
                 .service(routes::get_zone_record)
                 .service(routes::put_zone_record)
@@ -57,7 +57,7 @@ impl HTTPListen {
 async fn authenticate(
     request: ServiceRequest,
     credentials: BasicAuth,
-) -> Result<ServiceRequest, ActixError> {
+) -> Result<ServiceRequest, (ActixError, ServiceRequest)> {
     let password = if let Some(password) = credentials.password() {
         &*password
     } else {
@@ -76,6 +76,6 @@ async fn authenticate(
 
         *error.status_code_mut() = actix_web::http::StatusCode::FORBIDDEN;
 
-        Err(error.into())
+        Err((error.into(), request))
     }
 }

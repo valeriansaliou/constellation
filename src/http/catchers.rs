@@ -4,10 +4,11 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use actix_web::body::{Body, ResponseBody};
+use actix_web::body::BoxBody;
 use actix_web::dev::ServiceResponse;
-use actix_web::http::{self, StatusCode as Status};
-use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
+use actix_web::http::header::{HeaderValue, CONTENT_TYPE};
+use actix_web::http::StatusCode as Status;
+use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::Result;
 use serde_json;
 
@@ -19,7 +20,7 @@ pub struct CatcherResponse {
 pub struct HTTPCatchers;
 
 impl HTTPCatchers {
-    pub fn errors() -> ErrorHandlers<Body> {
+    pub fn errors() -> ErrorHandlers<BoxBody> {
         ErrorHandlers::new()
             .handler(Status::BAD_REQUEST, Self::bad_request)
             .handler(Status::UNAUTHORIZED, Self::unauthorized)
@@ -36,19 +37,20 @@ impl HTTPCatchers {
         reason: &'static str,
     ) -> Result<ErrorHandlerResponse<B>> {
         // Insert JSON MIME type
-        response.response_mut().headers_mut().insert(
-            http::header::CONTENT_TYPE,
-            http::HeaderValue::from_static("application/json"),
-        );
+        response
+            .response_mut()
+            .headers_mut()
+            .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
         // Map new error body
         let body_json = serde_json::to_string(&CatcherResponse { error: reason })
             .expect("could not serialize catcher json body");
 
-        let error: ServiceResponse<B> =
-            response.map_body(|_, _| ResponseBody::Other(Body::Message(Box::new(body_json))));
+        let error_response = response.map_body(|_, _| BoxBody::new(body_json));
 
-        Ok(ErrorHandlerResponse::Response(error))
+        Ok(ErrorHandlerResponse::Response(
+            error_response.map_into_right_body(),
+        ))
     }
 
     fn bad_request<B>(response: ServiceResponse<B>) -> Result<ErrorHandlerResponse<B>> {

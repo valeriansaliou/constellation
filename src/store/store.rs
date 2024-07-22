@@ -30,8 +30,8 @@ static KEY_REGION: &'static str = "r";
 static KEY_RESCUE: &'static str = "f"; // Alias for 'failover'
 static KEY_VALUE: &'static str = "v";
 
-const LIMITS_GET_REMOTE_TIMESPAN_TOTAL: Duration = Duration::from_secs(3);
-const LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD: Duration = Duration::from_secs(1);
+const LIMITS_GET_REMOTE_TIMESPAN_TOTAL: Duration = Duration::from_secs(10);
+const LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD: Duration = Duration::from_secs(9);
 
 type StoreGetType = (
     String,
@@ -214,17 +214,18 @@ impl Store {
         }
 
         // #3. Get from store (external origin, ie. DOS-unsafe, thus we need to apply limits)
-        // Notice: this prevents against DOS attacks that exploit the mono-threaded nature of \
-        //   Constellation, as the main thread blocks whenever a Redis query is pending. Some \
-        //   attackers exploit this 'vulnerability' by issuing a large number of DNS queries on \
-        //   non-cached records (random non-existing records). To avoid blocking all the server \
-        //   for the duration of the attack, we limit the total time spent querying Redis to 2/3 \
-        //   of each limiting timespans (of 3 seconds). Given typical DNS resolvers timeouts, this \
-        //   allows cached entries to be still served, while blocking non-cached entries for the \
-        //   duration of the attack. This way, DOS attacks only put down a (smaller) portion of \
-        //   the server. Note that this applies to DNS queries coming from external requesters \
+        // Notice: this prevents against DOS attacks that exploit the expensive remote store of \
+        //   Constellation, as it creates a pending task on the event loop whenever a Redis \
+        //   query is pending. Some attackers may overwhelm the event loop by issuing a large \
+        //   number of DNS queries on non-cached records (random non-existing records). To avoid \
+        //   overwhelming the server event loop with LOADS of pending tasks (waiting for network) \
+        //   for the duration of the attack, we limit the total time spent querying Redis to 90% \
+        //   of each limiting timespans (of 10 seconds). This way, DOS attacks can not continue \
+        //   stacking a huge number of tasks on the event loop, defeating the purpose of the \
+        //   attack. Note that this applies to DNS queries coming from external requesters \
         //   only, meaning that cache refresh queries will not be subject to this policy, nor \
-        //   health check queries.
+        //   health check queries. Also, already-cached records will be served as normal and \
+        //   not be subject to those limits (those are almost free requests).
         debug!(
             "get from remote store from external on type: {:?}, zone: {:?}, record: {:?}",
             record_type, zone_name, record_name

@@ -31,7 +31,7 @@ static KEY_RESCUE: &'static str = "f"; // Alias for 'failover'
 static KEY_VALUE: &'static str = "v";
 
 const LIMITS_GET_REMOTE_TIMESPAN_TOTAL: Duration = Duration::from_secs(10);
-const LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD: Duration = Duration::from_secs(9);
+const LIMITS_GET_REMOTE_ALLOWANCE_THRESHOLD: Duration = Duration::from_secs(8);
 
 type StoreGetType = (
     String,
@@ -219,7 +219,7 @@ impl Store {
         //   query is pending. Some attackers may overwhelm the event loop by issuing a large \
         //   number of DNS queries on non-cached records (random non-existing records). To avoid \
         //   overwhelming the server event loop with LOADS of pending tasks (waiting for network) \
-        //   for the duration of the attack, we limit the total time spent querying Redis to 90% \
+        //   for the duration of the attack, we limit the total time spent querying Redis to 80% \
         //   of each limiting timespans (of 10 seconds). This way, DOS attacks can not continue \
         //   stacking a huge number of tasks on the event loop, defeating the purpose of the \
         //   attack. Note that this applies to DNS queries coming from external requesters \

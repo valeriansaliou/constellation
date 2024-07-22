@@ -83,20 +83,23 @@ impl DNSHandler {
         match request.message_type() {
             MessageType::Query => match request.op_code() {
                 OpCode::Query => {
-                    info!("lookup request with id: {}", request.id());
+                    info!("lookup request with identifier: {}", request.id());
 
                     self.lookup(responder, request).await
                 }
                 code @ _ => {
-                    error!("unimplemented opcode: {:?}", code);
+                    error!("unimplemented dns operation code: {:?}", code);
 
-                    self.not_implemented()
+                    self.abort(ResponseCode::NotImp)
                 }
             },
             MessageType::Response => {
-                warn!("got a response as a request from id: {}", request.id());
+                warn!(
+                    "got a response as a request from identifier: {}",
+                    request.id()
+                );
 
-                self.not_implemented()
+                self.abort(ResponseCode::NotImp)
             }
         }
     }
@@ -330,10 +333,10 @@ impl DNSHandler {
         Self::dispatch_response(responder, request, header, None, Some(soa_records)).await
     }
 
-    fn not_implemented(&self) -> DNSResponse {
+    fn abort(&self, code: ResponseCode) -> DNSResponse {
         let mut header = Header::new();
 
-        header.set_response_code(ResponseCode::NotImp);
+        header.set_response_code(code);
 
         Ok(header.into())
     }

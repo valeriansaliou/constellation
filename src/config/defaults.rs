@@ -148,7 +148,7 @@ pub fn redis_idle_timeout_seconds() -> u64 {
 }
 
 pub fn redis_connection_timeout_seconds() -> u64 {
-    3
+    2
 }
 
 pub fn redis_delinquency_seconds() -> u64 {

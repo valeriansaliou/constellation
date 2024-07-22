@@ -5,9 +5,7 @@
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
 use hickory_proto::rr::rdata::{self as HickoryRData};
-use hickory_proto::rr::{
-    LowerName as HickoryLowerName, Name as HickoryName, RData, RecordType as HickoryRecordType,
-};
+use hickory_proto::rr::{LowerName as HickoryLowerName, RData, RecordType as HickoryRecordType};
 use hickory_proto::serialize::txt::RDataParser;
 use regex::Regex;
 use serde::de::{Error as DeserializeError, Unexpected, Visitor};
@@ -28,16 +26,15 @@ static DATA_TXT_CHUNK_MAXIMUM: usize = 255;
 serde_string_impls!(RecordType, from_str);
 serde_string_impls!(RecordName, from_str);
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub enum RecordType {
-    A,
-    AAAA,
-    CNAME,
-    MX,
-    TXT,
-    CAA,
-    PTR,
-}
+gen_record_type_impls!(
+    A -> "a",
+    AAAA -> "aaaa",
+    CNAME -> "cname",
+    MX -> "mx",
+    TXT -> "txt",
+    CAA -> "caa",
+    PTR -> "ptr",
+);
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct RecordName(String);
@@ -71,70 +68,6 @@ pub struct RecordRegions {
 
     #[serde(rename = "in")]
     pub _in: Option<RecordValues>,
-}
-
-impl RecordType {
-    pub fn from_str(value: &str) -> Option<RecordType> {
-        match value {
-            "a" => Some(RecordType::A),
-            "aaaa" => Some(RecordType::AAAA),
-            "cname" => Some(RecordType::CNAME),
-            "mx" => Some(RecordType::MX),
-            "txt" => Some(RecordType::TXT),
-            "caa" => Some(RecordType::CAA),
-            "ptr" => Some(RecordType::PTR),
-            _ => None,
-        }
-    }
-
-    pub fn from_hickory(record_type: &HickoryRecordType) -> Option<RecordType> {
-        match record_type {
-            &HickoryRecordType::A => Some(RecordType::A),
-            &HickoryRecordType::AAAA => Some(RecordType::AAAA),
-            &HickoryRecordType::CNAME => Some(RecordType::CNAME),
-            &HickoryRecordType::MX => Some(RecordType::MX),
-            &HickoryRecordType::TXT => Some(RecordType::TXT),
-            &HickoryRecordType::CAA => Some(RecordType::CAA),
-            &HickoryRecordType::PTR => Some(RecordType::PTR),
-            _ => None,
-        }
-    }
-
-    pub fn to_str(&self) -> &'static str {
-        match *self {
-            RecordType::A => "a",
-            RecordType::AAAA => "aaaa",
-            RecordType::CNAME => "cname",
-            RecordType::MX => "mx",
-            RecordType::TXT => "txt",
-            RecordType::CAA => "caa",
-            RecordType::PTR => "ptr",
-        }
-    }
-
-    pub fn to_hickory(&self) -> Result<HickoryRecordType, ()> {
-        match *self {
-            RecordType::A => Ok(HickoryRecordType::A),
-            RecordType::AAAA => Ok(HickoryRecordType::AAAA),
-            RecordType::CNAME => Ok(HickoryRecordType::CNAME),
-            RecordType::MX => Ok(HickoryRecordType::MX),
-            RecordType::TXT => Ok(HickoryRecordType::TXT),
-            RecordType::CAA => Ok(HickoryRecordType::CAA),
-            RecordType::PTR => Ok(HickoryRecordType::PTR),
-        }
-    }
-
-    pub fn list_choices() -> Vec<RecordType> {
-        return vec![
-            RecordType::A,
-            RecordType::AAAA,
-            RecordType::CNAME,
-            RecordType::MX,
-            RecordType::TXT,
-            RecordType::CAA,
-            RecordType::PTR,
-        ];
-    }
 }
 
 impl RecordName {
@@ -192,43 +125,22 @@ impl RecordName {
 
 impl RecordValue {
     pub fn to_hickory(&self, record_type: &RecordType) -> Result<RData, ()> {
+        let hickory_record_type = record_type.to_hickory()?;
+
         match record_type {
-            RecordType::A => {
-                // Parse A into actual IPv4
-                self.parse()
-                    .map(|value| RData::A(HickoryRData::a::A(value)))
-                    .or(Err(()))
-            }
-            RecordType::AAAA => {
-                // Parse AAAA into actual IPv6
-                self.parse()
-                    .map(|value| RData::AAAA(HickoryRData::aaaa::AAAA(value)))
-                    .or(Err(()))
-            }
-            RecordType::CNAME => {
-                // Parse CNAME into domain name
-                HickoryName::parse(self, Some(&HickoryName::new()))
-                    .map(|value| RData::CNAME(HickoryRData::name::CNAME(value)))
-                    .or(Err(()))
-            }
-            RecordType::MX => {
-                // Parse MX record into (priority, exchange) tuple
-                let mut mx_parts = self.split(" ");
-
-                let priority_str = mx_parts.next().unwrap_or("0");
-                let exchange_str = mx_parts.next().unwrap_or("");
-
-                if let (Ok(priority), Ok(exchange)) = (
-                    priority_str.parse::<u16>(),
-                    HickoryName::parse(exchange_str, Some(&HickoryName::new())),
-                ) {
-                    Ok(RData::MX(HickoryRData::mx::MX::new(priority, exchange)))
-                } else {
-                    Err(())
-                }
+            RecordType::A
+            | RecordType::AAAA
+            | RecordType::CNAME
+            | RecordType::MX
+            | RecordType::CAA
+            | RecordType::PTR => {
+                RDataParser::try_from_str(hickory_record_type, self.to_str()).or(Err(()))
             }
             RecordType::TXT => {
                 // Split TXT records to parts of 255 characters (enforced by specs)
+                // Notice: unfortunately, RDataParser does not work well with large TXT \
+                //   records, such as DKIM keys. We have to implement a custom parser \
+                //   here.
                 let mut txt_splits = Vec::new();
                 let mut last_value = self.to_str();
 
@@ -247,13 +159,6 @@ impl RecordValue {
                     Err(())
                 }
             }
-            RecordType::CAA => {
-                // Attempt to parse CAA record
-                RDataParser::try_from_str(HickoryRecordType::CAA, self.to_str()).or(Err(()))
-            }
-            RecordType::PTR => HickoryName::parse(self, Some(&HickoryName::new()))
-                .map(|value| RData::PTR(HickoryRData::PTR(value)))
-                .or(Err(())),
         }
     }
 

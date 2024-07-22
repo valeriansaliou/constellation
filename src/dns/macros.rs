@@ -38,6 +38,57 @@ macro_rules! serde_string_impls {
     };
 }
 
+macro_rules! gen_record_type_impls {
+    ($($TypeEnum:ident -> $TypeString:expr),+,) => {
+        #[derive(Clone, Debug, Eq, PartialEq, Hash)]
+        pub enum RecordType {
+            $($TypeEnum,)+
+        }
+
+        impl RecordType {
+            pub fn from_str(value: &str) -> Option<RecordType> {
+                match value {
+                    $(
+                        $TypeString => Some(RecordType::$TypeEnum),
+                    )+
+                    _ => None,
+                }
+            }
+
+            pub fn from_hickory(record_type: &HickoryRecordType) -> Option<RecordType> {
+                match record_type {
+                    $(
+                        &HickoryRecordType::$TypeEnum => Some(RecordType::$TypeEnum),
+                    )+
+                    _ => None,
+                }
+            }
+
+            pub fn to_str(&self) -> &'static str {
+                match *self {
+                    $(
+                        RecordType::$TypeEnum => $TypeString,
+                    )+
+                }
+            }
+
+            pub fn to_hickory(&self) -> Result<HickoryRecordType, ()> {
+                match *self {
+                    $(
+                        RecordType::$TypeEnum => Ok(HickoryRecordType::$TypeEnum),
+                    )+
+                }
+            }
+
+            pub fn list_choices() -> Vec<RecordType> {
+                return vec![
+                    $(RecordType::$TypeEnum,)+
+                ];
+            }
+        }
+    }
+}
+
 macro_rules! gen_metrics_tick_perform_item {
     ($Store:ident, $Backlog:ident) => {
         // Move all minutes up in the list (sliding window)

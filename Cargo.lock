@@ -442,7 +442,7 @@ dependencies = [
 
 [[package]]
 name = "constellation-server"
-version = "1.14.3"
+version = "1.15.0"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",
@@ -1895,9 +1895,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winnow"
-version = "0.6.14"
+version = "0.6.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "374ec40a2d767a3c1b4972d9475ecd557356637be906f2cb3f7fe17a6eb5e22f"
+checksum = "557404e450152cd6795bb558bca69e43c585055f4606e3bcae5894fc6dac9ba0"
 dependencies = [
  "memchr",
 ]

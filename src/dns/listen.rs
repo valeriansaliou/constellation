@@ -43,8 +43,8 @@ impl DNSListen {
         let mut handler: DNSHandler = DNSHandler::new();
 
         for (zone_name, _) in &APP_CONF.dns.zone {
-            match Self::map_authority(&zone_name) {
-                Ok((name, authority)) => handler.upsert(LowerName::new(&name), authority),
+            match Self::zone_authority(&zone_name) {
+                Ok((name, authority)) => handler.add_authority(LowerName::new(&name), authority),
                 Err(_) => error!("could not load zone {}", zone_name),
             }
         }
@@ -76,7 +76,7 @@ impl DNSListen {
         }
     }
 
-    fn map_authority(zone_name: &str) -> Result<(Name, DNSAuthority), ()> {
+    fn zone_authority(zone_name: &str) -> Result<(Name, DNSAuthority), ()> {
         if let Ok(name) = Name::parse(zone_name, Some(&Name::new())) {
             let mut records = BTreeMap::new();
 

@@ -180,6 +180,9 @@ pub struct ConfigRedis {
     #[serde(default = "defaults::redis_connection_timeout_seconds")]
     pub connection_timeout_seconds: u64,
 
+    #[serde(default = "defaults::redis_delinquency_seconds")]
+    pub delinquency_seconds: u64,
+
     #[serde(default = "defaults::redis_cache_refresh_seconds")]
     pub cache_refresh_seconds: u64,
 

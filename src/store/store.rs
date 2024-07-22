@@ -44,13 +44,17 @@ type StoreGetType = (
     String,
 );
 
-type StorePoolType = (Pool<RedisConnectionManager>, String);
-
 pub struct StoreBuilder;
 
 pub struct Store {
-    pools: Vec<StorePoolType>,
+    pools: Vec<StorePool>,
     limits: StoreLimits,
+}
+
+pub struct StorePool {
+    connection: Pool<RedisConnectionManager>,
+    target: String,
+    delinquent_until: RwLock<Option<Instant>>,
 }
 
 pub struct StoreLimits {
@@ -118,7 +122,7 @@ impl StoreBuilder {
     }
 
     async fn pool_bind(
-        pools: &mut Vec<StorePoolType>,
+        pools: &mut Vec<StorePool>,
         host: &str,
         port: u16,
         password: &Option<String>,
@@ -134,7 +138,7 @@ impl StoreBuilder {
         host: &str,
         port: u16,
         password: &Option<String>,
-    ) -> Result<StorePoolType, &'static str> {
+    ) -> Result<StorePool, &'static str> {
         info!("binding to store backend at {}:{}", host, port);
 
         let addr_auth = match password {
@@ -168,7 +172,11 @@ impl StoreBuilder {
                     Ok(pool) => {
                         info!("connected to redis at: {}", tcp_addr_raw);
 
-                        Ok((pool, tcp_addr_raw))
+                        Ok(StorePool {
+                            connection: pool,
+                            target: tcp_addr_raw,
+                            delinquent_until: RwLock::new(None),
+                        })
                     }
                     Err(_) => Err("could not spawn redis pool"),
                 }

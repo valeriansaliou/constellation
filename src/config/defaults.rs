@@ -151,6 +151,10 @@ pub fn redis_connection_timeout_seconds() -> u64 {
     3
 }
 
+pub fn redis_delinquency_seconds() -> u64 {
+    10
+}
+
 pub fn redis_cache_refresh_seconds() -> u64 {
     60
 }

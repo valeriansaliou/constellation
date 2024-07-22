@@ -224,6 +224,7 @@ Use the sample [config.cfg](https://github.com/valeriansaliou/constellation/blob
 * `max_lifetime_seconds` (type: _integer_, allowed: seconds, default: `20`) — Maximum lifetime of a connection to Redis (you want it below 5 minutes, as this affects the reconnect delay to Redis if a connection breaks)
 * `idle_timeout_seconds` (type: _integer_, allowed: seconds, default: `600`) — Timeout of idle/dead pool connections to Redis
 * `connection_timeout_seconds` (type: _integer_, allowed: seconds, default: `3`) — Timeout in seconds to consider Redis dead and reject DNS and HTTP API queries
+* `delinquency_seconds` (type: _integer_, allowed: seconds, default: `10`) — Time in seconds to mark a failing Redis connection as delinquent, meaning it will not be retried over and over again during the failure period. It should be some factor of the connection timeout, a factor of 3 is recommended.
 * `cache_refresh_seconds` (type: _integer_, allowed: seconds, default: `60`) — Time in seconds after which a locally-cached record is refreshed from Redis (this should be kept low)
 * `cache_expire_seconds` (type: _integer_, allowed: seconds, default: `600`) — Time in seconds after which a locally-cached record expires and should be refreshed from Redis (this should be kept low)
 

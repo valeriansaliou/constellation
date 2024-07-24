@@ -28,7 +28,7 @@ macro_rules! get_cache_store_client {
                         return $code;
                     }
                     Err(err) => {
-                        warn!(
+                        error!(
                             "could not acquire cache store client from sub-pool: {}",
                             err
                         );

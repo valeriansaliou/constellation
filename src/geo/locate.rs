@@ -4,7 +4,7 @@
 // Copyright: 2018, Valerian Saliou <valerian@valeriansaliou.name>
 // License: Mozilla Public License v2.0 (MPL v2.0)
 
-use maxminddb::{geoip2, MaxMindDBError, Reader as GeoReader};
+use maxminddb::{geoip2, MaxMindDbError, Reader as GeoReader};
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -26,7 +26,7 @@ impl Locator {
     pub fn ip_to_country(ip: IpAddr) -> Option<CountryCode> {
         if let Ok(ref reader) = DB_READER.read() {
             // Lookup IP address to country
-            if let Ok(result) = reader.lookup::<geoip2::Country>(ip) {
+            if let Ok(Some(result)) = reader.lookup::<geoip2::Country>(ip) {
                 // Country found?
                 if let Some(country) = result.country {
                     if let Some(iso_code) = country.iso_code {
@@ -45,7 +45,7 @@ impl Locator {
         Path::new(&APP_CONF.geo.database_path).join(&APP_CONF.geo.database_file)
     }
 
-    pub fn request_geo_refresh() -> Result<(), MaxMindDBError> {
+    pub fn request_geo_refresh() -> Result<(), MaxMindDbError> {
         match Self::geo_acquire() {
             Ok(reader) => {
                 let mut store = DB_READER.write().unwrap();
@@ -60,7 +60,7 @@ impl Locator {
         }
     }
 
-    fn geo_acquire() -> Result<GeoReaderType, MaxMindDBError> {
+    fn geo_acquire() -> Result<GeoReaderType, MaxMindDbError> {
         let database_path = Self::get_database_full_path();
 
         debug!("acquiring geo database at: {:?}", database_path);

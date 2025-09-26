@@ -64,7 +64,7 @@ Constellation is built in Rust. To install it, either download a version from th
 
 Constellation provides [pre-built packages](https://packagecloud.io/valeriansaliou/constellation) for Debian-based systems (Debian, Ubuntu, etc.).
 
-**Important: Constellation only provides 64 bits packages targeting Debian 10, 11 & 12 for now (codenames: `buster`, `bullseye` & `bookworm`). You will still be able to use them on other Debian versions, as well as Ubuntu.**
+**Important: Constellation only provides 64 bits packages targeting Debian 11 & 12 for now (codenames: `bullseye` & `bookworm`). You will still be able to use them on other Debian versions, as well as Ubuntu.**
 
 First, add the Constellation APT repository (eg. for Debian `bookworm`):
 

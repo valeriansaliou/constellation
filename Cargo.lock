@@ -386,7 +386,7 @@ dependencies = [
 
 [[package]]
 name = "constellation-server"
-version = "1.15.0"
+version = "1.15.1"
 dependencies = [
  "actix-web",
  "actix-web-httpauth",

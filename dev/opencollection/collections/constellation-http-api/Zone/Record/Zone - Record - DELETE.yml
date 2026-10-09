@@ -1,0 +1,18 @@
+info:
+  name: Zone / Record - DELETE
+  type: http
+  seq: 4
+
+http:
+  method: DELETE
+  url: "{{endpoint}}/zone/{{zone}}/record/{{name}}/{{type}}"
+  auth:
+    type: basic
+    password: REPLACE_THIS_WITH_A_SECRET_KEY
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: false
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

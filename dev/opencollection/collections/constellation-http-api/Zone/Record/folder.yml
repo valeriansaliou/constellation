@@ -1,0 +1,12 @@
+info:
+  name: Record
+  type: folder
+  seq: 1
+
+request:
+  auth: inherit
+  variables:
+    - name: name
+      value: client.@
+    - name: type
+      value: cname

@@ -1,0 +1,10 @@
+info:
+  name: Metrics
+  type: folder
+  seq: 2
+
+request:
+  auth: inherit
+  variables:
+    - name: timespan
+      value: 1m

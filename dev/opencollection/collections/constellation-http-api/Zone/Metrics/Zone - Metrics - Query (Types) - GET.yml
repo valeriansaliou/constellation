@@ -1,0 +1,18 @@
+info:
+  name: Zone / Metrics / Query (Types) - GET
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{endpoint}}/zone/{{zone}}/metrics/{{timespan}}/query/types"
+  auth:
+    type: basic
+    password: REPLACE_THIS_WITH_A_SECRET_KEY
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: false
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

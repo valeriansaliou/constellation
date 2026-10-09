@@ -1,0 +1,12 @@
+opencollection: 1.0.0
+info:
+  name: "constellation"
+  type: workspace
+
+collections:
+  - name: "Constellation HTTP API"
+    path: "collections/constellation-http-api"
+
+specs:
+
+docs: ''

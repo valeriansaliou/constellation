@@ -1,0 +1,35 @@
+info:
+  name: Zone / Record - PUT
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: "{{endpoint}}/zone/{{zone}}/record/{{name}}/{{type}}"
+  headers:
+    - name: Content-Type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "values": [
+          "socket-1.lon.atlas.net.crisp.chat",
+          "socket-1.fra.atlas.net.crisp.chat"
+        ],
+        "rescue": [
+          "socket-1.ams.atlas.net.crisp.chat"
+        ],
+        "ttl": 600,
+        "flatten": true
+      }
+  auth:
+    type: basic
+    password: REPLACE_THIS_WITH_A_SECRET_KEY
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: false
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

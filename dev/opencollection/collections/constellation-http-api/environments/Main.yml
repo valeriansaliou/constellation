@@ -1,0 +1,8 @@
+name: Main
+variables:
+  - name: endpoint
+    value: http://localhost:8080
+    description: ""
+  - name: zone
+    value: relay.crisp.chat
+    description: ""

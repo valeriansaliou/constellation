@@ -6,9 +6,6 @@ info:
 http:
   method: PUT
   url: "{{endpoint}}/zone/{{zone}}/record/{{name}}/{{type}}"
-  headers:
-    - name: Content-Type
-      value: application/json
   body:
     type: json
     data: |-
